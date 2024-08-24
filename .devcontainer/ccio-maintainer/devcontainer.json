@@ -29,8 +29,8 @@
         7681,
         8080
     ],
-    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
-    "workspaceFolder": "/workspace",
+    "workspaceMount": "source=${localWorkspaceFolder},target=/home/vscode/Git,type=bind,consistency=cached",
+    "workspaceFolder": "/home/vscode/Git",
     "customizations": {
         "vscode": {
             "extensions": [
