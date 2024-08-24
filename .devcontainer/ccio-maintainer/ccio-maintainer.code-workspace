@@ -2,34 +2,32 @@
 	"folders": [
 		{
 			"name": "konductor",
-			"path": "."
+			"path": "../../"
 		},
 		{
 			"name": "kargo",
-			"path": "../kargo"
+			"path": "../../../kargo"
 		},
 		{
 			"name": "devcontainer",
-			"path": "../devcontainer"
+			"path": "../../../devcontainer"
 		}
 	],
 	"settings": {
 		"files.exclude": {
-			"**/.git": true,
-			"**/.gitignore": true,
-			"**/.svn": true,
 			"**/.hg": true,
 			"**/CVS": true,
-			"**/.DS_Store": true,
-			"**/Thumbs.db": true,
-			"**/node_modules": true,
+			"**/.git": true,
+			"**/.svn": true,
 			"**/venv": true,
-			"**/.vscode": true,
-			"**/.devcontainer": true,
-			"**/*.code-workspace": true,
 			"**/.kube": true,
 			"**/.talos": true,
-			"**/.pulumi": true
+			"**/.pulumi": true,
+			"**/.vscode": true,
+			"**/.DS_Store": true,
+			"**/Thumbs.db": true,
+			"**/.gitignore": true,
+			"**/node_modules": true
 		}
 	},
 	"extensions": {

@@ -1,6 +1,6 @@
 {
-  "name": "Kargo",
-  "sdk": "python",
+  "name": "Konductor",
+  "engineVersion": "v0.12.4",
   "source": "dagger",
-  "engineVersion": "v0.12.4"
+  "sdk": "python"
 }
