@@ -55,7 +55,7 @@
   "editor.showIcons": true,
   "editor.tabSizing": "shrink",
   "editor.lineHeight": 20,
-  "editor.autoIndent": true,
+  "editor.autoIndent": "full",
   "editor.lineNumbers": "relative",
   "editor.formatOnSave": true,
   "editor.insertSpaces": true,
@@ -82,7 +82,6 @@
   "editor.parameterHints.enabled": true,
   "editor.trimTrailingWhitespace": true,
   "editor.lineHighlightBackground": "#30BFBF",
-  "editor.highlightActiveIndentGuide": true,
   "editor.fontFamily": "'FiraMono Nerd Font Mono', monospace",
   "editor.gotoLocation.multipleReferences": "goto",
   "editor.gotoLocation.multipleDefinitions": "goto",
@@ -105,12 +104,11 @@
   "git.enableSmartCommit": true,
   "git.ignoreLegacyWarning": true,
   "git.autoRepositoryDetection": "openEditors",
-  "git.defaultCloneParentDirectory": "/home/vscode",
+  "git.defaultCloneParentDirectory": "/workspaces",
   "git.scanRepositories": [
-    "/home/vscode",
-    "/home/vscode/konductor",
-    "/home/vscode/konductor/.github/devcontainer",
-    "/workspaces"
+    "/workspaces/konductor",
+    "/workspaces/devcontainer",
+    "/workspaces/kargo"
   ],
   "git.path": "/usr/local/bin/git",
   "go.testTags": "all",
@@ -217,5 +215,10 @@
     "editor.scrollBeyondLastLine": true,
     "editor.trimTrailingWhitespace": false,
     "editor.scrollbar.alwaysConsumeMouseWheel": true
+  },
+  "editor.guides.highlightActiveIndentation": true,
+  "zoma.vscode-auto-open-workspace": {
+    "enableAutoOpenIfSingleWorkspace": false,
+    "enableAutoOpenAlwaysFirst": false
   }
 }
