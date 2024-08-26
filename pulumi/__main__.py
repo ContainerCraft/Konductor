@@ -7,16 +7,9 @@ from pulumi_kubernetes import Provider
 from src.lib.kubernetes_api_endpoint import KubernetesApiEndpointIp
 from src.cilium.deploy import deploy_cilium
 from src.cert_manager.deploy import deploy_cert_manager
-from src.kubevirt.deploy import deploy_kubevirt
-from src.containerized_data_importer.deploy import deploy_cdi
-from src.cluster_network_addons.deploy import deploy_cnao
-from src.multus.deploy import deploy_multus
-from src.hostpath_provisioner.deploy import deploy as deploy_hostpath_provisioner
 from src.openunison.deploy import deploy_openunison
 from src.prometheus.deploy import deploy_prometheus
 from src.kubernetes_dashboard.deploy import deploy_kubernetes_dashboard
-from src.kv_manager.deploy import deploy_ui_for_kubevirt
-from src.ceph.deploy import deploy_rook_operator
 from src.vm.ubuntu import deploy_ubuntu_vm
 
 ##################################################################################
@@ -64,15 +57,9 @@ def get_module_config(module_name):
 # Get configurations and enabled flags
 config_cilium, cilium_enabled = get_module_config('cilium')
 config_cert_manager, cert_manager_enabled = get_module_config('cert_manager')
-config_kubevirt, kubevirt_enabled = get_module_config('kubevirt')
-config_cdi, cdi_enabled = get_module_config('cdi')
-config_multus, multus_enabled = get_module_config('multus')
 config_prometheus, prometheus_enabled = get_module_config('prometheus')
 config_openunison, openunison_enabled = get_module_config('openunison')
-config_hostpath_provisioner, hostpath_provisioner_enabled = get_module_config('hostpath_provisioner')
-config_cnao, cnao_enabled = get_module_config('cnao')
 config_kubernetes_dashboard, kubernetes_dashboard_enabled = get_module_config('kubernetes_dashboard')
-config_kubevirt_manager, kubevirt_manager_enabled = get_module_config('kubevirt_manager')
 config_vm, vm_enabled = get_module_config('vm')
 
 ##################################################################################
@@ -107,11 +94,8 @@ depends = []
 def safe_append(depends, resource):
     if resource:
         depends.append(resource)
-    #else:
-    #    pulumi.log.warn("Attempted to append a None resource to depends list.")
 
 ##################################################################################
-# Fetch the Cilium Version
 # Deploy Cilium
 def run_cilium():
     if cilium_enabled:
@@ -144,7 +128,6 @@ cilium_version, cilium_release = run_cilium()
 versions["cilium"] = {"enabled": cilium_enabled, "version": cilium_version}
 
 ##################################################################################
-# Fetch the Cert Manager Version
 # Deploy Cert Manager
 def run_cert_manager():
     if cert_manager_enabled:
@@ -171,165 +154,6 @@ def run_cert_manager():
     return None, None, None
 
 cert_manager, cert_manager_release, cert_manager_selfsigned_cert = run_cert_manager()
-
-##################################################################################
-# Deploy KubeVirt
-def run_kubevirt():
-    if kubevirt_enabled:
-        ns_name = "kubevirt"
-        kubevirt_version = config_kubevirt.get('version') or None
-        kubevirt_emulation = config_kubevirt.get('emulation') or False
-
-        custom_depends = []
-        safe_append(custom_depends, cilium_release)
-        safe_append(custom_depends, cert_manager_release)
-
-        kubevirt = deploy_kubevirt(
-            custom_depends,
-            ns_name,
-            kubevirt_version,
-            kubevirt_emulation,
-            k8s_provider,
-            kubernetes_distribution,
-        )
-
-        versions["kubevirt"] = {"enabled": kubevirt_enabled, "version": kubevirt[0]}
-        kubevirt_operator = kubevirt[1]
-
-        safe_append(depends, kubevirt_operator)
-
-        return kubevirt, kubevirt_operator
-    return None, None
-
-kubevirt, kubevirt_operator = run_kubevirt()
-
-##################################################################################
-# Deploy Multus
-def run_multus():
-    if multus_enabled:
-        ns_name = "multus"
-        multus_version = config_multus.get('version') or "master"
-        bridge_name = config_multus.get('bridge_name') or "br0"
-
-        custom_depends = []
-
-        if cilium_enabled:
-            safe_append(custom_depends, cilium_release)
-        if cert_manager_enabled:
-            safe_append(custom_depends, cert_manager_release)
-
-        multus = deploy_multus(
-            custom_depends,
-            multus_version,
-            bridge_name,
-            k8s_provider
-        )
-
-        versions["multus"] = {"enabled": multus_enabled, "version": multus[0]}
-        multus_release = multus[1]
-
-        safe_append(depends, multus_release)
-
-        return multus, multus_release
-    return None, None
-
-multus, multus_release = run_multus()
-
-##################################################################################
-# Deploy Cluster Network Addons Operator (CNAO)
-def run_cnao():
-    if cnao_enabled:
-        ns_name = "cluster-network-addons"
-        cnao_version = config_cnao.get('version') or None
-
-        custom_depends = []
-
-        if cilium_enabled:
-            safe_append(custom_depends, cilium_release)
-
-        if cert_manager_enabled:
-            safe_append(custom_depends, cert_manager_release)
-
-        cnao = deploy_cnao(
-            custom_depends,
-            cnao_version,
-            k8s_provider
-        )
-
-        versions["cnao"] = {"enabled": cnao_enabled, "version": cnao[0]}
-        cnao_release = cnao[1]
-
-        safe_append(depends, cnao_release)
-
-        return cnao, cnao_release
-    return None, None
-
-cnao, cnao_release = run_cnao()
-
-##################################################################################
-# Deploy Hostpath Provisioner
-def run_hostpath_provisioner():
-    if hostpath_provisioner_enabled:
-        if not cert_manager_enabled:
-            msg = "HPP requires Cert Manager. Please enable Cert Manager and try again."
-            pulumi.log.error(msg)
-            return None, None
-
-        hostpath_default_path = config_hostpath_provisioner.get('default_path') or "/var/mnt/hostpath-provisioner"
-        hostpath_default_storage_class = config_hostpath_provisioner.get('default_storage_class') or False
-        ns_name = "hostpath-provisioner"
-        hostpath_provisioner_version = config_hostpath_provisioner.get('version') or None
-
-        custom_depends = []
-
-        if cilium_enabled:
-            safe_append(custom_depends, cilium_release)
-        if cert_manager_enabled:
-            safe_append(custom_depends, cert_manager_release)
-        if kubevirt_enabled:
-            safe_append(custom_depends, kubevirt_operator)
-
-        hostpath_provisioner = deploy_hostpath_provisioner(
-            custom_depends,
-            hostpath_provisioner_version,
-            ns_name,
-            hostpath_default_path,
-            hostpath_default_storage_class,
-            k8s_provider,
-        )
-
-        versions["hostpath_provisioner"] = {"enabled": hostpath_provisioner_enabled, "version": hostpath_provisioner[0]}
-        hostpath_provisioner_release = hostpath_provisioner[1]
-
-        safe_append(depends, hostpath_provisioner_release)
-
-        return hostpath_provisioner, hostpath_provisioner_release
-    return None, None
-
-hostpath_provisioner, hostpath_provisioner_release = run_hostpath_provisioner()
-
-##################################################################################
-# Deploy Containerized Data Importer (CDI)
-def run_cdi():
-    if cdi_enabled:
-        ns_name = "cdi"
-        cdi_version = config_cdi.get('version') or None
-
-        cdi = deploy_cdi(
-            depends,
-            cdi_version,
-            k8s_provider
-        )
-
-        versions["cdi"] = {"enabled": cdi_enabled, "version": cdi[0]}
-        cdi_release = cdi[1]
-
-        safe_append(depends, cdi_release)
-
-        return cdi, cdi_release
-    return None, None
-
-cdi, cdi_release = run_cdi()
 
 ##################################################################################
 # Deploy Prometheus
@@ -373,7 +197,11 @@ def run_kubernetes_dashboard():
             k8s_provider
         )
 
-        versions["kubernetes_dashboard"] = {"enabled": kubernetes_dashboard_enabled, "version": kubernetes_dashboard[0]}
+        versions["kubernetes_dashboard"] = {
+            "enabled": kubernetes_dashboard_enabled,
+            "version": kubernetes_dashboard[0]
+        }
+
         kubernetes_dashboard_release = kubernetes_dashboard[1]
 
         safe_append(depends, kubernetes_dashboard_release)
@@ -398,13 +226,8 @@ def run_openunison():
 
         enabled = {}
 
-        if kubevirt_enabled:
-            enabled["kubevirt"] = {"enabled": kubevirt_enabled}
-
         if prometheus_enabled:
             enabled["prometheus"] = {"enabled": prometheus_enabled}
-
-        pulumi.export("enabled", enabled)
 
         openunison = deploy_openunison(
             depends,
@@ -432,47 +255,13 @@ def run_openunison():
 openunison, openunison_release = run_openunison()
 
 ##################################################################################
-# Deploy Rook Ceph
-def run_rook_ceph():
-    deploy_ceph = config.get_bool('ceph.enabled') or False
-    if deploy_ceph:
-        rook_operator = deploy_rook_operator(
-            "kargo",
-            k8s_provider,
-            kubernetes_distribution,
-            "kargo",
-            "rook-ceph"
-        )
-        return rook_operator
-    return None
-
-rook_operator = run_rook_ceph()
-
-##################################################################################
-# Deploy Kubevirt Manager
-def run_kubevirt_manager():
-    kubevirt_manager_enabled = config.get_bool('kubevirt_manager.enabled') or False
-    if kubevirt_manager_enabled:
-        kubevirt_manager = deploy_ui_for_kubevirt(
-            "kargo",
-            k8s_provider,
-            kubernetes_distribution,
-            "kargo",
-            "kubevirt_manager"
-        )
-        pulumi.export('kubevirt_manager', kubevirt_manager)
-        return kubevirt_manager
-    return None
-
-kubevirt_manager = run_kubevirt_manager()
-
-##################################################################################
 # Deploy Ubuntu VM
 def run_ubuntu_vm():
     if vm_enabled:
 
         # Get the SSH Public Key string from Pulumi Config if it exists
         # Otherwise, read the SSH Public Key from the local filesystem
+        # TODO: Add user prompt before reading the SSH Public Key from the local filesystem
         ssh_pub_key = config.get("ssh_pub_key")
         if not ssh_pub_key:
             # Get the SSH public key

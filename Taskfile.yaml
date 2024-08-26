@@ -4,8 +4,9 @@ dotenv:
   - .env
 
 vars:
-  deployment: "{{.DEPLOYMENT | default `ci`}}"
-  project: "{{.PROJECT | default `kargo`}}"
+  cluster_name: "konductor"
+  deployment: "{{.DEPLOYMENT | default `dev`}}"
+  project: "{{.PROJECT | default `konductor`}}"
   organization: "{{.ORGANIZATION | default .GITHUB_USER}}"
   pulumi_dir: "{{.PWD}}/.pulumi"
   kube_dir: "{{.PWD}}/.kube"
@@ -14,7 +15,6 @@ vars:
   talos_dir: "{{.PWD}}/.talos"
   talos_patch: "{{.talos_dir}}/patch/cluster.yaml"
   talos_config_file: "{{.talos_dir}}/manifest/talosconfig"
-  cluster_name: "talos-kargo-docker"
   exposed_ports: "30590:30590/tcp"
   memory: "8192"
   arch:
@@ -46,7 +46,7 @@ tasks:
   init:
     desc: "Initialize directories and configuration files."
     cmds:
-      - mkdir -p .kube .pulumi .talos
+      - mkdir -p .kube .pulumi .talos/{manifest,patch,secrets}
       - touch {{.kube_config_file}} {{.talos_config_file}}
       - chmod 600 {{.kube_config_file}} {{.talos_config_file}}
 
@@ -123,12 +123,11 @@ tasks:
   configure:
     desc: "Configure Pulumi stack settings."
     cmds:
-      - source .envrc && pulumi stack select --create {{.pulumi_stack_identifier}} || true
-      - source .envrc && pulumi config set --path kubernetes.distribution talos
+      - source .envrc && pulumi stack select --create {{.pulumi_stack_identifier}}
       - source .envrc && pulumi config set --path kubernetes.context admin@{{.cluster_name}}
       - source .envrc && pulumi config set --path kubernetes.kubeconfig {{.kube_config_file}}
+      - source .envrc && pulumi config set --path kubernetes.distribution talos
       - source .envrc && pulumi config set --path cilium.enabled false
-      - source .envrc && pulumi config set --path multus.enabled false
       - source .envrc && pulumi config set --path vm.enabled false
 
   iac-deploy:
