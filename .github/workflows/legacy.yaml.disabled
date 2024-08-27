@@ -1,0 +1,119 @@
+# This GitHub Workflow will run on every push to the repository
+# and will test the Kargo codebase on a Kind Kubernetes cluster.
+name: CI - Kargo on Kind
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "devcontainer/**"
+      - ".devcontainer/**"
+      - ".pulumi/**"
+      - ".talos/**"
+      - ".kube/**"
+      - "docs/**"
+      - "**.md"
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - "devcontainer/**"
+      - ".devcontainer/**"
+      - ".pulumi/**"
+      - ".talos/**"
+      - ".kube/**"
+      - "docs/**"
+      - "**.md"
+  schedule:
+    - cron: "0 2 * * *"
+
+jobs:
+  ci-kargo-kind:
+    runs-on: ubuntu-latest
+
+    steps:
+      - id: checkout
+        name: ✨ Checkout ✨
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - id: kind-kubernetes
+        name: 🔨 Kind Kubernetes 🔨
+        uses: helm/kind-action@v1.10.0
+        env:
+          ACTIONS_STEP_DEBUG: false
+          KUBECONFIG: .kube/config
+        with:
+          wait: 30s
+          cluster_name: kargo
+          config: hack/kind.yaml
+          ignore_failed_clean: true
+
+      - id: pulumi-install
+        name: 📦️ Pulumi Install 📦️
+        uses: pulumi/actions@v5
+
+      - id: pulumi-up
+        name: 🚀 Pulumi Up 🚀
+        uses: pulumi/actions@v5
+        env:
+          ACTIONS_STEP_DEBUG: false
+          KUBECONFIG: .kube/config
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          PULUMI_CONFIG_PASSPHRASE: foobarbaz
+          PULUMI_BACKEND_URL: file://./.pulumi
+        with:
+          command: up
+          refresh: true
+          upsert: true
+          stack-name: /kargo/ci
+          secrets-provider: passphrase
+          cloud-url: file://./.pulumi
+          work-dir: ./
+
+      - name: 🕚 Wait for pods 🕛
+        uses: CodingNagger/minikube-wait-action@v1.1.1
+        env:
+          ACTIONS_STEP_DEBUG: false
+          KUBECONFIG: .kube/config
+        with:
+          max-retry-attempts: 12
+          retry-delay: 10
+
+      - id: kind-destroy
+        if: always()
+        name: 🛠️ Pulumi Config 🛠️
+        env:
+          ACTIONS_STEP_DEBUG: true
+          KUBECONFIG: .kube/config
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          PULUMI_CONFIG_PASSPHRASE: foobarbaz
+          PULUMI_BACKEND_URL: file://./.pulumi
+        run: |
+          make clean
+          make clean-all
+
+      - id: pulumi-destroy
+        name: 💣 Pulumi Destroy 💣
+        uses: pulumi/actions@v5
+        continue-on-error: true
+        if: always()
+        env:
+          ACTIONS_STEP_DEBUG: false
+          KUBECONFIG: .kube/config
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          PULUMI_CONFIG_PASSPHRASE: foobarbaz
+          PULUMI_BACKEND_URL: file://./.pulumi
+          PULUMI_K8S_DELETE_UNREACHABLE: true
+        with:
+          command: destroy
+          refresh: true
+          stack-name: organization/kargo/ci
+          secrets-provider: passphrase
+          cloud-url: file://./.pulumi
+          work-dir: ./
