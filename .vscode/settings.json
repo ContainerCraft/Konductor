@@ -1,10 +1,25 @@
 {
-  "telemetry.enableTelemetry": false,
-  "window.titleBarStyle": "custom",
-  "window.title": "${localWorkspaceFolderBasename}${separator}${containerName}${separator}${profileName}${separator}${activeEditorShort}",
+  "window.title": "${localWorkspaceFolderBasename}${separator}${activeEditorShort}",
   "window.density.editorTabHeight": "compact",
   "search.defaultViewMode": "list",
-  "vim.disableExtension": false,
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/bower_components": true,
+    "**/vendor": true,
+    "**/.git": true,
+    "**/.svn": true,
+    "**/.hg": true,
+    "**/CVS": true,
+    "**/.DS_Store": true,
+    "**/Thumbs.db": true,
+    "**/.gitkeep": true,
+    "**/.gitignore": true,
+    "**/.gitattributes": true,
+    "**/.editorconfig": true,
+    "**/.vscode": true,
+    "**/.vscode-test": true
+  },
+  "vim.disableExtension": true,
   "vim.useSystemClipboard": true,
   "vim.useCtrlKeys": true,
   "vim.easymotion": true,
@@ -33,20 +48,18 @@
     "<C-a>": false,
     "<C-f>": false
   },
-  "extensions.experimental.affinity": {
-    "vscodevim.vim": 1
-  },
-  "zenmode.toggle": true,
-  "zenmode.hideTabs": true,
-  "zenmode.fullScreen": true,
-  "zenmode.hideMinimap": true,
-  "zenmode.centerLayout": false,
-  "zenmode.hideStatusBar": false,
-  "zenmode.hideActivityBar": false,
-  "zenmode.hideLineNumbers": true,
-  "zenmode.silentNotifications": true,
-  "zenmode.hideLineDecorations": false,
-  "zenmode.hideCursorInOverviewRuler": true,
+  "extensions.experimental.affinity.vscodevim.vim": 1,
+  "zenMode.restore": false,
+  "zenMode.fullScreen": false,
+  "zenMode.hideMinimap": true,
+  "zenMode.centerLayout": false,
+  "zenMode.hideStatusBar": true,
+  "zenMode.hideActivityBar": true,
+  "zenMode.showTabs": "multiple",
+  "zenMode.hideLineNumbers": false,
+  "zenMode.silentNotifications": true,
+  "zenMode.hideLineDecorations": false,
+  "zenMode.hideCursorInOverviewRuler": true,
   "editor.tabSize": 4,
   "editor.fontSize": 14,
   "editor.autoSave": "onFocusChange",
@@ -64,7 +77,6 @@
   "editor.tabDecoration": true,
   "editor.fontLigatures": true,
   "editor.tabCloseButton": "right",
-  "editor.minimap.enabled": false,
   "editor.openPositioning": "right",
   "editor.restoreViewState": true,
   "editor.renderWhitespace": "all",
@@ -78,16 +90,19 @@
   "editor.autoImportCompletions": true,
   "editor.scrollBeyondLastLine": true,
   "editor.highlightModifiedTabs": true,
-  "editor.inlineSuggest.enabled": true,
-  "editor.parameterHints.enabled": true,
   "editor.trimTrailingWhitespace": true,
   "editor.lineHighlightBackground": "#30BFBF",
+  "editor.inlineSuggest.enabled": true,
+  "editor.parameterHints.enabled": true,
   "editor.fontFamily": "'FiraMono Nerd Font Mono', monospace",
-  "editor.gotoLocation.multipleReferences": "goto",
-  "editor.gotoLocation.multipleDefinitions": "goto",
-  "editor.gotoLocation.multipleDeclarations": "goto",
-  "editor.gotoLocation.multipleImplementations": "goto",
-  "editor.gotoLocation.multipleTypeDefinitions": "goto",
+  "editor.minimap.enabled": false,
+  "editor.gotoLocation": {
+    "multipleReferences": "goto",
+    "multipleDefinitions": "goto",
+    "multipleDeclarations": "goto",
+    "multipleImplementations": "goto",
+    "multipleTypeDefinitions": "goto"
+  },
   "editor.scrollbar.alwaysConsumeMouseWheel": true,
   "editor.bracketPairColorization.enabled": true,
   "files.encoding": "utf8",
@@ -105,18 +120,16 @@
   "git.ignoreLegacyWarning": true,
   "git.autoRepositoryDetection": "openEditors",
   "git.defaultCloneParentDirectory": "/workspaces",
+  "git.path": "/usr/local/bin/git",
   "git.scanRepositories": [
     "/workspaces/konductor",
     "/workspaces/devcontainer",
     "/workspaces/kargo"
   ],
-  "git.path": "/usr/local/bin/git",
   "go.testTags": "all",
   "go.vetOnSave": "off",
   "go.buildTags": "all",
   "go.lintOnSave": "off",
-  "go.testOnSave": "off",
-  "go.buildOnSave": "off",
   "go.formatTool": "goimports",
   "go.testEnvVars": {
     "GOFLAGS": "-count=1"
@@ -126,28 +139,28 @@
   ],
   "terminal.integrated.fontSize": 14,
   "terminal.integrated.scrollback": 10000,
-  "terminal.integrated.cursorStyle": "outline",
-  "terminal.integrated.hideOnStartup": false,
+  "terminal.integrated.cursorStyle": "block",
+  "terminal.integrated.hideOnStartup": "always",
   "terminal.integrated.cursorBlinking": true,
   "terminal.integrated.copyOnSelection": true,
   "terminal.integrated.sendKeybindingsToShell": false,
   "terminal.integrated.cursorStyleInactive": "line",
   "terminal.integrated.fontFamily": "FiraMono Nerd Font Mono",
-  "terminal.integrated.commandsToSkipShell": [],
   "terminal.integrated.scrollbar.alwaysConsumeMouseWheel": true,
-  "terminal.integrated.shell.linux": "/usr/bin/fish",
-  "vs-kubernetes.vs-kubernetes.namespace": "*",
-  "vs-kubernetes.vs-kubernetes.outputFormat": "yaml",
-  "vs-kubernetes.vs-kubernetes.helm-path": "/usr/local/bin/helm",
-  "vs-kubernetes.vs-kubernetes.kubeconfig": "/home/vscode/.kube/config",
-  "vs-kubernetes.vs-kubernetes.kubectl-path": "/usr/local/bin/kubectl",
-  "vs-kubernetes.vs-kubernetes.knownKubeconfigs": [
+  "terminal.integrated.shell.linux": "/usr/bin/bash",
+  "terminal.integrated.commandsToSkipShell": [],
+  "vs-kubernetes.namespace": "*",
+  "vs-kubernetes.outputFormat": "yaml",
+  "vs-kubernetes.helm-path": "/usr/local/bin/helm",
+  "vs-kubernetes.kubeconfig": "/home/vscode/.kube/config",
+  "vs-kubernetes.kubectl-path": "/usr/local/bin/kubectl",
+  "vs-kubernetes.knownKubeconfigs": [
     "/workspaces/*/.kube/config",
     "/home/vscode/*/.kube/config",
     "/home/vscode/.kube/config"
   ],
   "remote.restoreForwardedPorts": true,
-  "remote.localPortHost": "127.0.0.1",
+  "remote.localPortHost": "localhost",
   "2gua.rainbow-brackets": true,
   "indentRainbow.indicatorStyle": "light",
   "indentRainbow.colorOnWhiteSpaceOnly": true,
@@ -174,7 +187,7 @@
     "plaintext"
   ],
   "workbench.colorTheme": "Cyberpunk",
-  "explorer.openEditors.visible": 0,
+  "explorer.openEditors.visible": 1,
   "explorer.autoRevealExclude": {
     "**/.git/objects/**": true,
     "**/.git/subtree-cache/**": true,
@@ -217,8 +230,54 @@
     "editor.scrollbar.alwaysConsumeMouseWheel": true
   },
   "editor.guides.highlightActiveIndentation": true,
-  "zoma.vscode-auto-open-workspace": {
-    "enableAutoOpenIfSingleWorkspace": false,
-    "enableAutoOpenAlwaysFirst": false
-  }
+  "zoma.vscode-auto-open-workspace.enableAutoOpenIfSingleWorkspace": false,
+  "zoma.vscode-auto-open-workspace.enableAutoOpenAlwaysFirst": false,
+  "settings.cycle": [
+    {
+      "id": "zenOn",
+      "overrideWorkspaceSettings": true,
+      "values": [
+        {
+          "workbench.activityBar.visible": false,
+          "workbench.statusBar.visible": false,
+          "workbench.editor.showTabs": false,
+          "window.menuBarVisibility": "hidden",
+          "workbench.layoutControl.enabled": false,
+          "breadcrumbs.enabled": false,
+          "workbench.tips.enabled": false,
+          "editor.overviewRulerBorder": false,
+          "window.commandCenter": false,
+          "workbench.sideBar.location": "right",
+          "window.title": "${folderName}${separator}${profileName}",
+          "workbench.startupEditor": "none",
+          "editor.minimap.enabled": false,
+          "workbench.editor.decorations.colors": false,
+          "workbench.editor.decorations.badges": false
+        }
+      ]
+    },
+    {
+      "id": "zenOff",
+      "overrideWorkspaceSettings": true,
+      "values": [
+        {
+          "workbench.activityBar.visible": true,
+          "workbench.statusBar.visible": true,
+          "workbench.editor.showTabs": true,
+          "window.menuBarVisibility": "classic",
+          "workbench.layoutControl.enabled": true,
+          "breadcrumbs.enabled": true,
+          "workbench.tips.enabled": false,
+          "editor.overviewRulerBorder": true,
+          "window.commandCenter": true,
+          "workbench.sideBar.location": "right",
+          "window.title": "${folderName}${separator}${profileName}",
+          "workbench.startupEditor": "none",
+          "editor.minimap.enabled": false,
+          "workbench.editor.decorations.colors": false,
+          "workbench.editor.decorations.badges": false
+        }
+      ]
+    }
+  ]
 }

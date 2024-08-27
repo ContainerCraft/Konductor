@@ -7,6 +7,7 @@ from pulumi_kubernetes import Provider
 from src.lib.kubernetes_api_endpoint import KubernetesApiEndpointIp
 from src.cilium.deploy import deploy_cilium
 from src.cert_manager.deploy import deploy_cert_manager
+from src.multus.deploy import deploy_multus
 from src.openunison.deploy import deploy_openunison
 from src.prometheus.deploy import deploy_prometheus
 from src.kubernetes_dashboard.deploy import deploy_kubernetes_dashboard
@@ -28,6 +29,10 @@ kubernetes_config = config.get_object("kubernetes") or {}
 
 # Get Kubeconfig from Pulumi ESC Config
 kubeconfig = kubernetes_config.get("kubeconfig")
+
+# open the kubeconfig file, read contents, and print contents to stdout
+#with open(kubeconfig, 'r') as f:
+#    print(f.read())
 
 # Require Kubernetes context set explicitly
 kubernetes_context = kubernetes_config.get("context")
@@ -57,9 +62,15 @@ def get_module_config(module_name):
 # Get configurations and enabled flags
 config_cilium, cilium_enabled = get_module_config('cilium')
 config_cert_manager, cert_manager_enabled = get_module_config('cert_manager')
+config_kubevirt, kubevirt_enabled = get_module_config('kubevirt')
+config_cdi, cdi_enabled = get_module_config('cdi')
+config_multus, multus_enabled = get_module_config('multus')
 config_prometheus, prometheus_enabled = get_module_config('prometheus')
 config_openunison, openunison_enabled = get_module_config('openunison')
+config_hostpath_provisioner, hostpath_provisioner_enabled = get_module_config('hostpath_provisioner')
+config_cnao, cnao_enabled = get_module_config('cnao')
 config_kubernetes_dashboard, kubernetes_dashboard_enabled = get_module_config('kubernetes_dashboard')
+config_kubevirt_manager, kubevirt_manager_enabled = get_module_config('kubevirt_manager')
 config_vm, vm_enabled = get_module_config('vm')
 
 ##################################################################################
@@ -96,6 +107,7 @@ def safe_append(depends, resource):
         depends.append(resource)
 
 ##################################################################################
+# Fetch the Cilium Version
 # Deploy Cilium
 def run_cilium():
     if cilium_enabled:
@@ -128,6 +140,7 @@ cilium_version, cilium_release = run_cilium()
 versions["cilium"] = {"enabled": cilium_enabled, "version": cilium_version}
 
 ##################################################################################
+# Fetch the Cert Manager Version
 # Deploy Cert Manager
 def run_cert_manager():
     if cert_manager_enabled:
@@ -154,6 +167,38 @@ def run_cert_manager():
     return None, None, None
 
 cert_manager, cert_manager_release, cert_manager_selfsigned_cert = run_cert_manager()
+
+##################################################################################
+# Deploy Multus
+def run_multus():
+    if multus_enabled:
+        ns_name = "multus"
+        multus_version = config_multus.get('version') or "master"
+        bridge_name = config_multus.get('bridge_name') or "br0"
+
+        custom_depends = []
+
+        if cilium_enabled:
+            safe_append(custom_depends, cilium_release)
+        if cert_manager_enabled:
+            safe_append(custom_depends, cert_manager_release)
+
+        multus = deploy_multus(
+            custom_depends,
+            multus_version,
+            bridge_name,
+            k8s_provider
+        )
+
+        versions["multus"] = {"enabled": multus_enabled, "version": multus[0]}
+        multus_release = multus[1]
+
+        safe_append(depends, multus_release)
+
+        return multus, multus_release
+    return None, None
+
+multus, multus_release = run_multus()
 
 ##################################################################################
 # Deploy Prometheus
@@ -197,11 +242,7 @@ def run_kubernetes_dashboard():
             k8s_provider
         )
 
-        versions["kubernetes_dashboard"] = {
-            "enabled": kubernetes_dashboard_enabled,
-            "version": kubernetes_dashboard[0]
-        }
-
+        versions["kubernetes_dashboard"] = {"enabled": kubernetes_dashboard_enabled, "version": kubernetes_dashboard[0]}
         kubernetes_dashboard_release = kubernetes_dashboard[1]
 
         safe_append(depends, kubernetes_dashboard_release)
@@ -226,8 +267,13 @@ def run_openunison():
 
         enabled = {}
 
+        if kubevirt_enabled:
+            enabled["kubevirt"] = {"enabled": kubevirt_enabled}
+
         if prometheus_enabled:
             enabled["prometheus"] = {"enabled": prometheus_enabled}
+
+        pulumi.export("enabled", enabled)
 
         openunison = deploy_openunison(
             depends,
@@ -261,7 +307,6 @@ def run_ubuntu_vm():
 
         # Get the SSH Public Key string from Pulumi Config if it exists
         # Otherwise, read the SSH Public Key from the local filesystem
-        # TODO: Add user prompt before reading the SSH Public Key from the local filesystem
         ssh_pub_key = config.get("ssh_pub_key")
         if not ssh_pub_key:
             # Get the SSH public key

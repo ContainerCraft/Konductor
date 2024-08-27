@@ -14,8 +14,8 @@ config:
       pulumi:template: konductor
   kubernetes:
     value:
-      context: konductor
-      kubeconfig: .kube/config
+      context: admin@konductor
+      kubeconfig: ../.kube/config
   cert_manager:
     value:
       enabled: true
