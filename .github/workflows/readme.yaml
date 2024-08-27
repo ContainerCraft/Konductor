@@ -1,0 +1,72 @@
+# This Github Workflow will run on every push to the repository
+# and will test and validate the Kargo codebase using Kind Kubernetes.
+name: CI Testing - Konductor on Talos
+
+on: push
+
+jobs:
+  readme:
+    runs-on: ubuntu-latest
+
+    container:
+      image: ghcr.io/containercraft/konductor:latest
+      options: --user runner --security-opt seccomp=unconfined
+
+    steps:
+      - id: checkout
+        name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - id: list
+        name: List Runme Commands
+        run: |
+          runme list
+
+      - id: login
+        name: Login to Cloud Accounts
+        run: |
+          runme run login
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - id: configure
+        name: Configure Kargo Deployment
+        run: |
+          export ORGANIZATION="${GITHUB_USER:-${GITHUB_REPOSITORY_OWNER:-}}"
+          runme run configure
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_USER: ${{ github.actor }}
+          GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
+
+      #     - id: kubernetes
+      #       name: Deploy Kubernetes
+      #       run: |
+      #         runme run kubernetes
+
+      #     - id: deploy
+      #       name: Deploy Kargo Platform on Kubernetes
+      #       run: |
+      #         runme run deploy
+      #       env:
+      #         PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+      #         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      #     - name: Debug Build
+      #       uses: stateful/vscode-server-action@v1
+      #       if: failure()
+      #       with:
+      #         timeout: "300000"
+
+      - id: clean
+        name: Clean Up Kubernetes & Kargo Deployment
+        if: failure() || success()
+        run: |
+          runme run clean
+        env:
+          PULUMI_ACCESS_TOKEN: ${{ secrets.PULUMI_ACCESS_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
