@@ -1,23 +1,25 @@
 version: "3"
 
+# Load environment variables from the specified dotenv files
 dotenv:
   - .env
 
+# Define variables used throughout the Taskfile
 vars:
-  cluster_name: "konductor"
-  deployment: "{{.DEPLOYMENT | default `dev`}}"
-  project: "{{.PROJECT | default `konductor`}}"
-  organization: "{{.ORGANIZATION | default .GITHUB_USER}}"
-  pulumi_dir: "{{.PWD}}/.pulumi"
-  kube_dir: "{{.PWD}}/.kube"
-  kube_config_file: "{{.kube_dir}}/config"
-  pulumi_stack_identifier: "{{.organization}}/{{.project}}/{{.deployment}}"
-  talos_dir: "{{.PWD}}/.talos"
-  talos_patch: "{{.talos_dir}}/patch/cluster.yaml"
-  talos_config_file: "{{.talos_dir}}/manifest/talosconfig"
-  exposed_ports: "30590:30590/tcp"
-  memory: "8192"
-  arch:
+  cluster_name: "konductor" # Default cluster name
+  deployment: "{{.DEPLOYMENT | default `dev`}}" # Deployment environment (default: dev)
+  project: "{{.PROJECT | default `konductor`}}" # Project name (default: konductor)
+  organization: "{{.ORGANIZATION | default .GITHUB_USER}}" # Organization name (default: GitHub user)
+  pulumi_dir: "{{.PWD}}/.pulumi" # Directory for Pulumi configuration
+  kube_dir: "{{.PWD}}/.kube" # Directory for Kubernetes configuration
+  kube_config_file: "{{.kube_dir}}/config" # Path to the Kubernetes config file
+  pulumi_stack_identifier: "{{.organization}}/{{.project}}/{{.deployment}}" # Identifier for the Pulumi stack
+  talos_dir: "{{.PWD}}/.talos" # Directory for Talos configuration
+  talos_patch: "{{.talos_dir}}/patch/cluster.yaml" # Path to the Talos patch file
+  talos_config_file: "{{.talos_dir}}/manifest/talosconfig" # Path to the Talos config file
+  exposed_ports: "30590:30590/tcp" # Ports to expose for the Kubernetes cluster
+  memory: "8192" # Memory allocation for the Kubernetes cluster (in MB)
+  arch: # Architecture detection (amd64 or arm64)
     sh: |
       arch=$(uname -m)
       if [ "$arch" = "x86_64" ]; then
@@ -31,18 +33,21 @@ vars:
 tasks:
   ##################################################################################
   # Meta & Utility Tasks
-  # TODO: @RUNME remove `source .envrc` when runme support lands for direnv
+  ##################################################################################
 
+  # Default task that runs all the necessary steps to set up and configure the Kargo Kubevirt Kubernetes Platform
   default:
     desc: "Run all tasks to set up and configure a Kargo Kubevirt Kubernetes Platform."
     cmds:
       - task: deploy
 
+  # Task to print environment variables, useful for debugging
   printenv:
     desc: "Print environment variables."
     cmds:
       - /usr/bin/echo "{{.kube_dir}}"
 
+  # Task to initialize necessary directories and configuration files
   init:
     desc: "Initialize directories and configuration files."
     cmds:
@@ -50,6 +55,7 @@ tasks:
       - touch {{.kube_config_file}} {{.talos_config_file}}
       - chmod 600 {{.kube_config_file}} {{.talos_config_file}}
 
+  # Task to authenticate with Pulumi and install required plugins
   login:
     desc: "Authenticate with Pulumi."
     cmds:
@@ -57,35 +63,41 @@ tasks:
       - source .envrc && pulumi login
       - source .envrc && pulumi install
 
+  # Task to deploy the Kubernetes and Kargo Kubevirt PaaS Infrastructure as Code (IaC)
   deploy:
-    desc: "Deploy Kubernetes + Kargo Kubevirt PaaS IaC"
+    desc: "Deploy Kubernetes + Kargo Kubevirt PaaS IaC."
     deps:
       - iac-cancel
     cmds:
       - task: iac-deploy
 
+  # Task to wait until all Kubernetes pods in the cluster are ready
   all-pods-ready:
     desc: "Wait for all Kubernetes pods in the cluster to be ready."
     cmds:
       - bash -c 'until [ "$(kubectl get pods --all-namespaces --no-headers | grep -v "Running\\|Completed\\|Succeeded" | wc -l)" -eq 0 ]; do echo "Waiting for pods..."; sleep 5; done'
       - kubectl get pods --all-namespaces --show-labels --kubeconfig {{.kube_config_file}}
 
+  # Task to clean up and destroy all Pulumi and Kubernetes resources
   destroy:
     desc: "Clean up and destroy all Pulumi and Kubernetes resources."
     cmds:
       - task: destroy
 
+  # Task to test GitHub Actions locally using the 'act' tool
   act:
     desc: "Test GitHub Actions locally using 'act'."
     cmds:
       - act --container-options "--privileged" --rm --var GITHUB_TOKEN=${GITHUB_TOKEN} --var PULUMI_ACCESS_TOKEN=${PULUMI_ACCESS_TOKEN}
 
+  # Task to clean up all local Kargo resources
   clean:
     desc: "Clean up all local Kargo resources."
     cmds:
       - task: iac-cancel
       - task: iac-clean
 
+  # Task to clean up all local Kargo resources and additional files
   clean-all:
     desc: "Clean up all local Kargo resources."
     deps:
@@ -96,6 +108,7 @@ tasks:
       - rm -rf .talos/manifest/* .kube/config .ssh/known_hosts 2>/dev/null || true
       - rm ${HOME}/.pulumi ${HOME}/.kube ${HOME}/.talos 2>/dev/null || true
 
+  # Task to stop the GitHub Codespace
   stop:
     desc: "Stop the GitHub Codespace."
     cmds:
@@ -104,22 +117,27 @@ tasks:
 
   ##################################################################################
   # Demo VM Tasks
+  ##################################################################################
 
+  # Task to deploy an Ubuntu VM using Pulumi
   vm-deploy:
-    desc: "Enable the built in pulumi Ubuntu vm iac feature"
+    desc: "Enable the built-in Pulumi Ubuntu VM IaC feature."
     cmds:
       - source .envrc && pulumi config set --path vm.enabled true
       - source .envrc && pulumi up --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
 
+  # Task to destroy the deployed Ubuntu VM using Pulumi
   vm-destroy:
-    desc: "Enable the built in pulumi Ubuntu vm iac feature"
+    desc: "Disable the built-in Pulumi Ubuntu VM IaC feature."
     cmds:
       - source .envrc && pulumi config set --path vm.enabled false
       - source .envrc && pulumi up --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
 
   ##################################################################################
   # Pulumi Tasks
+  ##################################################################################
 
+  # Task to configure Pulumi stack settings
   configure:
     desc: "Configure Pulumi stack settings."
     cmds:
@@ -130,6 +148,7 @@ tasks:
       - source .envrc && pulumi config set --path cilium.enabled false
       - source .envrc && pulumi config set --path vm.enabled false
 
+  # Task to deploy Pulumi infrastructure
   iac-deploy:
     desc: "Deploy Pulumi infrastructure."
     cmds:
@@ -139,6 +158,7 @@ tasks:
       - source .envrc && pulumi up --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
       - task: all-pods-ready
 
+  # Task to destroy Pulumi infrastructure
   iac-destroy:
     desc: "Destroy Pulumi infrastructure."
     cmds:
@@ -148,11 +168,13 @@ tasks:
         pulumi down --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}} || true
         pulumi down --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
 
+  # Task to cancel the Pulumi update process
   iac-cancel:
     desc: "Cancel the Pulumi update."
     cmds:
       - source .envrc && pulumi cancel --yes --stack {{.pulumi_stack_identifier}} 2>/dev/null || true
 
+  # Task to clean up all Pulumi resources
   iac-clean:
     desc: "Clean up all Pulumi resources."
     cmds:
@@ -161,12 +183,15 @@ tasks:
 
   ##################################################################################
   # Talos Tasks
+  ##################################################################################
 
+  # Task to generate Talos cluster configuration
   kubernetes-gen-config:
     desc: "Generate Talos cluster configuration."
     cmds:
       - talosctl gen config {{.project}} https://10.0.5.2:6443 --config-patch @{{.talos_patch}} --force --output .talos/manifest --context {{.cluster_name}}
 
+  # Task to deploy a Kubernetes cluster using Talos
   kubernetes-deploy:
     desc: "Deploy Kubernetes cluster."
     cmds:
@@ -184,6 +209,7 @@ tasks:
           --name {{.cluster_name}} \
           --workers 0 --crashdump
 
+  # Task to wait until the Talos cluster control plane components are ready
   kubernetes-ready:
     desc: "Wait for the Talos cluster control plane components to be ready."
     cmds:
@@ -191,12 +217,14 @@ tasks:
       - bash -c 'until kubectl --kubeconfig {{.kube_config_file}} wait --for=condition=Ready pod -l k8s-app=kube-controller-manager --namespace=kube-system --timeout=180s; do echo "Waiting for kube-controller-manager..."; sleep 5; done' || true
       - bash -c 'until kubectl --kubeconfig {{.kube_config_file}} wait --for=condition=Ready pod -l k8s-app=kube-apiserver --namespace=kube-system --timeout=180s; do echo "Waiting for kube-apiserver..."; sleep 5; done' || true
 
+  # Task to clean up all Kubernetes resources deployed by Talos
   kubernetes-clean:
     desc: "Clean up all Kubernetes resources."
     cmds:
       - talosctl cluster destroy --name {{.cluster_name}} 2>/dev/null || true
       - docker rm --force {{.cluster_name}}-controlplane-1 2>/dev/null || true
 
+  # Task to complete setup and configuration of a Kubernetes cluster
   kubernetes:
     desc: "Complete setup and configuration of a Kubernetes cluster."
     deps:
