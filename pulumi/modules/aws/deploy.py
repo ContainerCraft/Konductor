@@ -1,131 +1,193 @@
-# src/aws/deploy.py
-# Description: generic boilerplate code not currently active in the project.
-# This code is provided as a reference for future implementation.
-# Key features include utilization of generate_compliance_tags, generate_compliance_labels, and generate_compliance_annotations functions from src/compliance/utils.py.
+# pulumi/modules/aws/deploy.py
+
+"""
+AWS Module
+
+This module defines the deployment logic for the AWS module.
+
+Configurable resources supported include:
+    - AWS Organization
+    - Organizational Units, AWS Control Tower,
+    - IAM
+      - policy
+      - roles
+      - users
+      - groups
+      - permissions
+
+The module extracts all configuration from the Pulumi configuration file (Pulumi.aws.yaml) and
+enforces type checking and safe typing.
+
+The module calls the following functions:
+    - deploy: Defines the function to deploy the AWS module.
+    - create_organization: Defines the function to create the AWS organization.
+    - create_organizational_units: Defines the function to create the AWS organizational units.
+    - create_iam_user: Defines the function to create the IAM user.
+    - setup_control_tower: Defines the function to setup Control Tower.
+
+The module uses the following functions:
+
+    - load_aws_config: Defines the function to load the configuration for the AWS module.
+    - load_tenant_account_configs: Defines the function to load the tenant account configuration.
+    - create_organization: Defines the function to create the AWS organization.
+    - create_organizational_units: Defines the function to create the AWS organizational units.
+    - create_iam_user: Defines the function to create the IAM user.
+    - setup_control_tower: Defines the function to setup Control Tower.
+
+The module uses the following classes:
+
+    - pulumi.Provider: Defines the Pulumi provider for AWS.
+    - pulumi.ResourceOptions: Defines the Pulumi resource options.
+    - pulumi.export: Defines the Pulumi export function.
+    - pulumi_aws.Provider: Defines the Pulumi AWS provider.
+
+The module uses the following resources:
+
+    - aws.Provider: Defines the AWS provider.
+    - aws.OrganizationsOrganization: Defines the AWS organization.
+    - aws.OrganizationsOrganizationalUnit: Defines the AWS organizational unit.
+    - aws.iam.User: Defines the AWS IAM user.
+    - aws.iam.Group: Defines the AWS IAM group.
+    - aws.iam.Policy: Defines the AWS IAM policy.
+    - aws.iam.Role: Defines the AWS IAM role.
+    - aws.iam.RolePolicyAttachment: Defines the AWS IAM role policy attachment.
+    - aws.s3.Bucket: Defines the AWS S3 bucket.
+    - aws.s3.BucketPolicy: Defines the AWS S3 bucket policy.
+    - aws.organizations.Account: Defines the AWS organization account.
+
+The module uses the following variables:
+
+    - aws_config: Defines the AWS configuration.
+    - tenant_account_configs: Defines the tenant account configuration.
+    - provider: Defines the AWS provider.
+    - organization: Defines the AWS organization.
+    - ou_name: Defines the organizational unit name.
+    - ou_resources: Defines the organizational unit resources.
+
+The module returns the following:
+
+    - pulumi.export: Exports the outputs of the Pulumi stack.
+
+The module does the following:
+
+    - Loads the configuration for the AWS module.
+    - Loads the tenant account configuration.
+    - Checks if AWS deployment is enabled.
+    - Creates the AWS provider.
+    - Creates the AWS organization.
+    - Creates the AWS organizational units.
+    - Creates the IAM user.
+    - Sets up Control Tower.
+"""
+
+from typing import Dict, List
 
 import pulumi
-from pulumi import ResourceOptions
 import pulumi_aws as aws
-import pulumi_eks as eks
-import pulumi_kubernetes as k8s
+from pulumi import ResourceOptions, export, Config, Output
 
-# Global Pulumi settings
-stack_tags = {
-    "project": pulumi.get_project(),
-    "stack": pulumi.get_stack(),
-    "owner": "pulumi-user",
-}
+# Import type-safe classes from aws/types.py
+from .types import (
+    AWSConfig,
+    TenantAccountConfig,
+    ControlTowerConfig,
+    IAMUserConfig,
+    GlobalTags,
+)
 
-stack_labels = {
-    "environment": "testing",
-}
+# Import resource functions from aws/resources.py
+from .resources import (
+    load_aws_config,
+    load_tenant_account_configs,
+    create_organization,
+    create_organizational_units,
+    create_iam_users,
+    create_tenant_accounts,
+    deploy_tenant_resources,
+    assume_role_in_tenant_account,
+)
 
-pulumi.runtime.set_all_project_tags(stack_tags)
-pulumi.runtime.set_all_project_labels(stack_labels)
+# ---------------------
+# Main Deployment Function
+# ---------------------
 
-# AWS S3 Bucket with global tags
-s3_bucket = aws.s3.Bucket("nginxStorageBucket",
-    tags={
-        **stack_tags,
-        "Name": "nginxStorageBucket",
-        "Environment": "Dev",
+def deploy_aws_module():
+    """
+    Main function to deploy the AWS module.
+    """
+    # Load configurations
+    aws_config = load_aws_config()
+    tenant_configs = load_tenant_account_configs()
+
+    # Check if AWS module deployment is enabled
+    if not aws_config.enabled:
+        pulumi.log.info("AWS module deployment is disabled.")
+        return
+
+    # Global tags
+    global_tags = {
+        "Project": "Pulumi-AWS-Infrastructure",
+        "ManagedBy": "Pulumi",
     }
-)
 
-# AWS EKS Cluster with global tags
-eks_cluster = eks.Cluster("exampleCluster",
-    tags={
-        **stack_tags,
-        "Name": "exampleCluster",
-        "Environment": "Dev",
-    }
-)
+    # Create AWS provider
+    aws_provider = aws.Provider(
+        resource_name="aws_provider",
+        profile=aws_config.profile,
+        region=aws_config.region,
+    )
 
-# Kubernetes Persistent Volume
-persistent_volume = k8s.core.v1.PersistentVolume("nginxPv",
-    metadata=k8s.meta.v1.ObjectMetaArgs(
-        name="nginx-pv",
-        labels={
-            **stack_labels,
-            "type": "local",
-        }
-    ),
-    spec=k8s.core.v1.PersistentVolumeSpecArgs(
-        capacity={"storage": "1Gi"},
-        access_modes=["ReadWriteOnce"],
-        aws_elastic_block_store=k8s.core.v1.AWSElasticBlockStoreVolumeSourceArgs(
-            volume_id=s3_bucket.id.apply(lambda id: f"aws://{aws.region}/{id}"),
-            fs_type="ext4",
-        ),
-    ),
-    opts=ResourceOptions(parent=eks_cluster)
-)
+    # Create AWS Organization
+    organization = create_organization()
 
-# Kubernetes Persistent Volume Claim
-persistent_volume_claim = k8s.core.v1.PersistentVolumeClaim("nginxPvc",
-    metadata=k8s.meta.v1.ObjectMetaArgs(
-        name="nginx-pvc",
-        labels=stack_labels,
-    ),
-    spec=k8s.core.v1.PersistentVolumeClaimSpecArgs(
-        access_modes=["ReadWriteOnce"],
-        resources=k8s.core.v1.ResourceRequirementsArgs(
-            requests={"storage": "1Gi"},
-        ),
-    ),
-    opts=ResourceOptions(parent=eks_cluster)
-)
+    # Create Organizational Units
+    ou_resources = create_organizational_units(
+        organization=organization,
+        ou_names=[aws_config.control_tower.organizational_unit_name],
+    )
+    ou = ou_resources[aws_config.control_tower.organizational_unit_name]
 
-# Kubernetes Nginx Deployment with Persistent Storage
-nginx_deployment = k8s.apps.v1.Deployment("nginxDeployment",
-    metadata=k8s.meta.v1.ObjectMetaArgs(
-        name="nginx-deployment",
-        labels={
-            **stack_labels,
-            "app": "nginx",
-        }
-    ),
-    spec=k8s.apps.v1.DeploymentSpecArgs(
-        replicas=1,
-        selector=k8s.meta.v1.LabelSelectorArgs(
-            match_labels={
-                "app": "nginx",
-            }
-        ),
-        template=k8s.core.v1.PodTemplateSpecArgs(
-            metadata=k8s.meta.v1.ObjectMetaArgs(
-                labels={
-                    **stack_labels,
-                    "app": "nginx",
-                }
-            ),
-            spec=k8s.core.v1.PodSpecArgs(
-                containers=[
-                    k8s.core.v1.ContainerArgs(
-                        name="nginx",
-                        image="nginx:1.14.2",
-                        ports=[k8s.core.v1.ContainerPortArgs(container_port=80)],
-                        volume_mounts=[
-                            k8s.core.v1.VolumeMountArgs(
-                                name="nginx-storage",
-                                mount_path="/usr/share/nginx/html",
-                            )
-                        ],
-                    )
-                ],
-                volumes=[
-                    k8s.core.v1.VolumeArgs(
-                        name="nginx-storage",
-                        persistent_volume_claim=k8s.core.v1.PersistentVolumeClaimVolumeSourceArgs(
-                            claim_name=persistent_volume_claim.metadata.name,
-                        )
-                    )
-                ]
-            )
-        ),
-    ),
-    opts=ResourceOptions(parent=eks_cluster)
-)
+    # Set up AWS Control Tower if enabled
+    if aws_config.control_tower.enabled:
+        setup_control_tower(aws_config.control_tower)
 
-pulumi.export("s3BucketName", s3_bucket.bucket)
-pulumi.export("eksClusterName", eks_cluster.core.apply(lambda core: core.endpoint))
+    # Create IAM users in the master account
+    create_iam_users(aws_config.iam_users, global_tags)
+
+    # Create Tenant Accounts
+    tenant_accounts = create_tenant_accounts(
+        organization=organization,
+        ou=ou,
+        tenant_configs=tenant_configs,
+        tags=global_tags,
+    )
+
+    # For each tenant account, perform operations
+    for tenant_account in tenant_accounts:
+        # Assume role in tenant account
+        tenant_provider = assume_role_in_tenant_account(
+            tenant_account=tenant_account,
+            role_name=aws_config.control_tower.execution_role_name,
+            region=aws_config.region,
+        )
+
+        # Get tenant configuration
+        tenant_config = tenant_configs[tenant_account.name]
+
+        # Deploy resources in tenant account
+        deploy_tenant_resources(
+            tenant_provider=tenant_provider,
+            tenant_account=tenant_account,
+            tenant_config=tenant_config,
+            global_tags=global_tags,
+        )
+
+    # Export outputs
+    export("organization_arn", organization.arn)
+    for ou_name, ou in ou_resources.items():
+        export(f"organizational_unit_{ou_name}_id", ou.id)
+    for tenant_account in tenant_accounts:
+        export(f"{tenant_account.name}_account_id", tenant_account.id)
+
+# Run the deployment function
+deploy_aws_module()
