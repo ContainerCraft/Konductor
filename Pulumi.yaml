@@ -1,4 +1,4 @@
-name: kargo
+name: konductor
 description: The easy to use Kubevirt Homelab Platform
 main: ./pulumi
 stackConfigDir: ./pulumi/stacks
