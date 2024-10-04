@@ -43,6 +43,7 @@ eval $(pulumi env open --format=shell $ENVIRONMENT | tee ../.tmpenv; direnv allo
 ln -sf $GIT_CONFIG ~/.gitconfig
 ln -sf $AWS_CONFIG_FILE ~/.aws/config
 ln -sf $AWS_SHARED_CREDENTIALS_FILE ~/.aws/credentials
+echo "Loaded environment $ENVIRONMENT"
 
 ```
 
@@ -142,7 +143,7 @@ By following these steps, you've set up your environment to interact with AWS se
 
 **Note:** If you encounter authentication issues due to MFA requirements, test temporary session credentials using the following command:
 
-```bash {"id":"01J9CGCF9R0EWGHNN32BMZCGZY"}
+```bash {"excludeFromRunAll":"true","id":"01J9CGCF9R0EWGHNN32BMZCGZY","name":"aws-sts-get-session-token","tag":"dbg"}
 aws sts get-session-token \
   --duration-seconds 129600 \
   --profile default \
