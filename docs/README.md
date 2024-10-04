@@ -39,7 +39,7 @@ Use Pulumi to load environment variables, configuration files, and credentials:
 
 ```bash {"id":"01J97M1349ZY70MQVHDGAFVNEB","name":"load-environments-and-secrets","tag":"setup"}
 export ENVIRONMENT="containercraft/NavtecaAwsCredentialsConfigSmce/navteca-aws-credentials-config-smce"
-eval $(pulumi env open --format=shell $ENVIRONMENT | tee -a .tmpenv; direnv allow)
+eval $(pulumi env open --format=shell $ENVIRONMENT | tee ../.tmpenv; direnv allow)
 ln -sf $GIT_CONFIG ~/.gitconfig
 ln -sf $AWS_CONFIG_FILE ~/.aws/config
 ln -sf $AWS_SHARED_CREDENTIALS_FILE ~/.aws/credentials
@@ -54,7 +54,7 @@ Clone the SMCE CLI repository && Symlink `smce` cli:
 rm -rf ~/smce-cli
 git clone https://git.smce.nasa.gov/smce-administration/smce-cli.git ~/smce-cli
 ln -sf ~/smce-cli/smce ~/.local/bin/smce-gitops
-smce --help
+smce --help; true
 
 ```
 
@@ -64,24 +64,18 @@ Set up AWS Multi-Factor Authentication (MFA):
 
 > TODO: enhance smce-cli to auto-export mfa env vars
 
-```bash {"id":"01J97M1349ZY70MQVHDT7NEEM1","name":"smce-aws-mfa","tag":"aws"}
+```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHDT7NEEM1","name":"smce-aws-mfa","tag":"aws"}
 smce awsconfig mfa
 
 ```
 
 ### 7. Test AWS CLI Access
 
-Verify your AWS identity:
+List S3 buckets to confirm AWS access && Verify your AWS identity:
 
-```bash {"id":"01J97M1349ZY70MQVHE11Y7TC6","name":"validate-aws-identity","tag":"validate-aws"}
-aws sts get-caller-identity
-
-```
-
-List S3 buckets to confirm AWS access:
-
-```bash {"id":"01J97M1349ZY70MQVHE452WAP0","name":"validate-aws-s3-ls","tag":"validate-aws"}
+```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHE452WAP0","name":"validate-aws-s3-ls","tag":"validate-aws"}
 aws s3 ls
+aws sts get-caller-identity
 
 ```
 
@@ -89,21 +83,21 @@ aws s3 ls
 
 Update your kubeconfig file to interact with your EKS cluster:
 
-```bash {"id":"01J97M1349ZY70MQVHE78ZE70R","name":"aws-get-ops-kubeconfig","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHE78ZE70R","name":"aws-get-ops-kubeconfig","tag":"kubeconfig"}
 aws eks update-kubeconfig --profile main --region us-east-1 --name smce-gitops
 
 ```
 
 Generate a new Kubernetes configuration:
 
-```bash {"id":"01J97M1349ZY70MQVHDZVHZ3TQ","name":"generate-smce-kubeconfig","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHDZVHZ3TQ","name":"generate-smce-kubeconfig","tag":"kubeconfig"}
 smce kubeconfig generate
 
 ```
 
 Generate an authentication token for the EKS cluster:
 
-```bash {"id":"01J97M1349ZY70MQVHE9A2GZGB","name":"generate-eks-auth-token","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHE9A2GZGB","name":"generate-eks-auth-token","tag":"kubeconfig"}
 aws eks get-token --region us-east-1 --cluster-name smce-gitops --output json
 
 ```
@@ -114,21 +108,21 @@ Replace `<mfa-device-arn>` with your MFA device's ARN and provide your MFA token
 
 List available Kubernetes contexts:
 
-```bash {"id":"01J97M1349ZY70MQVHEE3CJ1YZ","name":"validate-kubeconfig-context-list","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHEE3CJ1YZ","name":"validate-kubeconfig-context-list","tag":"kubeconfig"}
 kubectl --kubeconfig ~/.kube/smce config get-contexts
 
 ```
 
 Retrieve the list of nodes in your Kubernetes cluster:
 
-```bash {"id":"01J97M1349ZY70MQVHEGY0QEQW","name":"validate-kube-get-nodes","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHEGY0QEQW","name":"validate-kube-get-nodes","tag":"kubeconfig"}
 kubectl --kubeconfig ~/.kube/smce get nodes
 
 ```
 
 Check the Kubernetes client and server versions with verbose output:
 
-```bash {"id":"01J97M1349ZY70MQVHEHTZNV1Y","name":"validate-kube-get-version","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHEHTZNV1Y","name":"validate-kube-get-version","tag":"kubeconfig"}
 kubectl version -v=8
 
 ```
@@ -148,7 +142,7 @@ By following these steps, you've set up your environment to interact with AWS se
 
 **Note:** If you encounter authentication issues due to MFA requirements, test temporary session credentials using the following command:
 
-```bash {"id":"01J97M1349ZY70MQVHEJENFEAD"}
+```bash {"id":"01J9CGCF9R0EWGHNN32BMZCGZY"}
 aws sts get-session-token \
   --duration-seconds 129600 \
   --profile default \

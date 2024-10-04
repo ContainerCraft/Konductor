@@ -1,4 +1,7 @@
+.env
 .envrc
+.tmpenv
+**/.tmpenv
 
 local
 .kube
@@ -23,5 +26,3 @@ tmp
 .ssh
 tmp
 smce-cli
-.env
-.tmpenv
