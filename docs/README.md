@@ -51,9 +51,9 @@ ln -sf $AWS_SHARED_CREDENTIALS_FILE ~/.aws/credentials
 Clone the SMCE CLI repository && Symlink `smce` cli:
 
 ```bash {"id":"01J97M1349ZY70MQVHDMSP1MHQ","name":"install-smce-cli","tag":"setup"}
-rm -rf ~/smce-cli
+mkdir -p ~/.local/bin; rm -rf ~/smce-cli
 git clone https://git.smce.nasa.gov/smce-administration/smce-cli.git ~/smce-cli
-ln -sf ~/smce-cli/smce ~/.local/bin/smce-gitops
+ln -sf ~/smce-cli/smce ~/.local/bin/smce
 smce --help; true
 
 ```
