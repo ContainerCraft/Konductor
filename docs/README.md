@@ -39,7 +39,7 @@ Use Pulumi to load environment variables, configuration files, and credentials:
 
 ```bash {"id":"01J97M1349ZY70MQVHDGAFVNEB","name":"load-environments-and-secrets","tag":"setup"}
 export ENVIRONMENT="containercraft/NavtecaAwsCredentialsConfigSmce/navteca-aws-credentials-config-smce"
-eval $(pulumi env open --format=shell $ENVIRONMENT | tee -a .env)
+eval $(pulumi env open --format=shell $ENVIRONMENT | tee -a .tmpenv; direnv allow)
 ln -sf $GIT_CONFIG ~/.gitconfig
 ln -sf $AWS_CONFIG_FILE ~/.aws/config
 ln -sf $AWS_SHARED_CREDENTIALS_FILE ~/.aws/credentials
