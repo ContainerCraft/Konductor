@@ -1,3 +1,5 @@
+.envrc
+
 local
 .kube
 .talos
@@ -21,3 +23,5 @@ tmp
 .ssh
 tmp
 smce-cli
+.env
+.tmpenv
