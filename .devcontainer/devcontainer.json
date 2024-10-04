@@ -42,6 +42,7 @@
                 "esbenp.prettier-vscode",
                 "oderwat.indent-rainbow",
                 "okteto.kubernetes-context",
+                "pulumi.pulumi-vscode-tools",
                 "ms-vsliveshare.vsliveshare",
                 "ms-azuretools.vscode-docker",
                 "github.vscode-github-actions",
