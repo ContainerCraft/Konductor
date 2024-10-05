@@ -26,3 +26,6 @@ tmp
 .ssh
 tmp
 smce-cli
+**/config
+**/credentials
+**/.gitconfig

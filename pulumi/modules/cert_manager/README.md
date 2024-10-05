@@ -1,6 +1,7 @@
 # Cert Manager Module Guide
+# TODO: Convert from Kargo to generalized Konductor Framework Template repo docs content
 
-Welcome to the **Cert Manager Module** for the Kargo KubeVirt Kubernetes PaaS! This guide is tailored for both newcomers to DevOps and experienced developers, providing a comprehensive overview of how to deploy and configure the Cert Manager module within the Kargo platform.
+Welcome to the **Cert Manager Module** for the Konductor IaC Framework! This guide is tailored for both newcomers to DevOps and experienced developers, providing a comprehensive overview of how to deploy and configure the Cert Manager module within the Kargo platform.
 
 ---
 

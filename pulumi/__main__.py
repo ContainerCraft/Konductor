@@ -26,13 +26,16 @@ def main():
         # TODO:
         # - Refactor this as a map of module names and default enabled booleans.
         # - Map of module:enabled pairs will depricate the DEFAULT_ENABLED_CONFIG list in config.py.
+        # - This eliminates the need for checking whether a module is enabled in Pulumi stack configuration.
+        # - Modules are set to enabled=false by defualt, override this to enable by default in DEFAULT_ENABLED_CONFIG.
         modules_to_deploy = [
-            "cert_manager",
-            "kubevirt",
-            "multus",
-            "hostpath_provisioner",
-            "containerized_data_importer",
-            "prometheus"
+            "aws",
+            #"cert_manager",
+            #"kubevirt",
+            #"multus",
+            #"hostpath_provisioner",
+            #"containerized_data_importer",
+            #"prometheus"
         ]
 
         # Deploy modules

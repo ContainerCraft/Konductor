@@ -1,6 +1,8 @@
 # Kargo KubeVirt Kubernetes PaaS - Pulumi Python Infrastructure as Code (IaC)
 
-Welcome to the **Kargo KubeVirt Kubernetes PaaS Pulumi Infrastructure as Code (IaC) project**! This guide is designed to help both newcomers to DevOps and experienced module developers navigate, contribute to, and get the most out of the Kargo platform. Whether you're setting up your environment for the first time or looking to develop new modules, this guide provides comprehensive instructions and best practices.
+Welcome to the **Konductor DevOps Template Infrastructure as Code (IaC) new project template**! This guide is designed to help both newcomers to DevOps and experienced module developers navigate, contribute to, and get the most out of the Kargo platform. Whether you're setting up your environment for the first time or looking to develop new modules, this guide provides comprehensive instructions and best practices.
+
+# TODO: Convert this template docs from Kargo origins to general to Konductor template repo docs.
 
 ---
 

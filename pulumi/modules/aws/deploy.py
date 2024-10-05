@@ -84,7 +84,7 @@ from typing import Dict, List
 
 import pulumi
 import pulumi_aws as aws
-from pulumi import ResourceOptions, export, Config, Output
+from pulumi import ResourceOptions, InvokeOptions, export, Config, Output
 
 # Import type-safe classes from aws/types.py
 from .types import (
@@ -95,10 +95,12 @@ from .types import (
     GlobalTags,
 )
 
-# Import resource functions from aws/resources.py
-from .resources import (
+from .config import (
     load_aws_config,
     load_tenant_account_configs,
+)
+
+from .resources import (
     create_organization,
     create_organizational_units,
     create_iam_users,
@@ -111,7 +113,8 @@ from .resources import (
 # Main Deployment Function
 # ---------------------
 
-def deploy_aws_module():
+# TODO: Refactor this function signature to match the common function signature for all modules
+def deploy_aws_module(aws_config: AWSConfig):
     """
     Main function to deploy the AWS module.
     """
@@ -119,75 +122,77 @@ def deploy_aws_module():
     aws_config = load_aws_config()
     tenant_configs = load_tenant_account_configs()
 
-    # Check if AWS module deployment is enabled
-    if not aws_config.enabled:
-        pulumi.log.info("AWS module deployment is disabled.")
-        return
-
     # Global tags
     global_tags = {
-        "Project": "Pulumi-AWS-Infrastructure",
-        "ManagedBy": "Pulumi",
+        "Project": "scip-aws-prod",
     }
 
     # Create AWS provider
     aws_provider = aws.Provider(
         resource_name="aws_provider",
-        profile=aws_config.profile,
         region=aws_config.region,
+        #profile=aws_config.profile,
     )
+    # pulumi export aws_provider as a secret stack output
+    pulumi.export("aws_provider", aws_provider)
 
-    # Create AWS Organization
-    organization = create_organization()
+    # Get the AWS STS caller identity
+    caller_identity = aws.get_caller_identity(opts=InvokeOptions(provider=aws_provider))
 
-    # Create Organizational Units
-    ou_resources = create_organizational_units(
-        organization=organization,
-        ou_names=[aws_config.control_tower.organizational_unit_name],
-    )
-    ou = ou_resources[aws_config.control_tower.organizational_unit_name]
+    pulumi.export("aws_caller_id", caller_identity)
+    pulumi.log.info(f"Caller Identity: {caller_identity}")
 
-    # Set up AWS Control Tower if enabled
-    if aws_config.control_tower.enabled:
-        setup_control_tower(aws_config.control_tower)
+    ## Create AWS Organization
+    #organization = create_organization()
 
-    # Create IAM users in the master account
-    create_iam_users(aws_config.iam_users, global_tags)
+    ## Create Organizational Units
+    #ou_resources = create_organizational_units(
+    #    organization=organization,
+    #    ou_names=[aws_config.control_tower.organizational_unit_name],
+    #)
+    #ou = ou_resources[aws_config.control_tower.organizational_unit_name]
 
-    # Create Tenant Accounts
-    tenant_accounts = create_tenant_accounts(
-        organization=organization,
-        ou=ou,
-        tenant_configs=tenant_configs,
-        tags=global_tags,
-    )
+    ## Set up AWS Control Tower if enabled
+    #if aws_config.control_tower.enabled:
+    #    setup_control_tower(aws_config.control_tower)
 
-    # For each tenant account, perform operations
-    for tenant_account in tenant_accounts:
-        # Assume role in tenant account
-        tenant_provider = assume_role_in_tenant_account(
-            tenant_account=tenant_account,
-            role_name=aws_config.control_tower.execution_role_name,
-            region=aws_config.region,
-        )
+    ## Create IAM users in the master account
+    #create_iam_users(aws_config.iam_users, global_tags)
 
-        # Get tenant configuration
-        tenant_config = tenant_configs[tenant_account.name]
+    ## Create Tenant Accounts
+    #tenant_accounts = create_tenant_accounts(
+    #    organization=organization,
+    #    ou=ou,
+    #    tenant_configs=tenant_configs,
+    #    tags=global_tags,
+    #)
 
-        # Deploy resources in tenant account
-        deploy_tenant_resources(
-            tenant_provider=tenant_provider,
-            tenant_account=tenant_account,
-            tenant_config=tenant_config,
-            global_tags=global_tags,
-        )
+    ## For each tenant account, perform operations
+    #for tenant_account in tenant_accounts:
+    #    # Assume role in tenant account
+    #    tenant_provider = assume_role_in_tenant_account(
+    #        tenant_account=tenant_account,
+    #        role_name=aws_config.control_tower.execution_role_name,
+    #        region=aws_config.region,
+    #    )
 
-    # Export outputs
-    export("organization_arn", organization.arn)
-    for ou_name, ou in ou_resources.items():
-        export(f"organizational_unit_{ou_name}_id", ou.id)
-    for tenant_account in tenant_accounts:
-        export(f"{tenant_account.name}_account_id", tenant_account.id)
+    #    # Get tenant configuration
+    #    tenant_config = tenant_configs[tenant_account.name]
+
+    #    # Deploy resources in tenant account
+    #    deploy_tenant_resources(
+    #        tenant_provider=tenant_provider,
+    #        tenant_account=tenant_account,
+    #        tenant_config=tenant_config,
+    #        global_tags=global_tags,
+    #    )
+
+    ## Export outputs
+    #export("organization_arn", organization.arn)
+    #for ou_name, ou in ou_resources.items():
+    #    export(f"organizational_unit_{ou_name}_id", ou.id)
+    #for tenant_account in tenant_accounts:
+    #    export(f"{tenant_account.name}_account_id", tenant_account.id)
 
 # Run the deployment function
 deploy_aws_module()

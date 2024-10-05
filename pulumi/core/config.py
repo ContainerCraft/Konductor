@@ -52,7 +52,9 @@ def get_module_config(
     # Retrieve enabled status from configuration or defaults to defined default setting
     module_enabled = str(module_config.pop('enabled', DEFAULT_ENABLED_CONFIG.get(module_name, False))).lower() == "true"
 
-    module_config['version'] = module_config.get('version', default_versions.get(module_name))
+    # Only set the version if it is *not* the aws module
+    if module_name != "aws":
+        module_config['version'] = module_config.get('version', default_versions.get(module_name))
     return module_config, module_enabled
 
 

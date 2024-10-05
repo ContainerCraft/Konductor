@@ -1,134 +1,149 @@
-# Kargo Modules Development Guide
+# Konductor User Guide
 
-Welcome to the Kargo Kubevirt PaaS IaC module developer guide. This document provides an overview of the design principles, code structure, and best practices for developing and maintaining modules within the Kargo IaC codebase. It is intended for developers and AI language models (like ChatGPT) to quickly understand and contribute to the project.
+Welcome to the **Konductor IaC Platform Engineering User Guide**. This document provides an in-depth overview of the design principles, code structure, and best practices for developing and maintaining modules within the Konductor IaC codebase. It is intended for both DevOps Template users and Konductor Template Developers to understand, contribute, and confidently work with the project's architecture and features.
+
+---
 
 ## Table of Contents
 
 - [Introduction](#introduction)
 - [Design Principles](#design-principles)
 - [Code Structure](#code-structure)
-- [Version Management](#version-management)
+- [Configuration Management with Pydantic](#configuration-management-with-pydantic)
+  - [Why Pydantic?](#why-pydantic)
+  - [Integration Strategy](#integration-strategy)
 - [Module Development Guide](#module-development-guide)
   - [1. Module Configuration](#1-module-configuration)
-  - [2. Defining Configuration Types](#2-defining-configuration-types)
+  - [2. Defining Configuration Models](#2-defining-configuration-models)
   - [3. Module Deployment Logic](#3-module-deployment-logic)
   - [4. Updating `__main__.py`](#4-updating-__main__py)
-- [Best Practices](#best-practices)
+  - [5. Best Practices](#5-best-practices)
 - [Example Module: Cert Manager](#example-module-cert-manager)
+  - [Configuration Schema](#configuration-schema)
+  - [Configuration Model](#configuration-model)
+  - [Deployment Logic](#deployment-logic)
+  - [Integration in `__main__.py`](#integration-in-__main__py)
 - [Conclusion](#conclusion)
 
 ---
 
 ## Introduction
 
-Kargo is a Kubernetes & Kubevirt based Platform Engineering IaC development & deployment framework that leverages Pulumi for infrastructure as code (IaC). This guide aims to standardize module development by centralizing version handling, simplifying module code, and promoting consistency across the codebase.
+Konductor is a Pulumi-based Infrastructure as Code (IaC) platform designed to streamline DevOps workflows and Platform Engineering practices. It leverages Pulumi for IaC and uses Python for scripting and automation. This guide aims to standardize module development by centralizing configuration management using Pydantic, simplifying module code, and promoting consistency across the codebase.
 
 ---
 
 ## Design Principles
 
-- **Centralization of Common Logic**: Shared functionality, such as version handling, is centralized to reduce duplication and simplify maintenance.
-- **Simplification of Module Code**: Modules focus solely on their specific deployment logic, relying on centralized utilities for configuration and version management.
-- **Consistency**: Establish clear patterns and standards for module development to ensure uniformity across the codebase.
-- **Maintainability**: Write clean, readable code with proper documentation and type annotations to facilitate ease of maintenance and contribution.
-- **Flexibility**: Allow users to override configurations and versions as needed, while providing sensible defaults.
+- **Modularity**: Each module should be self-contained, defining its own configuration schema and deployment logic.
+- **Centralized Configuration**: Use a centralized mechanism for loading and validating configurations to reduce duplication.
+- **Type Safety**: Employ Pydantic models for configuration schemas to ensure type safety and validation.
+- **Consistency**: Establish clear patterns and standards for module development to ensure uniformity.
+- **Developer Experience (DX)**: Simplify the development process with clear guidelines and reusable components.
+- **User Experience (UX)**: Provide clear documentation and error messages to enhance user interaction with the platform.
+- **Extensibility**: Allow modules to be easily added or modified without affecting the core system.
 
 ---
 
-## IaC Module Structure
+## Code Structure
 
-- **`__main__.py`**: The entry point of the Pulumi program. Handles global configurations, Kubernetes provider setup, version loading, and module deployments.
-- **`src/lib/`**: Contains shared utilities and libraries, such as version management (`versions.py`) and shared types (`types.py`).
-- **`src/<module_name>/`**: Each module resides in its own directory under `src/`, containing its specific types (`types.py`) and deployment logic (`deploy.py`).
-- **`src/<module_name>/types.py`**: Defines data classes for module configurations with default values and merging logic.
-- **`src/<module_name>/deploy.py`**: Contains the module-specific deployment logic, taking in the merged configuration and returning relevant outputs.
-- **`src/<module_name>/README.md`**: Module-specific documentation with configuration options, features, and usage instructions.
-- **`src/<module_name>/*.py`**: Additional utility files or scripts specific to the module.
+- **`__main__.py`**: The entry point of the Pulumi program. Handles global configurations, provider setup, and module deployments.
+- **`core/`**: Contains shared utilities and libraries, such as configuration management (`config.py`), deployment orchestration (`deployment.py`), and metadata handling (`metadata.py`).
+- **`modules/<module_name>/`**: Each module resides in its own directory under `modules/`, containing its specific configuration models (`types.py`) and deployment logic (`deploy.py`).
+- **`modules/<module_name>/types.py`**: Defines Pydantic models for module configurations with default values and validation logic.
+- **`modules/<module_name>/deploy.py`**: Contains the module-specific deployment logic, taking in the validated configuration and returning relevant outputs.
+- **`modules/<module_name>/*.py`**: Contains additional module-specific scripts or utilities, if needed.
+- **`modules/<module_name>/README.md`**: Module-specific documentation with configuration options, features, and usage instructions.
+- **`requirements.txt`**: Lists the dependencies for the project, including Pydantic and cloud provider SDKs.
 
 ---
 
-## Version Management
+## Configuration Management with Pydantic
 
-### Centralized Version Handling
+### Why Pydantic?
 
-Version management is centralized in `src/lib/versions.py`. The `load_default_versions` function loads versions based on the following precedence:
+- **Type Safety and Validation**: Ensures configurations are type-safe and valid before deployment.
+- **Flexibility**: Allows modules to define complex nested configurations and custom validation logic.
+- **Error Reporting**: Provides clear and detailed error messages for invalid configurations.
+- **Ease of Use**: Simplifies the configuration process for both developers and users.
 
-1. **User-Specified Source**: Via Pulumi config `default_versions.source`.
-2. **Stack-Specific Versions**: If `versions.stack_name` is `true`, loads from `./versions/$STACK_NAME.json`.
-3. **Local Default Versions**: Loads from `./default_versions.json`.
-4. **Remote Versions**: Fetches from a remote URL based on the specified `versions.channel`.
+### Integration Strategy
 
-### Injecting Versions into Modules
-
-In `__main__.py`, the `get_module_config` function handles module configuration loading and version injection. Modules receive configurations with versions already set, eliminating the need for individual modules to handle version logic.
+- **Module Autonomy**: Each module defines its own Pydantic configuration model in `types.py`.
+- **Centralized Loading**: A core function handles loading configurations from Pulumi config and passes them to the modules after validation.
+- **Consistency**: Modules follow a consistent pattern for defining configurations and deployment functions.
 
 ---
 
 ## Module Development Guide
 
-Follow these steps to develop or enhance a module in the Kargo codebase.
-
 ### 1. Module Configuration
 
-- **Purpose**: Retrieve and prepare the module's configuration, including version information.
-- **Implementation**: Use the `get_module_config` function in `__main__.py`.
+- **Purpose**: Retrieve and validate the module's configuration using Pydantic models.
+- **Implementation**: Use the `get_module_config` function in `core/config.py`.
 
 ```python
-# __main__.py
+# core/config.py
 
-config_module_dict, module_enabled = get_module_config('module_name', config, default_versions)
+from pydantic import ValidationError
+
+def get_module_config(module_name: str, config: pulumi.Config) -> Tuple[Any, bool]:
+    module_config_dict = config.get_object(module_name) or {}
+    module_enabled = module_config_dict.get('enabled', False)
+
+    # Import the module's configuration class
+    types_module = importlib.import_module(f"modules.{module_name}.types")
+    ModuleConfigClass = getattr(types_module, f"{module_name.capitalize()}Config")
+
+    try:
+        # Create an instance of the configuration model
+        config_obj = ModuleConfigClass(**module_config_dict)
+    except ValidationError as e:
+        # Handle validation errors
+        pulumi.log.error(f"Configuration error in module '{module_name}':\n{e}")
+        raise
+
+    return config_obj, module_enabled
 ```
 
-- **Parameters**:
-  - `module_name`: The name of the module as defined in Pulumi config.
-  - `config`: The global Pulumi config object.
-  - `default_versions`: The dictionary containing default versions.
+### 2. Defining Configuration Models
 
-### 2. Defining Configuration Types
-
-- **Purpose**: Define a data class for the module's configuration with default values.
+- **Purpose**: Define a Pydantic model for the module's configuration with default values and validation logic.
 - **Implementation**: Create a `types.py` in the module's directory.
 
 ```python
-# src/module_name/types.py
+# modules/module_name/types.py
 
-from dataclasses import dataclass
-from typing import Optional, Dict, Any
-import pulumi
+from pydantic import BaseModel, Field, validator
 
-@dataclass
-class ModuleNameConfig:
-    version: Optional[str] = None  # Version will be injected
+class ModuleNameConfig(BaseModel):
+    enabled: bool = False
+    version: Optional[str] = "latest"  # For Kubernetes modules
     # ... other configuration fields ...
 
-    @staticmethod
-    def merge(user_config: Dict[str, Any]) -> 'ModuleNameConfig':
-        default_config = ModuleNameConfig()
-        merged_config = default_config.__dict__.copy()
-        for key, value in user_config.items():
-            if hasattr(default_config, key):
-                merged_config[key] = value
-            else:
-                pulumi.log.warn(f"Unknown configuration key '{key}' in module_name config.")
-        return ModuleNameConfig(**merged_config)
+    @validator('version')
+    def check_version(cls, v):
+        if v not in ["latest", "stable", "edge"]:
+            raise ValueError("Invalid version specified")
+        return v
 ```
 
 ### 3. Module Deployment Logic
 
-- **Purpose**: Implement the module's deployment logic using the merged configuration.
+- **Purpose**: Implement the module's deployment logic using the validated configuration.
 - **Implementation**: Create a `deploy.py` in the module's directory.
 
 ```python
-# src/module_name/deploy.py
+# modules/module_name/deploy.py
 
 def deploy_module_name(
-    config_module_name: ModuleNameConfig,
+    config: ModuleNameConfig,
     global_depends_on: List[pulumi.Resource],
-    k8s_provider: k8s.Provider,
-) -> Tuple[Optional[str], Optional[pulumi.Resource]]:
+    providers: Dict[str, Any],
+) -> pulumi.Resource:
     # Module-specific deployment logic
-    # Use config_module_name.version as needed
-    # Return version and any relevant resources
+    # Use configuration values directly, e.g., config.version
+    # Return the primary resource
 ```
 
 ### 4. Updating `__main__.py`
@@ -139,86 +154,86 @@ def deploy_module_name(
 ```python
 # __main__.py
 
-if module_enabled:
-    from src.module_name.types import ModuleNameConfig
-    config_module_name = ModuleNameConfig.merge(config_module_dict)
+from core.config import get_module_config
 
-    from src.module_name.deploy import deploy_module_name
+# Initialize providers and other global configurations
+providers = {
+    'aws': aws_provider,
+    'k8s': k8s_provider,
+    # Add other providers as needed
+}
 
-    module_version, module_resource = deploy_module_name(
-        config_module_name=config_module_name,
-        global_depends_on=global_depends_on,
-        k8s_provider=k8s_provider,
-    )
+# List of modules to deploy
+modules_to_deploy = ["aws", "cert_manager", "kubevirt", "multus"]
 
-    # Update versions and configurations dictionaries
-    versions["module_name"] = module_version
-    configurations["module_name"] = {
-        "enabled": module_enabled,
-    }
+# Deploy modules
+for module_name in modules_to_deploy:
+    config_obj, module_enabled = get_module_config(module_name, config)
+    if module_enabled:
+        deploy_func = discover_deploy_function(module_name)
+        primary_resource = deploy_func(
+            config=config_obj,
+            global_depends_on=global_depends_on,
+            providers=providers,
+        )
+        global_depends_on.append(primary_resource)
+        configurations[module_name] = {"enabled": module_enabled}
+    else:
+        pulumi.log.info(f"Module {module_name} is not enabled.")
 ```
 
----
+### 5. Best Practices
 
-## Best Practices
-
-- **Centralize Common Logic**: Use shared utilities from `src/lib/` to avoid duplication.
-- **Type Annotations**: Use type hints throughout the code for better readability and tooling support.
-- **Documentation**: Include docstrings and comments to explain complex logic.
-- **Consistent Coding Style**: Follow the project's coding conventions for formatting and naming.
-- **Error Handling**: Implement robust error handling and logging for easier debugging.
-- **Avoid Global Variables**: Pass necessary objects as arguments to functions and methods.
+- **Use Pydantic Models**: Define all configurations using Pydantic for validation and type safety.
+- **Autonomy**: Modules control their own configuration schema and validation logic.
+- **Error Handling**: Provide clear and informative error messages for configuration issues.
+- **Documentation**: Document configuration options and usage in module `README.md` files.
+- **Consistency**: Follow the established code structure and patterns for module development.
+- **Avoid Global Variables**: Pass necessary objects as arguments to functions.
 
 ---
 
 ## Example Module: Cert Manager
 
-### Configuration
+### Configuration Schema
 
-```python
-# Configurable by either of:
-# - Pulumi Stack Config `Pulumi.stack.yaml`
-# - Pulumi CLI `--config` flag
-# - example: pulumi config set --path cert_manager.enabled true
-# - example: pulumi config set --path cert_manager.version "1.15.3"
-# - example: pulumi config set --path cert_manager.version "latest"
-config:
-  cert_manager:
-    enabled: true
-    version: "1.15.3"
+```yaml
+# Pulumi configuration (Pulumi.<stack>.yaml)
+cert_manager:
+  enabled: true
+  version: "v1.15.3"
+  namespace: "cert-manager"
+  install_crds: true
 ```
 
-### Types Definition
+### Configuration Model
 
 ```python
-# src/cert_manager/types.py
+# modules/cert_manager/types.py
 
-from dataclasses import dataclass
-from typing import Optional, Dict, Any
-import pulumi
+from pydantic import BaseModel
 
-@dataclass
-class CertManagerConfig:
-    version: Optional[str] = None
-    # ... other fields ...
-
-    @staticmethod
-    def merge(user_config: Dict[str, Any]) -> 'CertManagerConfig':
-        # Merging logic as shown above
+class CertManagerConfig(BaseModel):
+    enabled: bool = False
+    version: str = "latest"
+    namespace: str = "cert-manager"
+    install_crds: bool = True
+    # ... other fields and validators as needed ...
 ```
 
 ### Deployment Logic
 
 ```python
-# src/cert_manager/deploy.py
+# modules/cert_manager/deploy.py
 
-def deploy_cert_manager_module(
-    config_cert_manager: CertManagerConfig,
+def deploy_cert_manager(
+    config: CertManagerConfig,
     global_depends_on: List[pulumi.Resource],
-    k8s_provider: k8s.Provider,
-) -> Tuple[Optional[str], Optional[pulumi.Resource], Optional[str]]:
-    # Deployment logic for Cert Manager
-    # Return version, release resource, and any additional outputs
+    providers: Dict[str, Any],
+) -> pulumi.Resource:
+    k8s_provider = providers.get('k8s')
+    # Deployment logic for Cert Manager using config values
+    # Return the Helm release resource or primary resource
 ```
 
 ### Integration in `__main__.py`
@@ -226,24 +241,37 @@ def deploy_cert_manager_module(
 ```python
 # __main__.py
 
-config_cert_manager_dict, cert_manager_enabled = get_module_config('cert_manager', config, default_versions)
-
+config_cert_manager, cert_manager_enabled = get_module_config('cert_manager', config)
 if cert_manager_enabled:
-    from src.cert_manager.types import CertManagerConfig
-    config_cert_manager = CertManagerConfig.merge(config_cert_manager_dict)
-
-    from src.cert_manager.deploy import deploy_cert_manager_module
-
-    cert_manager_version, cert_manager_release, cert_manager_selfsigned_cert = deploy_cert_manager_module(
-        config_cert_manager=config_cert_manager,
+    from modules.cert_manager.deploy import deploy_cert_manager
+    cert_manager_release = deploy_cert_manager(
+        config=config_cert_manager,
         global_depends_on=global_depends_on,
-        k8s_provider=k8s_provider,
+        providers=providers,
     )
-
-    versions["cert_manager"] = cert_manager_version
-    configurations["cert_manager"] = {
-        "enabled": cert_manager_enabled,
-    }
-
-    pulumi.export("cert_manager_selfsigned_cert", cert_manager_selfsigned_cert)
+    global_depends_on.append(cert_manager_release)
+    configurations["cert_manager"] = {"enabled": cert_manager_enabled}
+else:
+    pulumi.log.info("Cert Manager is not enabled.")
 ```
+
+---
+
+## Conclusion
+
+By following this guide and utilizing Pydantic for configuration management, developers can create modules that are:
+
+- **Robust**: Type-safe and validated configurations reduce runtime errors.
+- **Maintainable**: Clear separation of concerns and consistent patterns simplify maintenance.
+- **User-Friendly**: Clear documentation and error messages improve user experience.
+- **Extensible**: New modules can be added with minimal changes to the core system.
+
+For any questions or further assistance, please refer to the `DEVELOPER.md` document or reach out to the Konductor development team.
+
+---
+
+## Next Steps
+
+- **Developers**: Start updating or creating modules using the guidelines provided.
+- **Users**: Refer to module `README.md` files for configuration options and usage instructions.
+- **Contributors**: Follow the contribution guidelines in `DEVELOPER.md` to submit enhancements or bug fixes.

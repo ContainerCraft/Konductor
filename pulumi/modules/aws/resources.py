@@ -26,6 +26,12 @@ import pulumi_aws as aws
 from pulumi import ResourceOptions, export, Config, Output
 from typing import Dict, List
 
+from .types import (
+    ControlTowerConfig,
+    IAMUserConfig,
+    TenantAccountConfig,
+)
+
 # ---------------------
 # AWS Organization Setup
 # ---------------------
