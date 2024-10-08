@@ -1,8 +1,12 @@
+pyyaml
 pylance
-pulumi_aws
-pulumi>=3
-pulumi_kubernetes>=4.11.0
+PyYAML>=5.4.1
+pydantic>=1.8.2
+requests>=2.25.1
+packaging>=20.9
 kubernetes>=4.7.1
 beautifulsoup4
-pyyaml
-packaging
+
+pulumi>=3.0.0
+pulumi-aws>=5.0.0
+pulumi_kubernetes>=4.11.0

@@ -29,3 +29,4 @@ smce-cli
 **/config
 **/credentials
 **/.gitconfig
+pulumi/modules/aws.bak

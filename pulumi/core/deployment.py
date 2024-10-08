@@ -10,6 +10,7 @@ initializes Pulumi and Kubernetes providers, and handles module deployments.
 import os
 import inspect
 import importlib
+from pydantic import BaseModel
 from typing import Dict, Any, List, Type, Callable
 
 import pulumi
@@ -123,7 +124,13 @@ def initialize_pulumi() -> Dict[str, Any]:
         log.error(f"Initialization error: {str(e)}")
         raise
 
-# Reusable function to deploy any IaC module with dynamic configuration and versioning.
+import inspect
+from typing import Any, Dict, List
+
+import pulumi
+import pulumi_kubernetes as k8s
+import pulumi_aws as aws
+
 def deploy_module(
     module_name: str,
     config: pulumi.Config,
@@ -151,7 +158,7 @@ def deploy_module(
     """
 
     # Validate input types.
-    # TODO: Evalute for better approach to type checking.
+    # TODO: Evaluate for better approach to type checking.
     if not isinstance(module_name, str):
         raise TypeError("module_name must be a string")
     if not isinstance(config, pulumi.Config):
@@ -177,28 +184,27 @@ def deploy_module(
         ModuleConfigClass = discover_config_class(module_name)
         deploy_func = discover_deploy_function(module_name)
 
-        # Merge module's default and user supplied configuration values.
+        # Merge module's default and user-supplied configuration values.
         config_obj = ModuleConfigClass.merge(module_config_dict)
 
         # Validate the configuration object.
         deploy_func_args = inspect.signature(deploy_func).parameters.keys()
         config_arg_name = list(deploy_func_args)[0]
 
+        # Prepare arguments for the deploy function based on the module.
+        deploy_kwargs = {config_arg_name: config_obj, "global_depends_on": global_depends_on}
+
+        # Conditionally add module-specific arguments.
+        if module_name != 'aws':
+            deploy_kwargs["k8s_provider"] = k8s_provider
+
         # Deploy the module.
         try:
-
-            # Execute the module's deploy function.
-            result = deploy_func(
-                **{config_arg_name: config_obj},
-                global_depends_on=global_depends_on,
-                k8s_provider=k8s_provider,
-            )
+            # Execute the module's deploy function with appropriate arguments.
+            result = deploy_func(**deploy_kwargs)
 
             # Parse the result for version and release information.
             # Accommodate for optional exported value.
-            # TODO:
-            # - Refactor this to be more robust and less restrictive.
-            # - Refactor to inherit value names from name string of returned key arguments.
             if isinstance(result, tuple) and len(result) == 3:
                 version, release, module_aux_meta = result
             elif isinstance(result, tuple) and len(result) == 2:
@@ -211,7 +217,7 @@ def deploy_module(
             versions[module_name] = version
             configurations[module_name] = {"enabled": module_enabled}
 
-            # adopt value export names from the returned key name argument string if possible, else solve for naming positional args.
+            # Adopt value export names from the returned key name argument string if possible, else solve for naming positional args.
             if module_aux_meta:
                 pulumi.export(f"meta_{module_name}", module_aux_meta)
 
@@ -227,21 +233,39 @@ def deploy_module(
     else:
         log.info(f"Module {module_name} is not enabled.")
 
+
+# Reusable function to deploy any IaC module with dynamic configuration and versioning.
 def discover_config_class(module_name: str) -> Type:
     """
     Discovers and returns the configuration class from the module's types.py.
+    Supports both Pydantic BaseModel and dataclasses.
 
     Args:
         module_name (str): The name of the module.
 
     Returns:
-        Type: The configuration class.
+        Type: The configuration class, either a Pydantic BaseModel subclass or a dataclass.
+
+    Raises:
+        ValueError: If no suitable configuration class is found.
     """
     types_module = importlib.import_module(f"modules.{module_name}.types")
+    config_class: Optional[Type] = None
+
     for name, obj in inspect.getmembers(types_module):
-        if inspect.isclass(obj) and hasattr(obj, "__dataclass_fields__"):
-            return obj
-    raise ValueError(f"No dataclass found in modules.{module_name}.types")
+        if inspect.isclass(obj):
+            # Check for Pydantic BaseModel subclass
+            if issubclass(obj, BaseModel) and obj is not BaseModel:
+                return obj
+            # Check for dataclass
+            elif hasattr(obj, "__dataclass_fields__"):
+                config_class = obj
+
+    if config_class:
+        return config_class
+
+    raise ValueError(f"No configuration class found in modules.{module_name}.types")
+
 
 def discover_deploy_function(module_name: str) -> Callable:
     """
