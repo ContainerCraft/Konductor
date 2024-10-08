@@ -39,9 +39,6 @@ def deploy_aws_module(
     access_key = os.getenv('AWS_ACCESS_KEY_ID', c.get("access_key_id"))
     secret_key = os.getenv('AWS_SECRET_ACCESS_KEY', c.get("secret_access_key"))
     session_token = os.getenv('AWS_SESSION_TOKEN', None)
-    #pulumi.Config("aws").require("access_key")
-    #pulumi.Config("aws").require("secret_key")
-    #pulumi.Config("aws").require("session_token")
 
     # Initialize the AWS provider
     aws_provider = aws.Provider(
@@ -53,8 +50,9 @@ def deploy_aws_module(
         profile=profile,
     )
 
-    # Export AWS Provider for utilization as a stack output by other dependent stacks
-    pulumi.export("aws_provider", aws_provider)
+    # Export AWS Provider as a secret stack output for utilization by other dependent stacks
+    aws_provider_secret = pulumi.Output.secret(aws_provider)
+    pulumi.export("aws_provider", aws_provider_secret)
 
     # Retrieve global labels and annotations
     global_labels = get_global_labels()
