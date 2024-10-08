@@ -60,22 +60,22 @@ def deploy_aws_module(
     module_tags = {
         "iac_module_name": MODULE_NAME,
     }
-    all_module_tags = {
+    aws_module_tags = {
+        **module_tags,
         **global_labels,
         **global_annotations,
-        **module_tags,
     }
-    pulumi.export("aws_module_tags", all_module_tags)
+    pulumi.export("aws_module_tags", aws_module_tags)
 
     # Retrieve STS Caller Identity to verify the credentials
     sts_identity = aws.get_caller_identity(opts=pulumi.InvokeOptions(provider=aws_provider))
-    all_module_tags["sts_identity"] = sts_identity.arn
+    aws_module_tags["sts_identity"] = sts_identity.arn
 
     # Create an S3 bucket
     bucket = aws.s3.Bucket(
         "magic-testing-bucket",
         bucket="magic-testing-bucket",
-        tags=all_module_tags,
+        tags=aws_module_tags,
         opts=pulumi.ResourceOptions(provider=aws_provider)
     )
 
@@ -106,7 +106,7 @@ def deploy_aws_module(
                     "magic-ou",
                     name="magic-ou",
                     parent_id=root_id,
-                    tags=all_module_tags,
+                    tags=aws_module_tags,
                 )
                 pulumi.export("ou_id", ou.id)
             else:
@@ -121,7 +121,6 @@ def deploy_aws_module(
 
     # Log and export the caller identity to confirm it works
     log.info(f"Successfully retrieved STS caller identity: {sts_identity.arn}")
-    pulumi.export("caller_identity", sts_identity.arn)
 
     # Add aws_provider to global dependencies to propagate through other resources if needed
     global_depends_on.append(aws_provider)
