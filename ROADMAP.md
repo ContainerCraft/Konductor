@@ -32,7 +32,14 @@
 
 ## Introduction
 
-This roadmap outlines the development of a next-generation, cloud-agnostic platform engineering environment. The goal is to establish a robust, scalable, and secure multi-cloud infrastructure that automates provisioning, enforces compliance, and centralizes operational data. This environment will empower application teams to operate safely within their own isolated accounts, supported by a streamlined, code-driven landing zone setup.
+This roadmap outlines the development of a next-generation, cloud-agnostic platform engineering environment.
+The goal is to establish a robust, scalable, and secure multi-cloud infrastructure that automates provisioning, enforces compliance, and centralizes operational data.
+This environment will empower application teams to operate safely within their own isolated accounts, supported by a streamlined, code-driven landing zone setup.
+
+The architecture consists of a hierarchical organization with multiple organizational units (OUs) and accounts across AWS, Azure, and GCP.
+Infrastructure provisioning and configuration are fully automated using Infrastructure as Code (IaC) practices.
+Compliance controls are embedded within the configuration code, ensuring consistent policy enforcement.
+Centralized governance is achieved through policy propagation and centralized services for logging, monitoring, and cost management.
 
 ---
 
@@ -45,13 +52,6 @@ This roadmap outlines the development of a next-generation, cloud-agnostic platf
 - **Centralized Governance**: Maintain centralized policies, secrets, and configurations for consistent management across all environments.
 - **Scalability and Modularity**: Design for horizontal scalability and modularity to accommodate growth and technological changes.
 
----
-
-## Architecture Overview
-
-The architecture consists of a hierarchical organization with multiple organizational units (OUs) and accounts across AWS, Azure, and GCP. Infrastructure provisioning and configuration are fully automated using Infrastructure as Code (IaC) practices. Compliance controls are embedded within the configuration code, ensuring consistent policy enforcement. Centralized governance is achieved through policy propagation and centralized services for logging, monitoring, and cost management.
-
----
 
 ## Key Components
 
@@ -224,33 +224,33 @@ The architecture consists of a hierarchical organization with multiple organizat
 - **Policy as Code**: Embed compliance and governance policies directly into your codebase.
 - **Automation API**: Integrate Pulumi into CI/CD pipelines and other automation workflows.
 
-### C. 1.1 Infrastructure Provisioning
+### 1.1 Infrastructure Provisioning
 
 - **Resource Management**: Define and manage cloud resources using code.
 - **Complex Logic Handling**: Utilize programming constructs for loops, conditionals, and abstractions.
 - **Reusable Components**: Create modules and packages for shared infrastructure code.
 
-### C. 1.2 Multi-Cloud Capabilities
+### 1.2 Multi-Cloud Capabilities
 
 - **Unified Interface**: Manage different cloud providers using the same codebase.
 - **Cross-Cloud Abstractions**: Develop higher-level components that abstract away provider specifics.
 
-### C. 1.3 State Management
+### 1.3 State Management
 
 - **State Persistence**: Track infrastructure state for accurate deployments.
 - **Backend Options**: Use local files, cloud storage, or Pulumi Cloud for state management.
 
-### C. 1.4 Policy and Compliance
+### 1.4 Policy and Compliance
 
 - **Policy as Code**: Define and enforce policies within your infrastructure code.
 - **Compliance Integration**: Include compliance controls (e.g., FISMA, NIST) in configurations.
 
-### C. 1.5 CI/CD Integration
+### 1.5 CI/CD Integration
 
 - **Automation Support**: Seamlessly integrate with CI/CD pipelines for automated deployments.
 - **GitOps Workflow**: Adopt GitOps practices with Pulumi for infrastructure changes.
 
-### C. 1.6 Collaboration and Secrets Management
+### 1.6 Collaboration and Secrets Management
 
 - **Team Collaboration**: Use Pulumi Cloud for role-based access control and collaboration.
 - **Secure Secrets Management**: Handle secrets securely with Pulumi's Federated OIDC, and Secrets Federation suppport.

@@ -1,128 +1,101 @@
 # pulumi/modules/aws/deploy.py
 
 """
-AWS Module Deployment - Minimal Version for Provider Setup Verification
+AWS Module Deployment - Enhanced Compliance Metadata Propagation
 
-This script initializes the AWS provider and retrieves the STS caller identity
-to verify the setup and credentials are correct.
+This script initializes the AWS provider, retrieves the STS caller identity,
+and ensures compliance metadata is propagated as tags.
 """
-
-import os
 
 import pulumi
 import pulumi_aws as aws
-from pulumi import Output, Resource, ResourceOptions, log
+from pulumi import ResourceOptions, log
+from typing import List, Dict
 
-from .types import AWSConfig
-from core.metadata import get_global_labels, get_global_annotations
+from .types import AWSConfig, TenantAccountConfig
+from .config import initialize_aws_provider, generate_tags, load_tenant_account_configs
+from .resources import (
+    create_s3_bucket,
+    create_organization,
+    create_organizational_units,
+    setup_control_tower,
+    create_iam_users,
+    create_tenant_accounts,
+    deploy_tenant_resources,
+    assume_role_in_tenant_account
+)
+from core.metadata import collect_git_info
+from core.types import ComplianceConfig
 
-MODULE_NAME = "aws"
 
-def deploy_aws_module(
-    config: AWSConfig,
-    global_depends_on: list[pulumi.Resource],
-) -> pulumi.Resource:
-    """
-    Deploys the AWS module and returns the primary AWS resource.
+def deploy_aws_module(config: AWSConfig, global_depends_on: List[pulumi.Resource]) -> pulumi.Resource:
+    try:
+        # Initialize AWS Provider
+        aws_provider = initialize_aws_provider(config)
 
-    Args:
-        config (AWSConfig): The AWS module configuration object.
-        global_depends_on (List[pulumi.Resource]): List of global dependencies.
+        # Generate global tags
+        git_info = collect_git_info()
+        compliance_config = ComplianceConfig.merge(config.dict())
+        global_tags = generate_tags(config, compliance_config, git_info)
 
-    Returns:
-        pulumi.Resource: The primary AWS resource (for now, just the STS caller identity).
-    """
-    # Check for environment variables and fallback to config values
-    c = pulumi.Config("aws")
-    pulumi.export("config", c)
-    profile = os.getenv('AWS_PROFILE', c.get("profile"))
-    access_key = os.getenv('AWS_ACCESS_KEY_ID', c.get("access_key_id"))
-    secret_key = os.getenv('AWS_SECRET_ACCESS_KEY', c.get("secret_access_key"))
-    session_token = os.getenv('AWS_SESSION_TOKEN', None)
+        # Create an S3 bucket for Ops data
+        s3_bucket = create_s3_bucket(
+            "konductor-bucket",
+            global_tags,
+            aws_provider,
+            compliance_config,
+        )
+        pulumi.export("ops_data_bucket", s3_bucket.id)
 
-    # Initialize the AWS provider
-    aws_provider = aws.Provider(
-        "awsProvider",
-        access_key=access_key,
-        secret_key=secret_key,
-        token=session_token,
-        region=config.region,
-        profile=profile,
-    )
+        # Create AWS Organization
+        organization = create_organization(aws_provider)
 
-    # Export AWS Provider as a secret stack output for utilization by other dependent stacks
-    aws_provider_secret = pulumi.Output.secret(aws_provider)
-    pulumi.export("aws_provider", aws_provider_secret)
+        # Setup Control Tower
+        setup_control_tower(config.control_tower)
 
-    # Retrieve global labels and annotations
-    global_labels = get_global_labels()
-    global_annotations = get_global_annotations()
-    module_tags = {
-        "iac_module_name": MODULE_NAME,
-    }
-    aws_module_tags = {
-        **module_tags,
-        **global_labels,
-        **global_annotations,
-    }
-    pulumi.export("aws_module_tags", aws_module_tags)
+        # Create Organizational Units
+        organizational_units = create_organizational_units(
+            organization,
+            ["Security", "Infrastructure", "Applications"],
+            global_tags,
+            aws_provider
+        )
 
-    # Retrieve STS Caller Identity to verify the credentials
-    sts_identity = aws.get_caller_identity(opts=pulumi.InvokeOptions(provider=aws_provider))
-    aws_module_tags["sts_identity"] = sts_identity.arn
+        # Ensure Outputs are properly used from previously created resources
+        ou_applications = organizational_units.get("Applications")
+        if ou_applications:
+            tenant_accounts = create_tenant_accounts(
+                organization,
+                ou_applications,
+                load_tenant_account_configs(),
+                global_tags,
+                aws_provider
+            )
 
-    # Create an S3 bucket
-    bucket = aws.s3.Bucket(
-        "magic-testing-bucket",
-        bucket="magic-testing-bucket",
-        tags=aws_module_tags,
-        opts=pulumi.ResourceOptions(provider=aws_provider)
-    )
+            # Deploy resources for each tenant
+            tenant_account_configs = load_tenant_account_configs()
 
-    # Function to get organization details with error handling
-    def get_organization():
-        try:
-            return aws.organizations.get_organization()
-        except Exception as e:
-            pulumi.log.warn(f"Failed to get existing organization: {e}")
-            return None
-
-    # Attempt to retrieve existing AWS Organization
-    organization_details = get_organization()
-
-    if organization_details:
-        # Successfully fetched organization; export its ID
-        pulumi.export("organization_lookup_id", organization_details.id)
-
-        # Check if there are roots
-        if organization_details.roots:
-            # Fetch the root ID
-            root_id = organization_details.roots[0].id
-
-            # Create an Organizational Unit using the root_id as parent_id if desired
-            create_organizational_units: bool = True
-            if create_organizational_units:
-                ou = aws.organizations.OrganizationalUnit(
-                    "magic-ou",
-                    name="magic-ou",
-                    parent_id=root_id,
-                    tags=aws_module_tags,
+            for tenant_account in tenant_accounts:
+                tenant_provider = assume_role_in_tenant_account(
+                    tenant_account=tenant_account,
+                    role_name="OrganizationAccountAccessRole",
+                    region=config.region,
+                    aws_provider=aws_provider
                 )
-                pulumi.export("ou_id", ou.id)
-            else:
-                pulumi.log.warn("Organizational units creation is disabled")
-        else:
-            pulumi.log.warn("No roots found in the organization. Not creating Organizational Units.")
-    else:
-        pulumi.log.warn("The account is not part of an existing organization and create_organization flag is not set to True.")
 
-    # Export the bucket name
-    pulumi.export("bucket_name", bucket.id)
+                tenant_config = tenant_account_configs.get(tenant_account.name)
+                if tenant_config:
+                    deploy_tenant_resources(
+                        tenant_provider,
+                        tenant_account,
+                        tenant_config,
+                        global_tags
+                    )
 
-    # Log and export the caller identity to confirm it works
-    log.info(f"Successfully retrieved STS caller identity: {sts_identity.arn}")
+        pulumi.export("organization_id", organization.id)
 
-    # Add aws_provider to global dependencies to propagate through other resources if needed
-    global_depends_on.append(aws_provider)
+        return organization, aws_provider, organization.id
 
-    return None, sts_identity
+    except Exception as e:
+        log.error(f"Error deploying AWS module: {str(e)}")
+        raise

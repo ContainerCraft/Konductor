@@ -10,6 +10,7 @@ Join the community in the [ContainerCraft Community Discord](https://discord.gg/
 
 ## Features
 
+- **AWS LandingZone**: Automated Kubernetes cluster setup using Talos.
 - **Kubernetes Deployment**: Automated Kubernetes cluster setup using Talos.
 - **Pulumi IaC Integration**: Infrastructure as Code management with Pulumi.
 - **Runme Integration**: Execute documented tasks directly from the README.md.

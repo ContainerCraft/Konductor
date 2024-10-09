@@ -20,14 +20,6 @@ The module defines the following resources:
     - create_ec2_instance: Defines the function to create an EC2 instance.
     - todo: Add more resources as needed.
 """
-# pulumi/modules/aws/resources.py
-
-"""
-AWS Module Resource Helpers
-
-This module provides helper functions to create AWS resources using
-the configurations defined in the Pydantic-based types.py.
-"""
 
 from typing import Dict, List, Any
 import pulumi
@@ -40,52 +32,161 @@ from .types import (
     AWSConfig,
     GlobalTags,
 )
-from core.metadata import set_global_labels, set_global_annotations
+from core.metadata import set_global_labels, set_global_annotations, generate_compliance_labels
 from core.utils import set_resource_metadata
 
 
-def create_organization() -> aws.organizations.Organization:
+def fetch_sts_identity(aws_provider: aws.Provider) -> pulumi.Output[Dict[str, str]]:
+    try:
+        identity = aws.get_caller_identity(opts=pulumi.InvokeOptions(provider=aws_provider))
+
+        # Map the output to a dictionary with explicit keys
+        return pulumi.Output.from_input({
+            "account_id": identity.account_id,
+            "arn": identity.arn,
+            "id": identity.id,
+            "user_id": identity.user_id
+        })
+    except Exception as e:
+        log.error(f"Error fetching STS Caller Identity: {str(e)}")
+        raise
+
+def create_s3_bucket(
+        bucket_name: str,
+        tags: dict,
+        aws_provider: aws.Provider,
+        compliance_config: dict,
+    ) -> aws.s3.Bucket:
+    """
+    Creates an S3 Bucket with the specified tags.
+
+    Args:
+        bucket_name (str): The name of the bucket.
+        tags (dict): The tags to apply to the bucket.
+        provider (aws.Provider): The AWS Provider.
+        compliance_config (dict): The compliance configuration.
+
+    Returns:
+        aws.s3.Bucket: The created S3 bucket.
+    """
+    bucket_tags = {**tags, **generate_compliance_labels(compliance_config)}
+    bucket = aws.s3.Bucket(
+        bucket_name,
+        tags=bucket_tags,
+        opts=pulumi.ResourceOptions(provider=aws_provider)
+    )
+
+    return bucket
+
+def get_organization_details(provider: aws.Provider):
+    try:
+        return aws.organizations.get_organization(opts=pulumi.InvokeOptions(provider=aws_provider))
+    except Exception as e:
+        log.warn(f"Failed to get existing organization: {str(e)}")
+    return None
+
+
+def setup_organization_units(org_details, config: AWSConfig, tags: dict, aws_provider: aws.Provider):
+    if org_details.roots:
+        root_id = org_details.roots[0].id
+        if config.control_tower.enabled:
+            ou = aws.organizations.OrganizationalUnit(
+                "example-ou",
+                name="example-ou",
+                parent_id=root_id,
+                tags=tags,
+                opts=pulumi.ResourceOptions(provider=aws_provider)
+            )
+            pulumi.export("ou_id", ou.id)
+    else:
+        log.warn("No roots found in the organization.")
+
+
+def create_organization(aws_provider: aws.Provider) -> aws.organizations.Organization:
     """
     Creates an AWS Organization with all features enabled.
 
     Returns:
         aws.organizations.Organization: The AWS Organization resource.
     """
-    organization = aws.organizations.Organization(
-        resource_name="my_organization",
-        feature_set="ALL",
-        opts=ResourceOptions(protect=True),
-    )
-    return organization
+    try:
+        # Create an AWS Organization with all features enabled
+        organization = aws.organizations.Organization(
+            resource_name="scip-smdc-cba-dev",
+            feature_set="ALL",
+            opts=ResourceOptions(
+                provider=aws_provider,
+            ),
+        )
 
+        # Export the organization ID
+        organization_id = organization.id.apply(lambda id: f"{id}")
+        export("organization_id", organization_id)
+        log.info(f"Organization created with ID: {organization_id}")
+
+        return organization
+
+    except Exception as e:
+        log.error(f"Failed to create organization: {str(e)}")
+        raise
+
+
+def get_or_create_organization(
+        aws_provider: aws.Provider,
+    ) -> aws.organizations.Organization:
+    """
+    Retrieves the existing AWS Organization or creates a new one if it doesn't exist.
+
+    Returns:
+        aws.organizations.Organization: The AWS Organization resource.
+    """
+    try:
+        organization_data = aws.organizations.get_organization(
+            opts=ResourceOptions(provider=aws_provider)
+        )
+        log.info(f"Found existing Organization with ID: {organization_data.id}")
+        return aws.organizations.Organization.get("existing_organization", organization_data.id)
+    except aws.errors.AwsError as e:
+        log.warn("No existing organization found, creating a new one.")
+        organization = create_organization(aws_provider)
+        pulumi.export("organization_id", organization.id)
+        return organization
 
 def create_organizational_units(
     organization: aws.organizations.Organization,
     ou_names: List[str],
-) -> Dict[str, aws.organizations.OrganizationalUnit]:
+    tags: Dict[str, str],
+    aws_provider: aws.Provider
+) -> Dict[str, pulumi.Output]:
     """
     Creates Organizational Units (OUs) under the specified AWS Organization.
 
     Args:
-        organization (aws.organizations.Organization): The AWS Organization resource.
-        ou_names (List[str]): A list of OU names to create.
+        organization: The AWS Organization resource.
+        ou_names: A list of OU names to create.
+        tags: Tags to apply to the Organizational Units.
 
     Returns:
-        Dict[str, aws.organizations.OrganizationalUnit]: A dictionary of OU resources.
+        A dictionary of Organizational Unit resources.
     """
-    ou_resources = {}
-    root_id = organization.roots[0].id
+    # Create an OU in an organization, getting the root_id dynamically from the organization
+    ou_map = {}
+    root_id_output = organization.roots[0].id if organization.roots else None
 
-    for ou_name in ou_names:
-        ou = aws.organizations.OrganizationalUnit(
-            resource_name=f"ou_{ou_name.lower()}",
-            name=ou_name,
-            parent_id=root_id,
-            opts=ResourceOptions(parent=organization),
-        )
-        ou_resources[ou_name] = ou
+    if root_id_output:
+        for ou_name in ou_names:
+            ou_map[ou_name] = aws.organizations.OrganizationalUnit(
+                resource_name=f"ou_{ou_name.lower()}",
+                name=ou_name,
+                parent_id=root_id_output,
+                tags=tags,
+                opts=ResourceOptions(
+                    provider=aws_provider,
+                    parent=organization
+                )
+            )
 
-    return ou_resources
+    return ou_map
 
 
 def setup_control_tower(control_tower_config: ControlTowerConfig) -> None:
@@ -103,41 +204,54 @@ def setup_control_tower(control_tower_config: ControlTowerConfig) -> None:
         log.info("AWS Control Tower setup is disabled.")
 
 
-def create_iam_users(iam_users: List[IAMUserConfig], tags: Dict[str, str]) -> None:
+def create_iam_users(
+        iam_users: List[IAMUserConfig],
+        tags: Dict[str, str],
+        aws_provider: aws.Provider
+    ) -> None:
     """
-    Creates IAM users, groups, and policies as specified in the configuration.
+    Creates IAM users and associates them with groups and policies.
 
     Args:
         iam_users (List[IAMUserConfig]): A list of IAMUserConfig objects.
-        tags (Dict[str, str]): A dictionary of tags to apply to resources.
+        tags (Dict[str, str]): The tags to apply to the IAM resources.
     """
     for user_config in iam_users:
-        # Create IAM User
         iam_user = aws.iam.User(
             resource_name=user_config.name,
             name=user_config.name,
             tags={**tags, "Email": user_config.email},
+            opts=pulumi.ResourceOptions(
+                provider=aws_provider,
+            )
         )
 
-        # Create IAM Groups and add user to groups
         for group_name in user_config.groups:
             iam_group = aws.iam.Group(
                 resource_name=f"group_{group_name}",
                 name=group_name,
                 tags=tags,
+                opts=pulumi.ResourceOptions(
+                    provider=aws_provider,
+                )
             )
             aws.iam.UserGroupMembership(
                 resource_name=f"{user_config.name}_{group_name}_membership",
                 user=iam_user.name,
                 groups=[iam_group.name],
+                opts=pulumi.ResourceOptions(
+                    provider=aws_provider,
+                )
             )
 
-        # Attach policies to user
         for policy_arn in user_config.policies:
             aws.iam.UserPolicyAttachment(
                 resource_name=f"{user_config.name}_{policy_arn.split('/')[-1]}",
                 user=iam_user.name,
                 policy_arn=policy_arn,
+                opts=pulumi.ResourceOptions(
+                    provider=aws_provider,
+                )
             )
 
 
@@ -146,31 +260,38 @@ def create_tenant_accounts(
     ou: aws.organizations.OrganizationalUnit,
     tenant_configs: Dict[str, TenantAccountConfig],
     tags: Dict[str, str],
+    aws_provider: aws.Provider,
 ) -> List[aws.organizations.Account]:
     """
     Creates tenant accounts under the specified Organizational Unit.
 
     Args:
-        organization (aws.organizations.Organization): The AWS Organization resource.
-        ou (aws.organizations.OrganizationalUnit): The Organizational Unit resource.
-        tenant_configs (Dict[str, TenantAccountConfig]): Tenant account configurations.
-        tags (Dict[str, str]): Tags to apply to resources.
+        organization: The AWS Organization resource.
+        ou: The Organizational Unit resource.
+        tenant_configs: Tenant account configurations.
+        tags: Tags to apply to resources.
 
     Returns:
-        List[aws.organizations.Account]: A list of AWS Account resources representing tenant accounts.
+        List of AWS Account resources representing tenant accounts.
     """
     tenant_accounts = []
 
-    for tenant_name, tenant_config in tenant_configs.items():
-        tenant_account = aws.organizations.Account(
-            resource_name=f"{tenant_name}_account",
-            email=tenant_config.email,
-            name=tenant_config.name,
-            parent_id=ou.id,
-            tags={**tags, **tenant_config.tags},
-            opts=ResourceOptions(parent=ou),
-        )
-        tenant_accounts.append(tenant_account)
+    ou_id = ou.id if ou else None
+
+    if ou_id:
+        for tenant_name, tenant_config in tenant_configs.items():
+            tenant_account = aws.organizations.Account(
+                resource_name=f"{tenant_name}_account",
+                email=tenant_config.email,
+                name=tenant_config.name,
+                parent_id=ou_id,
+                tags={**tags, **tenant_config.tags},
+                opts=ResourceOptions(
+                    provider=aws_provider,
+                    parent=organization
+                ),
+            )
+            tenant_accounts.append(tenant_account)
 
     return tenant_accounts
 
@@ -179,6 +300,7 @@ def assume_role_in_tenant_account(
     tenant_account: aws.organizations.Account,
     role_name: str,
     region: str,
+    aws_provider: aws.Provider
 ) -> aws.Provider:
     """
     Assumes a role in the tenant account to perform operations.
@@ -191,26 +313,23 @@ def assume_role_in_tenant_account(
     Returns:
         aws.Provider: An AWS provider configured to operate in the tenant account.
     """
-    role_arn = pulumi.Output.all(tenant_account.id, tenant_account.arn).apply(
-        lambda args: f"arn:aws:iam::{args[0]}:role/{role_name}"
+    return tenant_account.id.apply(lambda account_id:
+        aws.Provider(
+            f"tenant_provider_{account_id}",
+            assume_role=aws.ProviderAssumeRoleArgs(
+                role_arn=f"arn:aws:iam::{account_id}:role/{role_name}",
+                session_name="PulumiSession",
+            ),
+            region=region,
+        )
     )
-    tenant_provider = aws.Provider(
-        resource_name=f"tenant_provider_{tenant_account.name}",
-        assume_role=aws.ProviderAssumeRoleArgs(
-            role_arn=role_arn,
-            session_name="PulumiSession",
-        ),
-        region=region,
-        opts=ResourceOptions(parent=tenant_account),
-    )
-    return tenant_provider
 
 
 def deploy_tenant_resources(
     tenant_provider: aws.Provider,
     tenant_account: aws.organizations.Account,
     tenant_config: TenantAccountConfig,
-    global_tags: Dict[str, str],
+    global_tags: Dict[str, str]
 ) -> None:
     """
     Deploys resources in the tenant account based on the configuration.
@@ -220,25 +339,30 @@ def deploy_tenant_resources(
         tenant_account (aws.organizations.Account): The tenant AWS account.
         tenant_config (TenantAccountConfig): Configuration for the tenant account.
         global_tags (Dict[str, str]): Global tags to apply to resources.
+
+    Raises:
+        ValueError: If tenant_config is None or other logical issues in the configuration.
     """
-    # Implement resource deployment based on tenant_config.features
-    # Example: Deploy S3 bucket if 'bucket' feature is enabled
+    if tenant_config is None:
+        tenant_account.name.apply(lambda name:
+            log.warn(f"Configuration for tenant account '{name}' is None or missing.")
+        )
+        return
+
     if 'bucket' in tenant_config.features:
         bucket = aws.s3.Bucket(
             resource_name=f"{tenant_account.name}_bucket",
-            bucket=f"{tenant_account.name}-bucket",
+            bucket_name=f"{tenant_account.name.apply(lambda x: x)}-bucket",
             acl="private",
             tags={**global_tags, **tenant_config.tags},
             opts=ResourceOptions(provider=tenant_provider, parent=tenant_account),
         )
         pulumi.export(f"{tenant_account.name}_bucket_name", bucket.bucket)
 
-    # Add more feature-based deployments as needed
-    # Example: Deploy EC2 instances if 'ec2' feature is enabled
     if 'ec2' in tenant_config.features:
         ec2_instance = aws.ec2.Instance(
             resource_name=f"{tenant_account.name}_instance",
-            ami="ami-0c94855ba95c71c99",  # Example AMI ID; replace with appropriate one
+            ami="ami-0c94855ba95c71c99",
             instance_type="t2.micro",
             tags={**global_tags, **tenant_config.tags},
             opts=ResourceOptions(provider=tenant_provider, parent=tenant_account),
@@ -250,7 +374,7 @@ def create_vpc(
     vpc_name: str,
     cidr_block: str,
     tags: Dict[str, str],
-    provider: aws.Provider,
+    aws_provider: aws.Provider,
     opts: ResourceOptions = None,
 ) -> aws.ec2.Vpc:
     """
@@ -274,7 +398,7 @@ def create_vpc(
         tags=tags,
         enable_dns_hostnames=True,
         enable_dns_support=True,
-        opts=opts.merge(ResourceOptions(provider=provider)),
+        opts=opts.merge(ResourceOptions(provider=aaws_provider)),
     )
     return vpc
 
@@ -284,7 +408,7 @@ def create_subnet(
     cidr_block: str,
     vpc_id: str,
     tags: Dict[str, str],
-    provider: aws.Provider,
+    aws_provider: aws.Provider,
     opts: ResourceOptions = None,
 ) -> aws.ec2.Subnet:
     """
@@ -308,7 +432,7 @@ def create_subnet(
         cidr_block=cidr_block,
         vpc_id=vpc_id,
         tags=tags,
-        opts=opts.merge(ResourceOptions(provider=provider)),
+        opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return subnet
 
@@ -317,7 +441,7 @@ def create_security_group(
     sg_name: str,
     vpc_id: str,
     tags: Dict[str, str],
-    provider: aws.Provider,
+    aws_provider: aws.Provider,
     description: str = "Default security group",
     opts: ResourceOptions = None,
 ) -> aws.ec2.SecurityGroup:
@@ -365,7 +489,7 @@ def create_security_group(
                 cidr_blocks=["0.0.0.0/0"],
             ),
         ],
-        opts=opts.merge(ResourceOptions(provider=provider)),
+        opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return sg
 
@@ -374,7 +498,7 @@ def create_internet_gateway(
     igw_name: str,
     vpc_id: str,
     tags: Dict[str, str],
-    provider: aws.Provider,
+    aws_provider: aws.Provider,
     opts: ResourceOptions = None,
 ) -> aws.ec2.InternetGateway:
     """
@@ -396,7 +520,7 @@ def create_internet_gateway(
         resource_name=igw_name,
         vpc_id=vpc_id,
         tags=tags,
-        opts=opts.merge(ResourceOptions(provider=provider)),
+        opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return igw
 
@@ -405,7 +529,7 @@ def create_route_table(
     rt_name: str,
     vpc_id: str,
     tags: Dict[str, str],
-    provider: aws.Provider,
+    aws_provider: aws.Provider,
     opts: ResourceOptions = None,
 ) -> aws.ec2.RouteTable:
     """
@@ -427,7 +551,7 @@ def create_route_table(
         resource_name=rt_name,
         vpc_id=vpc_id,
         tags=tags,
-        opts=opts.merge(ResourceOptions(provider=provider)),
+        opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return rt
 
@@ -437,7 +561,7 @@ def create_route(
     route_table_id: str,
     destination_cidr_block: str,
     gateway_id: str,
-    provider: aws.Provider,
+    aws_provider: aws.Provider,
     opts: ResourceOptions = None,
 ) -> aws.ec2.Route:
     """
@@ -461,7 +585,7 @@ def create_route(
         route_table_id=route_table_id,
         destination_cidr_block=destination_cidr_block,
         gateway_id=gateway_id,
-        opts=opts.merge(ResourceOptions(provider=provider)),
+        opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return route
 
@@ -470,7 +594,7 @@ def create_subnet_route_table_association(
     association_name: str,
     subnet_id: str,
     route_table_id: str,
-    provider: aws.Provider,
+    aws_provider: aws.Provider,
     opts: ResourceOptions = None,
 ) -> aws.ec2.RouteTableAssociation:
     """
@@ -492,7 +616,7 @@ def create_subnet_route_table_association(
         resource_name=association_name,
         subnet_id=subnet_id,
         route_table_id=route_table_id,
-        opts=opts.merge(ResourceOptions(provider=provider)),
+        opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return association
 
@@ -505,7 +629,7 @@ def create_security_group_rule(
     from_port: int,
     to_port: int,
     cidr_blocks: List[str],
-    provider: aws.Provider,
+    aws_provider: aws.Provider,
     opts: ResourceOptions = None,
 ) -> aws.ec2.SecurityGroupRule:
     """
@@ -535,7 +659,7 @@ def create_security_group_rule(
         from_port=from_port,
         to_port=to_port,
         cidr_blocks=cidr_blocks,
-        opts=opts.merge(ResourceOptions(provider=provider)),
+        opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return rule
 
@@ -547,7 +671,7 @@ def create_ec2_instance(
     subnet_id: str,
     security_group_ids: List[str],
     tags: Dict[str, str],
-    provider: aws.Provider,
+    aws_provider: aws.Provider,
     key_name: str,
     opts: ResourceOptions = None,
 ) -> aws.ec2.Instance:
@@ -578,6 +702,6 @@ def create_ec2_instance(
         vpc_security_group_ids=security_group_ids,
         tags=tags,
         key_name=key_name,
-        opts=opts.merge(ResourceOptions(provider=provider)),
+        opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return instance

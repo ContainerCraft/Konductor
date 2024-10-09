@@ -31,10 +31,6 @@ def main():
         modules_to_deploy = [
             "aws",
             #"cert_manager",
-            #"kubevirt",
-            #"multus",
-            #"hostpath_provisioner",
-            #"containerized_data_importer",
             #"prometheus"
         ]
 

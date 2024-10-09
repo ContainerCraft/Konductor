@@ -64,8 +64,9 @@ class ComplianceConfig:
             ComplianceConfig: The merged compliance configuration object.
         """
         default_config = ComplianceConfig()
+        valid_keys = {'fisma', 'nist', 'scip'}
         for key, value in user_config.items():
-            if hasattr(default_config, key):
+            if key in valid_keys:
                 nested_config = getattr(default_config, key)
                 for nested_key, nested_value in value.items():
                     if hasattr(nested_config, nested_key):
@@ -73,5 +74,5 @@ class ComplianceConfig:
                     else:
                         pulumi.log.warn(f"Unknown key '{nested_key}' in compliance.{key}")
             else:
-                pulumi.log.warn(f"Unknown compliance configuration key: {key}")
+                pulumi.log.debug(f"Ignored non-compliance key: {key}")
         return default_config
