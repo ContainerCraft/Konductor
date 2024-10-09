@@ -249,5 +249,5 @@ def sanitize_tag_value(value: str) -> str:
         str: The sanitized value.
     """
     # AWS tag value must be 0-256 Unicode characters
-    sanitized = re.sub(r'[^a-zA-Z0-9\s_.:/=+\-@]', '-', value)
+    sanitized = re.sub(r'[^a-zA-Z0-9\s_,.:/=+\-@]', '-', value)
     return sanitized[:256]
