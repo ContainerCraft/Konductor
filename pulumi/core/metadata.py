@@ -15,6 +15,7 @@ import re
 import json
 import threading
 import subprocess
+import dataclasses
 from typing import Dict, Any
 
 import pulumi
@@ -94,7 +95,7 @@ def collect_git_info() -> Dict[str, str]:
 
 def generate_git_labels(git_info: Dict[str, str]) -> Dict[str, str]:
     """
-    Generates git-related labels.
+    Generates git-related labels suitable for AWS tags.
 
     Args:
         git_info (Dict[str, str]): The Git information.
@@ -102,10 +103,16 @@ def generate_git_labels(git_info: Dict[str, str]) -> Dict[str, str]:
     Returns:
         Dict[str, str]: The git-related labels.
     """
-    return {
-        "git.branch": git_info.get("branch", ""),
-        "git.commit": git_info.get("commit", "")[:7],
-    }
+    flattened_git_info = flatten_dict(git_info)
+
+    # Sanitize keys and values to conform to AWS tag requirements
+    sanitized_labels = {}
+    for key, value in flattened_git_info.items():
+        sanitized_key = sanitize_tag_key(f"git.{key}")
+        sanitized_value = sanitize_tag_value(value)
+        sanitized_labels[sanitized_key] = sanitized_value
+
+    return sanitized_labels
 
 def generate_git_annotations(git_info: Dict[str, str]) -> Dict[str, str]:
     """
@@ -133,14 +140,19 @@ def generate_compliance_labels(compliance_config: ComplianceConfig) -> Dict[str,
     Returns:
         Dict[str, str]: A dictionary of compliance labels.
     """
-    labels = {}
-    if compliance_config.fisma.enabled:
-        labels['compliance.fisma.enabled'] = 'true'
-    if compliance_config.nist.enabled:
-        labels['compliance.nist.enabled'] = 'true'
-    if compliance_config.scip.environment:
-        labels['compliance.scip.environment'] = sanitize_label_value(compliance_config.scip.environment)
-    return labels
+    # Convert the ComplianceConfig to a dictionary
+    compliance_dict = compliance_config.dict()
+    # Flatten the nested compliance dictionary
+    flattened_compliance = flatten_dict(compliance_dict)
+
+    # Sanitize keys and values to conform to AWS tag requirements
+    sanitized_labels = {}
+    for key, value in flattened_compliance.items():
+        sanitized_key = sanitize_tag_key(key)
+        sanitized_value = sanitize_tag_value(value)
+        sanitized_labels[sanitized_key] = sanitized_value
+
+    return sanitized_labels
 
 def generate_compliance_annotations(compliance_config: ComplianceConfig) -> Dict[str, str]:
     """
@@ -186,3 +198,56 @@ def sanitize_label_value(value: str) -> str:
     sanitized = re.sub(r'^[^a-z0-9]+', '', sanitized)
     sanitized = re.sub(r'[^a-z0-9]+$', '', sanitized)
     return sanitized[:63]
+
+def flatten_dict(data, parent_key='', sep='.') -> Dict[str, str]:
+    """
+    Flattens a nested dictionary into a single-level dictionary with concatenated keys.
+
+    Args:
+        data (dict): The dictionary to flatten.
+        parent_key (str): The base key string.
+        sep (str): The separator between keys.
+
+    Returns:
+        Dict[str, str]: The flattened dictionary.
+    """
+    items = []
+    for k, v in data.items():
+        new_key = f"{parent_key}{sep}{k}" if parent_key else k
+        if isinstance(v, dict):
+            # Always recurse into dictionaries
+            items.extend(flatten_dict(v, new_key, sep=sep).items())
+        elif isinstance(v, list):
+            # Convert list to comma-separated string
+            items.append((new_key, ','.join(map(str, v))))
+        elif v is not None:
+            items.append((new_key, str(v)))
+    return dict(items)
+
+def sanitize_tag_key(key: str) -> str:
+    """
+    Sanitizes a string to be used as an AWS tag key.
+
+    Args:
+        key (str): The key to sanitize.
+
+    Returns:
+        str: The sanitized key.
+    """
+    # AWS tag key must be 1-128 Unicode characters
+    sanitized = re.sub(r'[^a-zA-Z0-9\s_.:/=+\-@]', '-', key)
+    return sanitized[:128]
+
+def sanitize_tag_value(value: str) -> str:
+    """
+    Sanitizes a string to be used as an AWS tag value.
+
+    Args:
+        value (str): The value to sanitize.
+
+    Returns:
+        str: The sanitized value.
+    """
+    # AWS tag value must be 0-256 Unicode characters
+    sanitized = re.sub(r'[^a-zA-Z0-9\s_.:/=+\-@]', '-', value)
+    return sanitized[:256]

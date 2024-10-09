@@ -4,23 +4,30 @@
 Configuration Management Module
 
 This module handles the retrieval and preparation of configurations for different modules
-within the Kargo Pulumi IaC program. It centralizes configuration logic to promote reuse
+within the Pulumi IaC program. It centralizes configuration logic to promote reuse
 and maintainability.
+
+Key Functions:
+- get_module_config: Retrieves and prepares module configuration.
+- load_default_versions: Loads default versions for modules.
+- export_results: Exports global deployment stack metadata.
+
+Includes proper data type handling to ensure configurations are correctly parsed.
 """
 
 import json
 import os
 import pulumi
 import requests
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Tuple, Optional
 from .types import ComplianceConfig
 
 # Default versions URL template
 DEFAULT_VERSIONS_URL_TEMPLATE = 'https://raw.githubusercontent.com/ContainerCraft/Kargo/rerefactor/pulumi/'
 
 # Module enabled defaults: Setting a module to True enables the module by default
-# TODO: relocate to pulumi/__main__.py for better visibility
 DEFAULT_ENABLED_CONFIG = {
+    "aws": False,
     "cert_manager": True,
     "kubevirt": True,
     "multus": True,
@@ -29,8 +36,22 @@ DEFAULT_ENABLED_CONFIG = {
     "prometheus": True,
 }
 
-# Centralized Pulumi Config Retrieval
-# Fetches the configuration for a module and determines if the module is enabled.
+def coerce_to_bool(value: Any) -> bool:
+    """
+    Coerces a value to a boolean.
+
+    Args:
+        value (Any): The value to coerce.
+
+    Returns:
+        bool: The coerced boolean value.
+    """
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, str):
+        return value.lower() == 'true'
+    return bool(value)
+
 def get_module_config(
         module_name: str,
         config: pulumi.Config,
@@ -45,31 +66,28 @@ def get_module_config(
         default_versions (Dict[str, Any]): A dictionary of default versions for modules.
 
     Returns:
-        Tuple[Dict[str, Any], bool]: A tuple containing the module's configuration dictionary and a boolean indicating if the module is enabled.
+        Tuple[Dict[str, Any], bool]: A tuple containing the module's configuration dictionary
+                                     and a boolean indicating if the module is enabled.
     """
+
     module_config = config.get_object(module_name) or {}
 
     # Retrieve enabled status from configuration or defaults to defined default setting
-    module_enabled = str(module_config.pop('enabled', DEFAULT_ENABLED_CONFIG.get(module_name, False))).lower() == "true"
+    enabled_value = module_config.pop('enabled', DEFAULT_ENABLED_CONFIG.get(module_name, False))
+    module_enabled = coerce_to_bool(enabled_value)
+
+    # Include 'compliance' config into 'module_config' for AWS module
+    if module_name == 'aws':
+        compliance_config_dict = config.get_object('compliance') or {}
+        module_config['compliance'] = compliance_config_dict
 
     # Only set the version if it is *not* the aws module
     if module_name != "aws":
         module_config['version'] = module_config.get('version', default_versions.get(module_name))
+
     return module_config, module_enabled
 
-
-# Retrieve Module Component Version Control Configuration from external local or remote json file.
-# Supports centralized component version control configuration via local or remote json objects including:
-# - `latest` for dynamic retrieval and utilization of the latest version.
-# - `v0.00.0` hard coded version in Pulumi Config for overrid-ing version control.
-# - `{lts,stable,edge,latest}` for subscribing to remote version control channels.
-# TODO:
-# - Refactor function to use more obvious prescedence ordering and configuration loading.
-# - Refactor function for easier module maintainer adoption.
-# - Adopt remote stable channel as first default version source after first github releases are published.
-# - Adopt local stable channel as exception fallback for centralized version configuration.
-# - Adopt `latest` as default version for modules without remote or local or pulumi config version configuration.
-def load_default_versions(config: pulumi.Config, force_refresh=False) -> dict:
+def load_default_versions(config: pulumi.Config, force_refresh: bool = False) -> Dict[str, Any]:
     """
     Loads the default versions for modules based on the specified configuration settings.
 
@@ -80,10 +98,11 @@ def load_default_versions(config: pulumi.Config, force_refresh=False) -> dict:
     4. Remote versions based on the specified channel (`versions.channel`).
 
     Args:
-        config: The Pulumi configuration object.
+        config (pulumi.Config): The Pulumi configuration object.
+        force_refresh (bool): Whether to force refresh the versions cache.
 
     Returns:
-        A dictionary containing the default versions for modules.
+        Dict[str, Any]: A dictionary containing the default versions for modules.
 
     Raises:
         Exception: If default versions cannot be loaded from any source.
@@ -99,13 +118,10 @@ def load_default_versions(config: pulumi.Config, force_refresh=False) -> dict:
     stack_name = pulumi.get_stack()
     default_versions_source = config.get('default_versions.source')
     versions_channel = config.get('versions.channel') or 'stable'
-    versions_stack_name = config.get_bool('versions.stack_name') or False
+    versions_stack_name = coerce_to_bool(config.get('versions.stack_name')) or False
     default_versions = {}
 
     # Function to try loading default versions from file
-    # TODO:
-    # - Adopt standardized local file storage location `./pulumi/versions/{filename}.json`
-    # - Adopt file naming convention `default.json` `lts.json` `stable.json` `edge.json` `latest.json`
     def load_versions_from_file(file_path: str) -> dict:
         try:
             with open(file_path, 'r') as f:
@@ -159,11 +175,10 @@ def load_default_versions(config: pulumi.Config, force_refresh=False) -> dict:
 
     return default_versions
 
-# Function to export global deployment stack metadata
 def export_results(
         versions: Dict[str, str],
         configurations: Dict[str, Dict[str, Any]],
-        compliance: Dict[str, Any]
+        compliance: Any
     ):
     """
     Exports the results of the deployment processes including versions, configurations, and compliance information.
@@ -171,8 +186,14 @@ def export_results(
     Args:
         versions (Dict[str, str]): A dictionary containing the versions of the deployed modules.
         configurations (Dict[str, Dict[str, Any]]): A dictionary containing the configurations of the deployed modules.
-        compliance (Dict[str, Any]): A dictionary containing the compliance information.
+        compliance (Any): The compliance configuration, can be ComplianceConfig or a dictionary.
     """
+    # Convert compliance to a dictionary if it's a Pydantic model
+    if hasattr(compliance, 'dict'):
+        compliance_dict = compliance.dict()
+    else:
+        compliance_dict = compliance
+
     pulumi.export("versions", versions)
     pulumi.export("configuration", configurations)
-    pulumi.export("compliance", compliance)
+    pulumi.export("compliance", compliance_dict)

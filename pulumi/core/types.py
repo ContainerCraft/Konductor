@@ -3,76 +3,66 @@
 """
 Types and Data Structures Module
 
-This module defines all shared data classes and types used across modules
-within the Kargo PaaS platform.
+This module defines all shared data classes and types used across all modules.
 """
 
 from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, validator
 
-import pulumi
-from dataclasses import dataclass, field
-
-@dataclass
-class NamespaceConfig:
+class NamespaceConfig(BaseModel):
     name: str
-    labels: Dict[str, str] = field(default_factory=lambda: {"ccio.v1/app": "kargo"})
-    annotations: Dict[str, str] = field(default_factory=dict)
-    finalizers: List[str] = field(default_factory=lambda: ["kubernetes"])
+    labels: Dict[str, str] = {"ccio.v1/app": "kargo"}
+    annotations: Dict[str, str] = {}
+    finalizers: List[str] = ["kubernetes"]
     protect: bool = False
     retain_on_delete: bool = False
-    ignore_changes: List[str] = field(default_factory=lambda: ["metadata", "spec"])
-    custom_timeouts: Dict[str, str] = field(default_factory=lambda: {
+    ignore_changes: List[str] = ["metadata", "spec"]
+    custom_timeouts: Dict[str, str] = {
         "create": "5m",
         "update": "10m",
         "delete": "10m"
-    })
+    }
 
-@dataclass
-class FismaConfig:
+class FismaConfig(BaseModel):
     enabled: bool = False
     level: Optional[str] = None
-    ato: Dict[str, str] = field(default_factory=dict)
+    ato: Dict[str, str] = {}
 
-@dataclass
-class NistConfig:
+    @validator('enabled', pre=True)
+    def parse_enabled(cls, v):
+        if isinstance(v, str):
+            return v.lower() == 'true'
+        return bool(v)
+
+class NistConfig(BaseModel):
     enabled: bool = False
-    controls: List[str] = field(default_factory=list)
-    auxiliary: List[str] = field(default_factory=list)
-    exceptions: List[str] = field(default_factory=list)
+    controls: List[str] = []
+    auxiliary: List[str] = []
+    exceptions: List[str] = []
 
-@dataclass
-class ScipConfig:
+    @validator('enabled', pre=True)
+    def parse_enabled(cls, v):
+        if isinstance(v, str):
+            return v.lower() == 'true'
+        return bool(v)
+
+class ScipConfig(BaseModel):
     environment: Optional[str] = None
-    ownership: Dict[str, Any] = field(default_factory=dict)
-    provider: Dict[str, Any] = field(default_factory=dict)
+    ownership: Dict[str, Any] = {}
+    provider: Dict[str, Any] = {}
 
-@dataclass
-class ComplianceConfig:
-    fisma: FismaConfig = field(default_factory=FismaConfig)
-    nist: NistConfig = field(default_factory=NistConfig)
-    scip: ScipConfig = field(default_factory=ScipConfig)
+class ComplianceConfig(BaseModel):
+    fisma: FismaConfig = FismaConfig()
+    nist: NistConfig = NistConfig()
+    scip: ScipConfig = ScipConfig()
 
-    @staticmethod
-    def merge(user_config: Dict[str, Any]) -> 'ComplianceConfig':
-        """
-        Merges user-provided compliance configuration with default configuration.
-
-        Args:
-            user_config (Dict[str, Any]): The user-provided compliance configuration.
-
-        Returns:
-            ComplianceConfig: The merged compliance configuration object.
-        """
-        default_config = ComplianceConfig()
-        valid_keys = {'fisma', 'nist', 'scip'}
-        for key, value in user_config.items():
-            if key in valid_keys:
-                nested_config = getattr(default_config, key)
-                for nested_key, nested_value in value.items():
-                    if hasattr(nested_config, nested_key):
-                        setattr(nested_config, nested_key, nested_value)
-                    else:
-                        pulumi.log.warn(f"Unknown key '{nested_key}' in compliance.{key}")
-            else:
-                pulumi.log.debug(f"Ignored non-compliance key: {key}")
-        return default_config
+    @classmethod
+    def merge(cls, user_config: Dict[str, Any]) -> 'ComplianceConfig':
+        fisma_config = FismaConfig(**user_config.get('fisma', {}))
+        nist_config = NistConfig(**user_config.get('nist', {}))
+        scip_config = ScipConfig(**user_config.get('scip', {}))
+        return cls(
+            fisma=fisma_config,
+            nist=nist_config,
+            scip=scip_config
+        )

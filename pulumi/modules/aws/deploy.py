@@ -10,7 +10,7 @@ and ensures compliance metadata is propagated as tags.
 import pulumi
 import pulumi_aws as aws
 from pulumi import ResourceOptions, log
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 from .types import AWSConfig, TenantAccountConfig
 from .config import initialize_aws_provider, generate_tags, load_tenant_account_configs
@@ -22,80 +22,98 @@ from .resources import (
     create_iam_users,
     create_tenant_accounts,
     deploy_tenant_resources,
-    assume_role_in_tenant_account
+    assume_role_in_tenant_account,
+    get_or_create_organization,
+    get_organization_root_id,
 )
 from core.metadata import collect_git_info
 from core.types import ComplianceConfig
 
+MODULE_NAME = "aws"
+MODULE_VERSION = "0.0.1"
 
-def deploy_aws_module(config: AWSConfig, global_depends_on: List[pulumi.Resource]) -> pulumi.Resource:
+
+def deploy_aws_module(config: AWSConfig, global_depends_on: List[pulumi.Resource]) -> Tuple[str, pulumi.Resource]:
+    """
+    Deploys the AWS module resources.
+
+    Args:
+        config (AWSConfig): AWS configuration.
+        global_depends_on (List[pulumi.Resource]): Global dependencies.
+
+    Returns:
+        Tuple[str, pulumi.Resource]: A tuple containing the module version and the main AWS resource deployed.
+    """
     try:
         # Initialize AWS Provider
         aws_provider = initialize_aws_provider(config)
 
-        # Generate global tags
+        # Generate global tags and register transformations
         git_info = collect_git_info()
-        compliance_config = ComplianceConfig.merge(config.dict())
-        global_tags = generate_tags(config, compliance_config, git_info)
+        compliance_config = config.compliance
+        # Log compliance_config to verify its content
+        pulumi.log.info(f"AWS Module Compliance Config: {compliance_config}")
+        generate_tags(config, compliance_config, git_info)
 
-        # Create an S3 bucket for Ops data
+        # Create a basic S3 bucket
         s3_bucket = create_s3_bucket(
             "konductor-bucket",
-            global_tags,
             aws_provider,
-            compliance_config,
         )
         pulumi.export("ops_data_bucket", s3_bucket.id)
 
-        # Create AWS Organization
-        organization = create_organization(aws_provider)
+        # Get existing AWS Organization and organization data
+        organization, organization_data = get_or_create_organization(aws_provider)
 
-        # Setup Control Tower
-        setup_control_tower(config.control_tower)
+        # Get the root ID from the organization data
+        root_id = get_organization_root_id(organization_data)
 
-        # Create Organizational Units
-        organizational_units = create_organizational_units(
-            organization,
-            ["Security", "Infrastructure", "Applications"],
-            global_tags,
-            aws_provider
-        )
-
-        # Ensure Outputs are properly used from previously created resources
-        ou_applications = organizational_units.get("Applications")
-        if ou_applications:
-            tenant_accounts = create_tenant_accounts(
+        # Create organizational units and tenant accounts if enabled
+        build_organizational_infrastructure: bool = False
+        if build_organizational_infrastructure:
+            # Create Organizational Units
+            organizational_units = create_organizational_units(
                 organization,
-                ou_applications,
-                load_tenant_account_configs(),
-                global_tags,
+                root_id,
+                ["SecOps", "Infrastructure", "Applications"],
                 aws_provider
             )
 
-            # Deploy resources for each tenant
-            tenant_account_configs = load_tenant_account_configs()
-
-            for tenant_account in tenant_accounts:
-                tenant_provider = assume_role_in_tenant_account(
-                    tenant_account=tenant_account,
-                    role_name="OrganizationAccountAccessRole",
-                    region=config.region,
-                    aws_provider=aws_provider
+            # Create Tenant Accounts under 'Applications' OU
+            ou_applications = organizational_units.get("Applications")
+            if ou_applications:
+                tenant_configs = load_tenant_account_configs()
+                tenant_accounts = create_tenant_accounts(
+                    organization,
+                    ou_applications,
+                    tenant_configs,
+                    aws_provider
                 )
 
-                tenant_config = tenant_account_configs.get(tenant_account.name)
-                if tenant_config:
-                    deploy_tenant_resources(
-                        tenant_provider,
-                        tenant_account,
-                        tenant_config,
-                        global_tags
+                # Deploy resources for each tenant
+                for tenant_account in tenant_accounts:
+                    tenant_provider = assume_role_in_tenant_account(
+                        tenant_account=tenant_account,
+                        role_name="OrganizationAccountAccessRole",
+                        region=config.region,
+                        aws_provider=aws_provider
                     )
 
-        pulumi.export("organization_id", organization.id)
+                    tenant_config = tenant_configs.get(tenant_account.name)
+                    if tenant_config:
+                        deploy_tenant_resources(
+                            tenant_provider,
+                            tenant_account,
+                            tenant_config
+                        )
 
-        return organization, aws_provider, organization.id
+        pulumi.export("organization_id", organization.id)
+        pulumi.export("organization_arn", organization.arn)
+
+        # Return the module version and the main resource
+        module_version = "1.0.0"
+        return (module_version, organization)
 
     except Exception as e:
-        log.error(f"Error deploying AWS module: {str(e)}")
+        pulumi.log.error(f"Error deploying AWS module: {str(e)}")
         raise

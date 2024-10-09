@@ -45,6 +45,7 @@ def main():
             k8s_provider,
             versions,
             configurations,
+            compliance_config
         )
 
         # Export stack outputs.
