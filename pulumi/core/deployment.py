@@ -184,7 +184,8 @@ def deploy_module(
             configurations[module_name] = {"enabled": module_enabled}
 
             if module_aux_meta:
-                pulumi.export(f"meta_{module_name}", module_aux_meta)
+                # Include module outputs into configurations[module_name]
+                configurations[module_name].update(module_aux_meta)
 
             global_depends_on.append(release)
 

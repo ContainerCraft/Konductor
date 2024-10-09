@@ -90,7 +90,6 @@ def setup_organization_units(org_details, config: AWSConfig, tags: dict, aws_pro
                 parent_id=root_id,
                 opts=pulumi.ResourceOptions(provider=aws_provider)
             )
-            pulumi.export("ou_id", ou.id)
     else:
         log.warn("No roots found in the organization.")
 
@@ -110,9 +109,6 @@ def create_organization(aws_provider: aws.Provider) -> aws.organizations.Organiz
             feature_set="ALL",
             opts=ResourceOptions(provider=aws_provider),
         )
-
-        # Export the organization ID
-        pulumi.export("organization_id", organization.id)
 
         # Use .apply to log the organization ID
         organization.id.apply(lambda org_id: log.info(f"Organization created with ID: {org_id}"))
@@ -367,7 +363,7 @@ def deploy_tenant_resources(
     if 'ec2' in tenant_config.features:
         ec2_instance = aws.ec2.Instance(
             resource_name=f"{tenant_account.name}_instance",
-            ami="ami-0c94855ba95c71c99",  # Example AMI ID
+            ami="ami-0c94855ba95c71c99",
             instance_type="t2.micro",
             opts=ResourceOptions(provider=tenant_provider, parent=tenant_account),
         )

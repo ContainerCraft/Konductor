@@ -140,12 +140,9 @@ def generate_compliance_labels(compliance_config: ComplianceConfig) -> Dict[str,
     Returns:
         Dict[str, str]: A dictionary of compliance labels.
     """
-    # Convert the ComplianceConfig to a dictionary
     compliance_dict = compliance_config.dict()
-    # Flatten the nested compliance dictionary
-    flattened_compliance = flatten_dict(compliance_dict)
+    flattened_compliance = flatten_dict(compliance_dict, list_sep=':')
 
-    # Sanitize keys and values to conform to AWS tag requirements
     sanitized_labels = {}
     for key, value in flattened_compliance.items():
         sanitized_key = sanitize_tag_key(key)
@@ -199,7 +196,7 @@ def sanitize_label_value(value: str) -> str:
     sanitized = re.sub(r'[^a-z0-9]+$', '', sanitized)
     return sanitized[:63]
 
-def flatten_dict(data, parent_key='', sep='.') -> Dict[str, str]:
+def flatten_dict(data, parent_key='', sep='.', list_sep=':') -> Dict[str, str]:
     """
     Flattens a nested dictionary into a single-level dictionary with concatenated keys.
 
@@ -207,6 +204,7 @@ def flatten_dict(data, parent_key='', sep='.') -> Dict[str, str]:
         data (dict): The dictionary to flatten.
         parent_key (str): The base key string.
         sep (str): The separator between keys.
+        list_sep (str): The separator between list items.
 
     Returns:
         Dict[str, str]: The flattened dictionary.
@@ -215,11 +213,9 @@ def flatten_dict(data, parent_key='', sep='.') -> Dict[str, str]:
     for k, v in data.items():
         new_key = f"{parent_key}{sep}{k}" if parent_key else k
         if isinstance(v, dict):
-            # Always recurse into dictionaries
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
+            items.extend(flatten_dict(v, new_key, sep=sep, list_sep=list_sep).items())
         elif isinstance(v, list):
-            # Convert list to comma-separated string
-            items.append((new_key, ','.join(map(str, v))))
+            items.append((new_key, list_sep.join(map(str, v))))
         elif v is not None:
             items.append((new_key, str(v)))
     return dict(items)
@@ -249,5 +245,6 @@ def sanitize_tag_value(value: str) -> str:
         str: The sanitized value.
     """
     # AWS tag value must be 0-256 Unicode characters
-    sanitized = re.sub(r'[^a-zA-Z0-9\s_,.:/=+\-@]', '-', value)
+    # Include colons ':' in the allowed characters
+    sanitized = re.sub(r'[^a-zA-Z0-9\s_./:=+\-@]', '-', value)
     return sanitized[:256]

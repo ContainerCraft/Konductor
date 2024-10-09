@@ -53,14 +53,13 @@ def deploy_aws_module(config: AWSConfig, global_depends_on: List[pulumi.Resource
         compliance_config = config.compliance
         # Log compliance_config to verify its content
         pulumi.log.info(f"AWS Module Compliance Config: {compliance_config}")
-        generate_tags(config, compliance_config, git_info)
+        module_tags = generate_tags(config, compliance_config, git_info)
 
         # Create a basic S3 bucket
         s3_bucket = create_s3_bucket(
             "konductor-bucket",
             aws_provider,
         )
-        pulumi.export("ops_data_bucket", s3_bucket.id)
 
         # Get existing AWS Organization and organization data
         organization, organization_data = get_or_create_organization(aws_provider)
@@ -107,12 +106,16 @@ def deploy_aws_module(config: AWSConfig, global_depends_on: List[pulumi.Resource
                             tenant_config
                         )
 
-        pulumi.export("organization_id", organization.id)
-        pulumi.export("organization_arn", organization.arn)
+        # Return Dictionary of AWS Module Resources to global configuration dictionary
+        module_outputs = {
+            "ops_data_bucket": s3_bucket.id,
+            "organization": organization.id,
+            "organization_arn": organization.arn,
+            "aws_module_tags": module_tags
+        }
 
         # Return the module version and the main resource
-        module_version = "1.0.0"
-        return (module_version, organization)
+        return MODULE_VERSION, organization, module_outputs
 
     except Exception as e:
         pulumi.log.error(f"Error deploying AWS module: {str(e)}")

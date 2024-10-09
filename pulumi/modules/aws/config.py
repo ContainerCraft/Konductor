@@ -15,6 +15,7 @@ Functions:
 """
 
 import os
+import json
 from typing import Dict, Any, Optional
 import pulumi
 from pulumi import log, Config, ResourceTransformationResult, ResourceTransformationArgs
@@ -103,7 +104,9 @@ def generate_tags(config: AWSConfig, compliance_config: ComplianceConfig, git_in
         "iac_module_name": MODULE_NAME,
         "iac_module_version": MODULE_VERSION,
     }
-    pulumi.export("aws_module_tags", aws_module_tags)
+
+    # Log generated tags for visibility
+    #pulumi.log.info(f"Generated AWS tags: {json.dumps(aws_module_tags, indent=2)}")
 
     # Register the global transformation
     generate_global_transformations(aws_module_tags)
