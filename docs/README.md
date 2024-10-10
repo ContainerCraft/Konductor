@@ -40,10 +40,29 @@ Use Pulumi to load environment variables, configuration files, and credentials:
 ```bash {"id":"01J97M1349ZY70MQVHDGAFVNEB","name":"load-environments-and-secrets","tag":"setup"}
 export ENVIRONMENT="containercraft/NavtecaAwsCredentialsConfigSmce/navteca-aws-credentials-config-smce"
 eval $(pulumi env open --format=shell $ENVIRONMENT | tee ../.tmpenv; direnv allow)
-#ln -s $GIT_CONFIG ~/.gitconfig
-#ln -sf $AWS_CONFIG_FILE ~/.aws/config
-#ln -sf $AWS_SHARED_CREDENTIALS_FILE ~/.aws/credentials
 echo "Loaded environment $ENVIRONMENT"
+
+alias aws='aws --profile smdc-cba'
+
+```
+
+### 3. Validate AWS CLI Access
+
+Get Caller Identity to verify your AWS identity:
+
+```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHDFZQZQZT","name":"validate-aws-identity","tag":"validate-aws"}
+aws --profile smdc-cba sts get-caller-identity
+
+```
+
+### 3. Deploy IaC
+
+Deploy the infrastructure as code (IaC) using Pulumi:
+
+```bash {"id":"01J97M1349ZY70MQVHDFZQZQZT","name":"deploy-iac","tag":"setup"}
+git remote add origin https://github.com/containercraft/konductor
+git config remote.origin.url https://github.com/containercraft/konductor
+pulumi up --yes --stack containercraft/scip-ops-prod --skip-preview=true --refresh=true
 
 ```
 
@@ -52,9 +71,17 @@ echo "Loaded environment $ENVIRONMENT"
 Clone the SMCE CLI repository && Symlink `smce` cli:
 
 ```bash {"id":"01J97M1349ZY70MQVHDMSP1MHQ","name":"install-smce-cli","tag":"setup"}
-mkdir -p ~/.local/bin; rm -rf ~/smce-cli
-git clone https://git.smce.nasa.gov/smce-administration/smce-cli.git ~/smce-cli
-ln -sf ~/smce-cli/smce ~/.local/bin/smce
+cd ~
+rm -rf ~/smce-cli ~/.local/bin/smce
+ln -sf $GIT_CONFIG ~/.gitconfig
+
+git config remote.origin.url https://git.smce.nasa.gov/smce-administration/smce-cli.git
+git clone https://git.smce.nasa.gov/smce-administration/smce-cli.git ~/smce-cli && cd ~/smce-cli && ls
+
+mkdir -p ~/.local/bin
+cp -f ~/smce-cli/smce ~/.local/bin/smce
+chmod +x ~/.local/bin/smce
+
 smce --help; true
 
 ```
@@ -149,4 +176,13 @@ aws sts get-session-token \
   --profile default \
   --serial-number <mfa-device-arn> \
   --token-code $MFA_TOKEN
+
+```
+
+## Bonus: Launch Kubernetes in Docker
+
+```bash {"excludeFromRunAll":"true","id":"01J9CGCF9R0EWGHNN32BMZCGZY","name":"task-run-kubernetes","tag":"tind"}
+cd ..
+task kubernetes
+
 ```
