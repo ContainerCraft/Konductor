@@ -27,7 +27,7 @@ Follow the steps below to set up your environment:
 Authenticate with your Pulumi account:
 
 ```bash {"id":"01J97M1349ZY70MQVHDE43DNY5","name":"login","tag":"setup"}
-pulumi login
+pulumi login && pulumi install
 
 ```
 
@@ -60,8 +60,8 @@ aws --profile smdc-cba sts get-caller-identity
 Deploy the infrastructure as code (IaC) using Pulumi:
 
 ```bash {"id":"01J97M1349ZY70MQVHDFZQZQZT","name":"deploy-iac","tag":"setup"}
-git remote add origin https://github.com/containercraft/konductor
-git config remote.origin.url https://github.com/containercraft/konductor
+git remote add origin https://github.com/containercraft/konductor || true
+git config remote.origin.url https://github.com/containercraft/konductor || true
 pulumi up --yes --stack containercraft/scip-ops-prod --skip-preview=true --refresh=true
 
 ```

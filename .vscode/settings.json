@@ -186,7 +186,7 @@
     "dockerfile",
     "plaintext"
   ],
-  "workbench.colorTheme": "Cyberpunk",
+  "workbench.colorTheme": "Activate UMBRA protocol",
   "explorer.openEditors.visible": 1,
   "explorer.autoRevealExclude": {
     "**/.git/objects/**": true,
