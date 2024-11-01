@@ -10,19 +10,22 @@ Welcome to the **Konductor IaC Platform Engineering User Guide**. This document 
 - [Design Principles](#design-principles)
 - [Code Structure](#code-structure)
 - [Configuration Management with Pydantic](#configuration-management-with-pydantic)
-  - [Why Pydantic?](#why-pydantic)
-  - [Integration Strategy](#integration-strategy)
+   - [Why Pydantic?](#why-pydantic)
+   - [Integration Strategy](#integration-strategy)
+
 - [Module Development Guide](#module-development-guide)
-  - [1. Module Configuration](#1-module-configuration)
-  - [2. Defining Configuration Models](#2-defining-configuration-models)
-  - [3. Module Deployment Logic](#3-module-deployment-logic)
-  - [4. Updating `__main__.py`](#4-updating-__main__py)
-  - [5. Best Practices](#5-best-practices)
+   - [1. Module Configuration](#1-module-configuration)
+   - [2. Defining Configuration Models](#2-defining-configuration-models)
+   - [3. Module Deployment Logic](#3-module-deployment-logic)
+   - [4. Updating `__main__.py`](#4-updating-__main__py)
+   - [5. Best Practices](#5-best-practices)
+
 - [Example Module: Cert Manager](#example-module-cert-manager)
-  - [Configuration Schema](#configuration-schema)
-  - [Configuration Model](#configuration-model)
-  - [Deployment Logic](#deployment-logic)
-  - [Integration in `__main__.py`](#integration-in-__main__py)
+   - [Configuration Schema](#configuration-schema)
+   - [Configuration Model](#configuration-model)
+   - [Deployment Logic](#deployment-logic)
+   - [Integration in `__main__.py`](#integration-in-__main__py)
+
 - [Conclusion](#conclusion)
 
 ---
@@ -47,13 +50,13 @@ Konductor is a Pulumi-based Infrastructure as Code (IaC) platform designed to st
 
 ## Code Structure
 
-- **`__main__.py`**: The entry point of the Pulumi program. Handles global configurations, provider setup, and module deployments.
+- __`__main__.py`__: The entry point of the Pulumi program. Handles global configurations, provider setup, and module deployments.
 - **`core/`**: Contains shared utilities and libraries, such as configuration management (`config.py`), deployment orchestration (`deployment.py`), and metadata handling (`metadata.py`).
-- **`modules/<module_name>/`**: Each module resides in its own directory under `modules/`, containing its specific configuration models (`types.py`) and deployment logic (`deploy.py`).
-- **`modules/<module_name>/types.py`**: Defines Pydantic models for module configurations with default values and validation logic.
-- **`modules/<module_name>/deploy.py`**: Contains the module-specific deployment logic, taking in the validated configuration and returning relevant outputs.
-- **`modules/<module_name>/*.py`**: Contains additional module-specific scripts or utilities, if needed.
-- **`modules/<module_name>/README.md`**: Module-specific documentation with configuration options, features, and usage instructions.
+- __`modules/<module_name>/`__: Each module resides in its own directory under `modules/`, containing its specific configuration models (`types.py`) and deployment logic (`deploy.py`).
+- __`modules/<module_name>/types.py`__: Defines Pydantic models for module configurations with default values and validation logic.
+- __`modules/<module_name>/deploy.py`__: Contains the module-specific deployment logic, taking in the validated configuration and returning relevant outputs.
+- __`modules/<module_name>/*.py`__: Contains additional module-specific scripts or utilities, if needed.
+- __`modules/<module_name>/README.md`__: Module-specific documentation with configuration options, features, and usage instructions.
 - **`requirements.txt`**: Lists the dependencies for the project, including Pydantic and cloud provider SDKs.
 
 ---
@@ -80,7 +83,7 @@ Konductor is a Pulumi-based Infrastructure as Code (IaC) platform designed to st
 ### 1. Module Configuration
 
 - **Purpose**: Retrieve and validate the module's configuration using Pydantic models.
-- **Implementation**: Use the `get_module_config` function in `core/config.py`.
+- __Implementation__: Use the `get_module_config` function in `core/config.py`.
 
 ```python
 # core/config.py

@@ -1,50 +1,62 @@
 ### Refactoring Enhancements to Consider
 
 **Modular Design**:
- - Core functionalities are segregated into distinct files/modules, such as `config.py`, `deployment.py`, `resource_helpers.py`, etc.
- - Each module follows a clear pattern with separate `types.py` and `deploy.py` files.
+
+- Core functionalities are segregated into distinct files/modules, such as `config.py`, `deployment.py`, `resource_helpers.py`, etc.
+- Each module follows a clear pattern with separate `types.py` and `deploy.py` files.
 
 **Configuration Management**:
- - Centralize configuration management using `config.py` to handle global settings.
- - Use data classes for module configurations to ensure type safety and defaults.
+
+- Centralize configuration management using `config.py` to handle global settings.
+- Use data classes for module configurations to ensure type safety and defaults.
 
 **Global Metadata Handling**:
- - Implementation of a singleton pattern for managing global metadata (labels and annotations).
- - Functions to generate and apply global metadata.
+
+- Implementation of a singleton pattern for managing global metadata (labels and annotations).
+- Functions to generate and apply global metadata.
 
 **Consistency and Readability**:
- - The existing TODO comments highlight areas needing reorganization and refactoring.
- - Some modules including `kubevirt`, `cert_manager`, `hostpath_provisioner` and others deploy differently in terms of resource creation and dependency management, look for ways to improve consistency.
+
+- The existing TODO comments highlight areas needing reorganization and refactoring.
+- Some modules including `kubevirt`, `cert_manager`, `hostpath_provisioner` and others deploy differently in terms of resource creation and dependency management, look for ways to improve consistency.
 
 **Centralized Configuration Loading**:
- - Configuration loading and merging logic vary across modules.
- - There is redundancy in fetching the latest versions for modules (e.g., `kubevirt`, `cert_manager`). Look for ways to reduce version fetching redundancy.
+
+- Configuration loading and merging logic vary across modules.
+- There is redundancy in fetching the latest versions for modules (e.g., `kubevirt`, `cert_manager`). Look for ways to reduce version fetching redundancy.
 
 **Exception Handling**:
- - Exception handling is partially implemented in some places, consistent and detailed error handling across all modules will improve reliability.
+
+- Exception handling is partially implemented in some places, consistent and detailed error handling across all modules will improve reliability.
 
 **Resource Helper Centralization**:
- - Several helper functions like `create_namespace`, `create_custom_resource`, etc., provide common functionality but could be standardized further.
- - Handling dependencies and resource transformations could be more DRY (Don't Repeat Yourself).
+
+- Several helper functions like `create_namespace`, `create_custom_resource`, etc., provide common functionality but could be standardized further.
+- Handling dependencies and resource transformations could be more DRY (Don't Repeat Yourself).
 
 **Standardize Configuration Management**:
- - Refactor configuration management to ensure consistency across all modules.
- - Implement a common pattern for fetching the latest versions and configuration merging.
 
-**Refactor `initialize_pulumi` Function**:
- - Use data classes or named tuples instead of dictionaries for initialization components.
- - Centralize and streamline initialization logic to reduce redundancy.
+- Refactor configuration management to ensure consistency across all modules.
+- Implement a common pattern for fetching the latest versions and configuration merging.
+
+__Refactor `initialize_pulumi` Function__:
+
+- Use data classes or named tuples instead of dictionaries for initialization components.
+- Centralize and streamline initialization logic to reduce redundancy.
 
 **Enhance Error Handling and Logging**:
- - Implement structured logging and consistent error handling across all the modules.
- - Ensure all relevant operations are logged, and errors are informative.
+
+- Implement structured logging and consistent error handling across all the modules.
+- Ensure all relevant operations are logged, and errors are informative.
 
 **Simplify Function Signatures and Improve Type Safety**:
- - Refactor function signatures to use data classes and named tuples. This will improve readability and maintainability.
+
+- Refactor function signatures to use data classes and named tuples. This will improve readability and maintainability.
 
 **Centralize Shared Logic**:
- - Standardize and centralize shared logic like version fetching, resource transformation, and compliance metadata generation.
- - Use utility functions from `utils.py` and refactor repetitive logic across `deploy.py` files.
+
+- Standardize and centralize shared logic like version fetching, resource transformation, and compliance metadata generation.
+- Use utility functions from `utils.py` and refactor repetitive logic across `deploy.py` files.
 
 ### Implementation Examples
 

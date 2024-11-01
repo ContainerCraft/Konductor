@@ -11,14 +11,17 @@ Welcome to the **KubeVirt Module** for the Kargo KubeVirt Kubernetes PaaS! This 
 - [Getting Started](#getting-started)
 - [Enabling the Module](#enabling-the-module)
 - [Configuration Options](#configuration-options)
-  - [Default Settings](#default-settings)
-  - [Customizing Your Deployment](#customizing-your-deployment)
+   - [Default Settings](#default-settings)
+   - [Customizing Your Deployment](#customizing-your-deployment)
+
 - [Module Components Explained](#module-components-explained)
-  - [Namespace Creation](#namespace-creation)
-  - [Operator Deployment](#operator-deployment)
-  - [Custom Resource Configuration](#custom-resource-configuration)
+   - [Namespace Creation](#namespace-creation)
+   - [Operator Deployment](#operator-deployment)
+   - [Custom Resource Configuration](#custom-resource-configuration)
+
 - [Using the Module](#using-the-module)
-  - [Example Usage](#example-usage)
+   - [Example Usage](#example-usage)
+
 - [Troubleshooting and FAQs](#troubleshooting-and-faqs)
 - [Additional Resources](#additional-resources)
 - [Conclusion](#conclusion)
@@ -51,17 +54,22 @@ The KubeVirt module enables you to run virtual machines (VMs) within your Kubern
 ### Setup Steps
 
 1. **Navigate to the Kargo Pulumi Directory**:
-   ```bash
-   cd Kargo/pulumi
-   ```
+
+```bash
+cd Kargo/pulumi
+```
+
 2. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+
+```bash
+pip install -r requirements.txt
+```
+
 3. **Initialize Pulumi Stack**:
-   ```bash
-   pulumi stack init dev
-   ```
+
+```bash
+pulumi stack init dev
+```
 
 ---
 
@@ -92,7 +100,7 @@ pulumi config set --path kubevirt.enabled true
 ### Default Settings
 
 - **Namespace**: `kubevirt`
-- **Version**: Defined in `default_versions.json`
+- __Version__: Defined in `default_versions.json`
 - **Use Emulation**: `false` (suitable for bare-metal environments)
 
 ### Customizing Your Deployment
@@ -102,7 +110,7 @@ pulumi config set --path kubevirt.enabled true
 - **enabled** *(bool)*: Enable or disable the module.
 - **namespace** *(string)*: Kubernetes namespace for KubeVirt.
 - **version** *(string)*: Specific version to deploy. Use `'latest'` for the most recent stable version.
-- **use_emulation** *(bool)*: Enable if running in a nested virtualization environment.
+- __use_emulation__ _(bool)_: Enable if running in a nested virtualization environment.
 - **labels** *(dict)*: Custom labels for resources.
 - **annotations** *(dict)*: Custom annotations for resources.
 
@@ -144,7 +152,7 @@ Deploys the KubeVirt operator.
 
 Defines the KubeVirt CustomResource to configure KubeVirt settings.
 
-- **Emulation Mode**: Controlled by `use_emulation`.
+- __Emulation Mode__: Controlled by `use_emulation`.
 - **Feature Gates**: Enables additional features like `HostDevices` and `ExpandDisks`.
 - **SMBIOS Configuration**: Sets metadata for virtual machines.
 
@@ -166,7 +174,7 @@ pulumi up
 
 **Q1: Virtual machines are not starting.**
 
-- **A**: Ensure that your nodes support virtualization. If running in a VM without the `/dev/kvm` device, set `use_emulation` to `true`.
+- __A__: Ensure that your nodes support virtualization. If running in a VM without the `/dev/kvm` device, set `use_emulation` to `true`.
 
 **Q2: Deployment fails with version errors.**
 

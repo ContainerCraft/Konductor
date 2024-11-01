@@ -36,12 +36,12 @@ This repository is designed as a template, allowing you to quickly bootstrap new
 
 1. **Clone the Repository to Your Local Machine:**
 
-   Once your new repository is created, clone it to your local machine using Git.
+Once your new repository is created, clone it to your local machine using Git.
 
-   ```bash
-   git clone https://github.com/YourUsername/YourNewRepoName.git
-   cd YourNewRepoName
-   ```
+```bash
+git clone https://github.com/YourUsername/YourNewRepoName.git
+cd YourNewRepoName
+```
 
 2. **Initialize the Development Environment:**
 
@@ -66,12 +66,12 @@ This repository is designed as a template, allowing you to quickly bootstrap new
 
 1. **Deploy the Infrastructure:**
 
-   Use the pre-configured tasks to deploy your infrastructure, as detailed in the Quickstart section.
+Use the pre-configured tasks to deploy your infrastructure, as detailed in the Quickstart section.
 
-   ```bash
-   task kubernetes
-   task deploy
-   ```
+```bash
+task kubernetes
+task deploy
+```
 
 2. **Build and Iterate:**
 
@@ -81,13 +81,13 @@ This repository is designed as a template, allowing you to quickly bootstrap new
 
 1. **Commit and Push:**
 
-   After making changes, commit them to your repository.
+After making changes, commit them to your repository.
 
-   ```bash
-   git add .
-   git commit -m "Initial setup and configuration"
-   git push origin main
-   ```
+```bash
+git add .
+git commit -m "Initial setup and configuration"
+git push origin main
+```
 
 2. **Collaborate and Contribute:**
 
@@ -130,49 +130,49 @@ Follow these steps to get your environment up and running:
 
 3. **Open the Integrated Terminal:**
 
-   Use `` Ctrl + ` `` to open the VSCode integrated terminal.
+   Use `Ctrl + `` to open the VSCode integrated terminal.
 
 4. **Authenticate Credentials:**
 
-   Login to Pulumi Cloud and other required services.
+Login to Pulumi Cloud and other required services.
 
-   ```bash {"id":"01J5VC1KTJBR22WEDNSSGTNAX4","name":"login"}
-   task login
-   ```
+```bash {"name":"login"}
+task login
+```
 
 5. **Configure the Pulumi Stack:**
 
-   Set up Pulumi stack parameters.
+Set up Pulumi stack parameters.
 
-   ```bash {"id":"01J5VC1KTJBR22WEDNSWYBKNQS","name":"configure"}
-   export ORGANIZATION="${GITHUB_USER:-${GITHUB_REPOSITORY_OWNER:-}}"
-   export DEPLOYMENT="${RepositoryName:-}"
-   task configure
-   ```
+```bash {"name":"configure"}
+export ORGANIZATION="${GITHUB_USER:-${GITHUB_REPOSITORY_OWNER:-}}"
+export DEPLOYMENT="${RepositoryName:-}"
+task configure
+```
 
 6. **Deploy Kubernetes:**
 
-   Deploy Kubernetes using Talos.
+Deploy Kubernetes using Talos.
 
-   ```bash {"excludeFromRunAll":"true","id":"01J5VC1KTJBR22WEDNSX4RHEG2","name":"kubernetes"}
-   task kubernetes
-   ```
+```bash {"excludeFromRunAll":"true","name":"kubernetes"}
+task kubernetes
+```
 
 7. **Deploy the Platform:**
 
-   Deploy the KubeVirt PaaS infrastructure.
+Deploy the KubeVirt PaaS infrastructure.
 
-   ```bash {"excludeFromRunAll":"true","id":"01J5VC1KTJBR22WEDNSZW7QADA","name":"deploy"}
-   task deploy
-   ```
+```bash {"excludeFromRunAll":"true","name":"deploy"}
+task deploy
+```
 
-10. **Cleanup:**
+8. **Cleanup:**
 
-    Clean up all Kubernetes and Pulumi resources when you're done.
+Clean up all Kubernetes and Pulumi resources when you're done.
 
-    ```bash {"excludeFromRunAll":"true","id":"01J5VC1KTJBR22WEDNT7BDRMAV","name":"clean"}
-    task clean-all
-    ```
+```bash {"excludeFromRunAll":"true","name":"clean"}
+task clean-all
+```
 
 ## Contributing
 
@@ -182,7 +182,7 @@ Contributions are welcome! This template is intended to evolve with the needs of
 
 Use the `act` tool to test GitHub Actions locally before pushing your changes.
 
-```bash {"excludeFromRunAll":"true","id":"01J5VC1KTJBR22WEDNT92WYZEH"}
+```bash {"excludeFromRunAll":"true"}
 task act
 ```
 

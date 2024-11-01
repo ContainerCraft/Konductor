@@ -1,4 +1,5 @@
 # Konductor IaC Template Repository Refactor and Enhancement Roadmap
+
 > **Technical Blueprint Addendum**
 
 ---
@@ -13,23 +14,26 @@
    - [Part 1: Aligning AWS Module with Kubernetes Modules](#part-1-aligning-aws-module-with-kubernetes-modules)
    - [Part 2: Modular Version Handling](#part-2-modular-version-handling)
    - [Part 3: Enhancing Configuration Management with Pydantic](#part-3-enhancing-configuration-management-with-pydantic)
+
 6. [Detailed Implementation Plan](#detailed-implementation-plan)
    - [Part 1 Implementation Steps](#part-1-implementation-steps)
    - [Part 2 Implementation Steps](#part-2-implementation-steps)
    - [Part 3 Implementation Steps](#part-3-implementation-steps)
+
 7. [Technical Considerations](#technical-considerations)
    - [Dependency Management](#dependency-management)
    - [Error Handling and Logging](#error-handling-and-logging)
    - [Testing Strategy](#testing-strategy)
    - [Documentation Standards](#documentation-standards)
    - [Security Implications](#security-implications)
+
 8. [Risks and Mitigations](#risks-and-mitigations)
 9. [Timeline and Milestones](#timeline-and-milestones)
 10. [Conclusion](#conclusion)
 11. [Appendices](#appendices)
-    - [Appendix A: Pydantic Overview](#appendix-a-pydantic-overview)
-    - [Appendix B: Code Samples](#appendix-b-code-samples)
-    - [Appendix C: Glossary](#appendix-c-glossary)
+   - [Appendix A: Pydantic Overview](#appendix-a-pydantic-overview)
+   - [Appendix B: Code Samples](#appendix-b-code-samples)
+   - [Appendix C: Glossary](#appendix-c-glossary)
 
 ---
 
@@ -61,23 +65,25 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 ### Kubernetes Modules
 
 - **Structure**:
-  - Reside under `pulumi/modules/<module_name>/`.
-  - Include `types.py`, `deploy.py`, and `README.md`.
-  - Use `dataclasses` for configuration models.
-  - Deployment functions have consistent signatures and return types.
+   - Reside under `pulumi/modules/<module_name>/`.
+   - Include `types.py`, `deploy.py`, and `README.md`.
+   - Use `dataclasses` for configuration models.
+   - Deployment functions have consistent signatures and return types.
+
 - **Version Handling**:
-  - Version locking mechanisms are in place.
-  - Versions are managed via configuration.
+   - Version locking mechanisms are in place.
+   - Versions are managed via configuration.
 
 ### AWS Module
 
 - **Structure**:
-  - Does not conform to the standard module structure.
-  - Lacks separation of concerns (configuration vs. deployment logic).
-  - Deployment function signatures differ from Kubernetes modules.
+   - Does not conform to the standard module structure.
+   - Lacks separation of concerns (configuration vs. deployment logic).
+   - Deployment function signatures differ from Kubernetes modules.
+
 - **Version Handling**:
-  - Unnecessary version interfaces are present.
-  - Versions are managed via `requirements.txt`, making internal version handling redundant.
+   - Unnecessary version interfaces are present.
+   - Versions are managed via `requirements.txt`, making internal version handling redundant.
 
 ### Issues Identified
 
@@ -122,12 +128,14 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 **Technical Details**:
 
 - **Create Directory**:
-  - Ensure `pulumi/modules/aws/` exists.
+   - Ensure `pulumi/modules/aws/` exists.
+
 - **Organize Files**:
-  - Move existing AWS code files (`aws_deploy.py`, `aws_types.py`, etc.) into `pulumi/modules/aws/`.
-  - Rename files to `deploy.py` and `types.py` to match the convention.
+   - Move existing AWS code files (`aws_deploy.py`, `aws_types.py`, etc.) into `pulumi/modules/aws/`.
+   - Rename files to `deploy.py` and `types.py` to match the convention.
+
 - **Initialize Module**:
-  - Add `__init__.py` to `pulumi/modules/aws/`.
+   - Add `__init__.py` to `pulumi/modules/aws/`.
 
 **Expected Outcome**:
 
@@ -141,34 +149,37 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 **Technical Details**:
 
 - **Use Pydantic**:
-  - Import `BaseModel` from `pydantic`.
+
+   - Import `BaseModel` from `pydantic`.
+
 - **Define Configuration Class**:
 
-  ```python
-  from pydantic import BaseModel, Field, root_validator
-  from typing import Optional, List, Dict, Any
+```python
+from pydantic import BaseModel, Field, root_validator
+from typing import Optional, List, Dict, Any
 
-  class AWSConfig(BaseModel):
-      enabled: bool = False
-      profile: Optional[str] = None
-      region: str
-      account_id: Optional[str] = None
-      landingzones: List[Dict[str, Any]] = Field(default_factory=list)
+class AWSConfig(BaseModel):
+    enabled: bool = False
+    profile: Optional[str] = None
+    region: str
+    account_id: Optional[str] = None
+    landingzones: List[Dict[str, Any]] = Field(default_factory=list)
 
-      @root_validator
-      def validate_region(cls, values):
-          if not values.get('region'):
-              raise ValueError('The "region" field is required for AWSConfig.')
-          return values
-  ```
+    @root_validator
+    def validate_region(cls, values):
+        if not values.get('region'):
+            raise ValueError('The "region" field is required for AWSConfig.')
+        return values
+```
 
 - **Explanation**:
-  - `enabled`: Determines if the module is active.
-  - `profile`: AWS CLI profile.
-  - `region`: Required AWS region.
-  - `account_id`: Optional AWS account ID.
-  - `landingzones`: List of landing zone configurations.
-  - `validate_region`: Ensures `region` is provided.
+
+   - `enabled`: Determines if the module is active.
+   - `profile`: AWS CLI profile.
+   - `region`: Required AWS region.
+   - `account_id`: Optional AWS account ID.
+   - `landingzones`: List of landing zone configurations.
+   - `validate_region`: Ensures `region` is provided.
 
 **Expected Outcome**:
 
@@ -176,45 +187,46 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 #### Step 3: Update Deployment Logic in `deploy.py`
 
-**Action**: Create `deploy_aws_module` function in `pulumi/modules/aws/deploy.py` with a consistent signature.
+__Action__: Create `deploy_aws_module` function in `pulumi/modules/aws/deploy.py` with a consistent signature.
 
 **Technical Details**:
 
 - **Define Deployment Function**:
 
-  ```python
-  from typing import List, Dict, Any
-  import pulumi
-  import pulumi_aws as aws
-  from .types import AWSConfig
+```python
+from typing import List, Dict, Any
+import pulumi
+import pulumi_aws as aws
+from .types import AWSConfig
 
-  def deploy_aws_module(
-          config: AWSConfig,
-          global_depends_on: List[pulumi.Resource],
-          providers: Dict[str, Any],
-      ) -> pulumi.Resource:
-      aws_provider = providers.get('aws')
-      if not aws_provider:
-          raise ValueError("AWS provider not found.")
+def deploy_aws_module(
+        config: AWSConfig,
+        global_depends_on: List[pulumi.Resource],
+        providers: Dict[str, Any],
+    ) -> pulumi.Resource:
+    aws_provider = providers.get('aws')
+    if not aws_provider:
+        raise ValueError("AWS provider not found.")
 
-      # Example AWS resource creation
-      s3_bucket = aws.s3.Bucket(
-          resource_name='my_bucket',
-          bucket='my-unique-bucket-name',
-          opts=pulumi.ResourceOptions(
-              provider=aws_provider,
-              depends_on=global_depends_on,
-          )
-      )
+    # Example AWS resource creation
+    s3_bucket = aws.s3.Bucket(
+        resource_name='my_bucket',
+        bucket='my-unique-bucket-name',
+        opts=pulumi.ResourceOptions(
+            provider=aws_provider,
+            depends_on=global_depends_on,
+        )
+    )
 
-      return s3_bucket
-  ```
+    return s3_bucket
+```
 
 - **Explanation**:
-  - The function signature aligns with other modules.
-  - It accepts the validated `config` object.
-  - Uses the `aws_provider` from the `providers` dictionary.
-  - Returns the primary resource without version information.
+
+   - The function signature aligns with other modules.
+   - It accepts the validated `config` object.
+   - Uses the `aws_provider` from the `providers` dictionary.
+   - Returns the primary resource without version information.
 
 **Expected Outcome**:
 
@@ -223,43 +235,43 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 #### Step 4: Modify `__main__.py` to Include AWS Module
 
-**Action**: Update `pulumi/__main__.py` to deploy the AWS module consistently.
+__Action__: Update `pulumi/__main__.py` to deploy the AWS module consistently.
 
 **Technical Details**:
 
 - **Initialize AWS Provider**:
 
-  ```python
-  # Inside main function
-  aws_config, aws_enabled = get_module_config('aws', config)
-  aws_provider = None
-  if aws_enabled:
-      from pulumi_aws import Provider as AWSProvider
-      aws_provider = AWSProvider(
-          'aws_provider',
-          profile=aws_config.profile,
-          region=aws_config.region,
-      )
-  ```
+```python
+# Inside main function
+aws_config, aws_enabled = get_module_config('aws', config)
+aws_provider = None
+if aws_enabled:
+    from pulumi_aws import Provider as AWSProvider
+    aws_provider = AWSProvider(
+        'aws_provider',
+        profile=aws_config.profile,
+        region=aws_config.region,
+    )
+```
 
 - **Update Providers Dictionary**:
 
-  ```python
-  providers = {
-      'k8s': k8s_provider,
-      'aws': aws_provider,
-      # Add other providers as needed
-  }
-  ```
+```python
+providers = {
+    'k8s': k8s_provider,
+    'aws': aws_provider,
+    # Add other providers as needed
+}
+```
 
 - **Include AWS Module in Deployment**:
 
-  ```python
-  modules_to_deploy = [
-      'aws',
-      # Other modules...
-  ]
-  ```
+```python
+modules_to_deploy = [
+    'aws',
+    # Other modules...
+]
+```
 
 **Expected Outcome**:
 
@@ -268,48 +280,49 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 #### Step 5: Adjust `core/deployment.py` to Handle Providers and Versioning
 
-**Action**: Modify `deploy_module` to handle modules with and without versioning.
+__Action__: Modify `deploy_module` to handle modules with and without versioning.
 
 **Technical Details**:
 
-- **Update `deploy_module` Function**:
+- __Update `deploy_module` Function__:
 
-  ```python
-  def deploy_module(
-      module_name: str,
-      config: pulumi.Config,
-      global_depends_on: List[pulumi.Resource],
-      providers: Dict[str, Any],
-      versions: Dict[str, str],
-      configurations: Dict[str, Dict[str, Any]]
-  ) -> None:
-      config_obj, module_enabled = get_module_config(module_name, config)
+```python
+def deploy_module(
+    module_name: str,
+    config: pulumi.Config,
+    global_depends_on: List[pulumi.Resource],
+    providers: Dict[str, Any],
+    versions: Dict[str, str],
+    configurations: Dict[str, Dict[str, Any]]
+) -> None:
+    config_obj, module_enabled = get_module_config(module_name, config)
 
-      if module_enabled:
-          deploy_func = discover_deploy_function(module_name)
-          result = deploy_func(
-              config=config_obj,
-              global_depends_on=global_depends_on,
-              providers=providers,
-          )
+    if module_enabled:
+        deploy_func = discover_deploy_function(module_name)
+        result = deploy_func(
+            config=config_obj,
+            global_depends_on=global_depends_on,
+            providers=providers,
+        )
 
-          if module_name in KUBERNETES_MODULES:
-              version, primary_resource = result
-              versions[module_name] = version
-          else:
-              primary_resource = result
+        if module_name in KUBERNETES_MODULES:
+            version, primary_resource = result
+            versions[module_name] = version
+        else:
+            primary_resource = result
 
-          configurations[module_name] = {"enabled": module_enabled}
-          global_depends_on.append(primary_resource)
-      else:
-          log.info(f"Module {module_name} is not enabled.")
-  ```
+        configurations[module_name] = {"enabled": module_enabled}
+        global_depends_on.append(primary_resource)
+    else:
+        log.info(f"Module {module_name} is not enabled.")
+```
 
 - **Explanation**:
-  - Checks if the module is enabled.
-  - For Kubernetes modules, expects a `(version, resource)` tuple.
-  - For other modules, expects a single resource.
-  - Updates `versions` only for Kubernetes modules.
+
+   - Checks if the module is enabled.
+   - For Kubernetes modules, expects a `(version, resource)` tuple.
+   - For other modules, expects a single resource.
+   - Updates `versions` only for Kubernetes modules.
 
 **Expected Outcome**:
 
@@ -319,43 +332,44 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 #### Step 6: Update `core/config.py` to Handle Versioning Exclusively for Kubernetes Modules
 
-**Action**: Adjust `get_module_config` to inject version information only for Kubernetes modules.
+__Action__: Adjust `get_module_config` to inject version information only for Kubernetes modules.
 
 **Technical Details**:
 
 - **Define Kubernetes Modules List**:
 
-  ```python
-  KUBERNETES_MODULES = [
-      'cert_manager',
-      'kubevirt',
-      'multus',
-      # Other Kubernetes modules...
-  ]
-  ```
+```python
+KUBERNETES_MODULES = [
+    'cert_manager',
+    'kubevirt',
+    'multus',
+    # Other Kubernetes modules...
+]
+```
 
-- **Update `get_module_config` Function**:
+- __Update `get_module_config` Function__:
 
-  ```python
-  def get_module_config(
-          module_name: str,
-          config: pulumi.Config,
-      ) -> Tuple[Any, bool]:
-      module_config_dict = config.get_object(module_name) or {}
-      module_enabled = module_config_dict.get('enabled', False)
+```python
+def get_module_config(
+        module_name: str,
+        config: pulumi.Config,
+    ) -> Tuple[Any, bool]:
+    module_config_dict = config.get_object(module_name) or {}
+    module_enabled = module_config_dict.get('enabled', False)
 
-      # Inject version for Kubernetes modules
-      if module_name in KUBERNETES_MODULES:
-          default_versions = load_default_versions()
-          module_config_dict['version'] = module_config_dict.get('version', default_versions.get(module_name))
+    # Inject version for Kubernetes modules
+    if module_name in KUBERNETES_MODULES:
+        default_versions = load_default_versions()
+        module_config_dict['version'] = module_config_dict.get('version', default_versions.get(module_name))
 
-      # Import and instantiate the module's configuration class
-      # ... (same as before)
-  ```
+    # Import and instantiate the module's configuration class
+    # ... (same as before)
+```
 
 - **Explanation**:
-  - Only Kubernetes modules receive a `version` in their configuration.
-  - Non-Kubernetes modules are unaffected.
+
+   - Only Kubernetes modules receive a `version` in their configuration.
+   - Non-Kubernetes modules are unaffected.
 
 **Expected Outcome**:
 
@@ -363,32 +377,32 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 #### Step 7: Adjust Module Discovery Functions
 
-**Action**: Ensure `discover_config_class` and `discover_deploy_function` work for all modules.
+__Action__: Ensure `discover_config_class` and `discover_deploy_function` work for all modules.
 
 **Technical Details**:
 
-- **Update `discover_config_class`**:
+- __Update `discover_config_class`__:
 
-  ```python
-  def discover_config_class(module_name: str) -> Type[BaseModel]:
-      types_module = importlib.import_module(f"modules.{module_name}.types")
-      for name, obj in inspect.getmembers(types_module):
-          if inspect.isclass(obj) and issubclass(obj, BaseModel):
-              return obj
-      raise ValueError(f"No Pydantic BaseModel found in modules.{module_name}.types")
-  ```
+```python
+def discover_config_class(module_name: str) -> Type[BaseModel]:
+    types_module = importlib.import_module(f"modules.{module_name}.types")
+    for name, obj in inspect.getmembers(types_module):
+        if inspect.isclass(obj) and issubclass(obj, BaseModel):
+            return obj
+    raise ValueError(f"No Pydantic BaseModel found in modules.{module_name}.types")
+```
 
-- **Update `discover_deploy_function`**:
+- __Update `discover_deploy_function`__:
 
-  ```python
-  def discover_deploy_function(module_name: str) -> Callable:
-      deploy_module = importlib.import_module(f"modules.{module_name}.deploy")
-      function_name = f"deploy_{module_name}_module"
-      deploy_function = getattr(deploy_module, function_name, None)
-      if not deploy_function:
-          raise ValueError(f"No deploy function named '{function_name}' found in modules.{module_name}.deploy")
-      return deploy_function
-  ```
+```python
+def discover_deploy_function(module_name: str) -> Callable:
+    deploy_module = importlib.import_module(f"modules.{module_name}.deploy")
+    function_name = f"deploy_{module_name}_module"
+    deploy_function = getattr(deploy_module, function_name, None)
+    if not deploy_function:
+        raise ValueError(f"No deploy function named '{function_name}' found in modules.{module_name}.deploy")
+    return deploy_function
+```
 
 **Expected Outcome**:
 
@@ -401,10 +415,11 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 **Technical Details**:
 
 - **In `types.py`**:
-  - Ensure no `version` field is present.
+   - Ensure no `version` field is present.
+
 - **In `deploy.py`**:
-  - Ensure deployment functions do not return version information.
-  - Remove any logic related to version checking or handling.
+   - Ensure deployment functions do not return version information.
+   - Remove any logic related to version checking or handling.
 
 **Expected Outcome**:
 
@@ -418,22 +433,23 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 - **Utility Function**:
 
-  ```python
-  def get_module_version_from_requirements(module_name: str) -> Optional[str]:
-      try:
-          with open('requirements.txt', 'r') as f:
-              for line in f:
-                  if module_name in line:
-                      parts = line.strip().split('==')
-                      if len(parts) == 2:
-                          return parts[1]
-      except Exception as e:
-          pulumi.log.warn(f"Error reading requirements.txt: {e}")
-      return None
-  ```
+```python
+def get_module_version_from_requirements(module_name: str) -> Optional[str]:
+    try:
+        with open('requirements.txt', 'r') as f:
+            for line in f:
+                if module_name in line:
+                    parts = line.strip().split('==')
+                    if len(parts) == 2:
+                        return parts[1]
+    except Exception as e:
+        pulumi.log.warn(f"Error reading requirements.txt: {e}")
+    return None
+```
 
 - **Usage**:
-  - For logging or documentation, not for configuration.
+
+   - For logging or documentation, not for configuration.
 
 **Expected Outcome**:
 
@@ -449,15 +465,15 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 - **Install Pydantic**:
 
-  ```bash
-  pip install pydantic
-  ```
+```bash
+pip install pydantic
+```
 
 - **Update `requirements.txt`**:
 
-  ```
-  pydantic>=1.8.2
-  ```
+```
+pydantic>=1.8.2
+```
 
 **Expected Outcome**:
 
@@ -465,22 +481,23 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 #### Step 11: Define Base Configuration Classes
 
-**Action**: Create `BaseConfig` in `pulumi/core/base_config.py` for common fields.
+__Action__: Create `BaseConfig` in `pulumi/core/base_config.py` for common fields.
 
 **Technical Details**:
 
 - **Define `BaseConfig`**:
 
-  ```python
-  from pydantic import BaseModel
+```python
+from pydantic import BaseModel
 
-  class BaseConfig(BaseModel):
-      enabled: bool = False
-  ```
+class BaseConfig(BaseModel):
+    enabled: bool = False
+```
 
 - **Explanation**:
-  - Provides a common `enabled` field.
-  - Modules can inherit from `BaseConfig`.
+
+   - Provides a common `enabled` field.
+   - Modules can inherit from `BaseConfig`.
 
 **Expected Outcome**:
 
@@ -494,31 +511,31 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 - **For AWS Module**:
 
-  ```python
-  from pydantic import BaseModel, Field, root_validator
-  from typing import Optional, List, Dict, Any
+```python
+from pydantic import BaseModel, Field, root_validator
+from typing import Optional, List, Dict, Any
 
-  class AWSConfig(BaseConfig):
-      profile: Optional[str] = None
-      region: str
-      account_id: Optional[str] = None
-      landingzones: List[Dict[str, Any]] = Field(default_factory=list)
+class AWSConfig(BaseConfig):
+    profile: Optional[str] = None
+    region: str
+    account_id: Optional[str] = None
+    landingzones: List[Dict[str, Any]] = Field(default_factory=list)
 
-      @root_validator
-      def validate_region(cls, values):
-          if not values.get('region'):
-              raise ValueError('The "region" field is required for AWSConfig.')
-          return values
-  ```
+    @root_validator
+    def validate_region(cls, values):
+        if not values.get('region'):
+            raise ValueError('The "region" field is required for AWSConfig.')
+        return values
+```
 
 - **For Kubernetes Module**:
 
-  ```python
-  class CertManagerConfig(BaseConfig):
-      version: str = "latest"
-      namespace: str = "cert-manager"
-      install_crds: bool = True
-  ```
+```python
+class CertManagerConfig(BaseConfig):
+    version: str = "latest"
+    namespace: str = "cert-manager"
+    install_crds: bool = True
+```
 
 **Expected Outcome**:
 
@@ -526,35 +543,35 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 #### Step 13: Centralize Configuration Loading and Validation
 
-**Action**: Update `get_module_config` in `core/config.py` to use Pydantic models.
+__Action__: Update `get_module_config` in `core/config.py` to use Pydantic models.
 
 **Technical Details**:
 
 - **Update Function**:
 
-  ```python
-  def get_module_config(
-          module_name: str,
-          config: pulumi.Config,
-      ) -> Tuple[Any, bool]:
-      module_config_dict = config.get_object(module_name) or {}
-      module_enabled = module_config_dict.get('enabled', False)
+```python
+def get_module_config(
+        module_name: str,
+        config: pulumi.Config,
+    ) -> Tuple[Any, bool]:
+    module_config_dict = config.get_object(module_name) or {}
+    module_enabled = module_config_dict.get('enabled', False)
 
-      if module_name in KUBERNETES_MODULES:
-          default_versions = load_default_versions()
-          module_config_dict['version'] = module_config_dict.get('version', default_versions.get(module_name))
+    if module_name in KUBERNETES_MODULES:
+        default_versions = load_default_versions()
+        module_config_dict['version'] = module_config_dict.get('version', default_versions.get(module_name))
 
-      types_module = importlib.import_module(f"modules.{module_name}.types")
-      ModuleConfigClass = getattr(types_module, f"{module_name.capitalize()}Config")
+    types_module = importlib.import_module(f"modules.{module_name}.types")
+    ModuleConfigClass = getattr(types_module, f"{module_name.capitalize()}Config")
 
-      try:
-          config_obj = ModuleConfigClass(**module_config_dict)
-      except ValidationError as e:
-          pulumi.log.error(f"Configuration error in module '{module_name}':\n{e}")
-          raise
+    try:
+        config_obj = ModuleConfigClass(**module_config_dict)
+    except ValidationError as e:
+        pulumi.log.error(f"Configuration error in module '{module_name}':\n{e}")
+        raise
 
-      return config_obj, module_enabled
-  ```
+    return config_obj, module_enabled
+```
 
 **Expected Outcome**:
 
@@ -568,23 +585,23 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 - **Example for AWS Module**:
 
-  ```python
-  def deploy_aws_module(
-          config: AWSConfig,
-          global_depends_on: List[pulumi.Resource],
-          providers: Dict[str, Any],
-      ) -> pulumi.Resource:
-      aws_provider = providers.get('aws')
-      if not aws_provider:
-          raise ValueError("AWS provider not found.")
+```python
+def deploy_aws_module(
+        config: AWSConfig,
+        global_depends_on: List[pulumi.Resource],
+        providers: Dict[str, Any],
+    ) -> pulumi.Resource:
+    aws_provider = providers.get('aws')
+    if not aws_provider:
+        raise ValueError("AWS provider not found.")
 
-      # Use configuration values directly
-      # Example: region = config.region
-      # ...
+    # Use configuration values directly
+    # Example: region = config.region
+    # ...
 
-      # Deployment logic
-      # ...
-  ```
+    # Deployment logic
+    # ...
+```
 
 **Expected Outcome**:
 
@@ -596,22 +613,22 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 **Technical Details**:
 
-- **In `get_module_config`**:
+- __In `get_module_config`__:
 
-  ```python
-  except ValidationError as e:
-      pulumi.log.error(f"Configuration error in module '{module_name}':\n{e}")
-      raise
-  ```
+```python
+except ValidationError as e:
+    pulumi.log.error(f"Configuration error in module '{module_name}':\n{e}")
+    raise
+```
 
 - **User Feedback**:
 
-  ```
-  Configuration error in module 'aws':
-  1 validation error for AWSConfig
-  region
-    The "region" field is required for AWSConfig. (type=value_error)
-  ```
+```
+Configuration error in module 'aws':
+1 validation error for AWSConfig
+region
+  The "region" field is required for AWSConfig. (type=value_error)
+```
 
 **Expected Outcome**:
 
@@ -625,25 +642,28 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 
 - **Include Configuration Examples**:
 
-  ```markdown
-  ## Configuration Schema
+```markdown
+## Configuration Schema
 
-  ```yaml
-  aws:
-    enabled: true
-    profile: "default"
-    region: "us-west-2"
-    # Other fields...
-  ```
-  ```
+```yaml
+aws:
+  enabled: true
+  profile: "default"
+  region: "us-west-2"
+  # Other fields...
+```
+
+```
+
+```
 
 - **Explain Each Field**:
 
-  - **enabled**: Enables or disables the module.
-  - **profile**: AWS CLI profile name.
-  - **region**: AWS region (required).
-  - **account_id**: AWS account ID.
-  - **landingzones**: List of landing zone configurations.
+   - **enabled**: Enables or disables the module.
+   - **profile**: AWS CLI profile name.
+   - **region**: AWS region (required).
+   - __account_id__: AWS account ID.
+   - **landingzones**: List of landing zone configurations.
 
 **Expected Outcome**:
 
@@ -685,11 +705,13 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 ## Risks and Mitigations
 
 - **Risk**: Breaking Changes During Refactoring
-  - **Mitigation**: Implement changes incrementally and test thoroughly.
+   - **Mitigation**: Implement changes incrementally and test thoroughly.
+
 - **Risk**: Incompatibility with Existing Configurations
-  - **Mitigation**: Provide migration guides and support legacy configurations temporarily.
+   - **Mitigation**: Provide migration guides and support legacy configurations temporarily.
+
 - **Risk**: Learning Curve for Pydantic
-  - **Mitigation**: Provide training and resources for the development team.
+   - **Mitigation**: Provide training and resources for the development team.
 
 ---
 
@@ -698,15 +720,19 @@ Konductor is an IaC platform built using Pulumi and Python, designed to streamli
 1. **Week 1**:
    - Integrate Pydantic into the project.
    - Update `core/config.py` and base classes.
+
 2. **Week 2**:
    - Refactor AWS module to align with Kubernetes modules.
    - Remove version handling from cloud provider modules.
+
 3. **Week 3**:
    - Update Kubernetes modules to use Pydantic.
    - Adjust core deployment functions.
+
 4. **Week 4**:
    - Comprehensive testing and bug fixing.
    - Update documentation and provide training.
+
 5. **Week 5**:
    - Final review and deployment to production.
    - Post-deployment monitoring and support.

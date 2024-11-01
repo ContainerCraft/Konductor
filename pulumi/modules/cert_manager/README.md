@@ -1,4 +1,5 @@
 # Cert Manager Module Guide
+
 # TODO: Convert from Kargo to generalized Konductor Framework Template repo docs content
 
 Welcome to the **Cert Manager Module** for the Konductor IaC Framework! This guide is tailored for both newcomers to DevOps and experienced developers, providing a comprehensive overview of how to deploy and configure the Cert Manager module within the Kargo platform.
@@ -12,14 +13,17 @@ Welcome to the **Cert Manager Module** for the Konductor IaC Framework! This gui
 - [Getting Started](#getting-started)
 - [Enabling the Module](#enabling-the-module)
 - [Configuration Options](#configuration-options)
-  - [Default Settings](#default-settings)
-  - [Customizing Your Deployment](#customizing-your-deployment)
+   - [Default Settings](#default-settings)
+   - [Customizing Your Deployment](#customizing-your-deployment)
+
 - [Module Components Explained](#module-components-explained)
-  - [Namespace Creation](#namespace-creation)
-  - [Helm Chart Deployment](#helm-chart-deployment)
-  - [Self-Signed Cluster Issuer Setup](#self-signed-cluster-issuer-setup)
+   - [Namespace Creation](#namespace-creation)
+   - [Helm Chart Deployment](#helm-chart-deployment)
+   - [Self-Signed Cluster Issuer Setup](#self-signed-cluster-issuer-setup)
+
 - [Using the Module](#using-the-module)
-  - [Example Usage](#example-usage)
+   - [Example Usage](#example-usage)
+
 - [Troubleshooting and FAQs](#troubleshooting-and-faqs)
 - [Additional Resources](#additional-resources)
 - [Conclusion](#conclusion)
@@ -52,17 +56,22 @@ The Cert Manager module automates the management of SSL/TLS certificates in your
 ### Setup Steps
 
 1. **Navigate to the Kargo Pulumi Directory**:
-   ```bash
-   cd Kargo/pulumi
-   ```
+
+```bash
+cd Kargo/pulumi
+```
+
 2. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
+
+```bash
+pip install -r requirements.txt
+```
+
 3. **Initialize Pulumi Stack**:
-   ```bash
-   pulumi stack init dev
-   ```
+
+```bash
+pulumi stack init dev
+```
 
 ---
 
@@ -95,7 +104,7 @@ pulumi config set --path cert_manager.enabled true
 The module is designed to work out-of-the-box with default settings:
 
 - **Namespace**: `cert-manager`
-- **Version**: Defined in `default_versions.json`
+- __Version__: Defined in `default_versions.json`
 - **Cluster Issuer Name**: `cluster-selfsigned-issuer`
 - **Install CRDs**: `true`
 
@@ -108,8 +117,8 @@ You can tailor the module to fit your specific needs by customizing its configur
 - **enabled** *(bool)*: Enable or disable the module.
 - **namespace** *(string)*: Kubernetes namespace for cert-manager.
 - **version** *(string)*: Helm chart version to deploy. Use `'latest'` to fetch the most recent stable version.
-- **cluster_issuer** *(string)*: Name of the ClusterIssuer resource.
-- **install_crds** *(bool)*: Whether to install Custom Resource Definitions.
+- __cluster_issuer__ _(string)_: Name of the ClusterIssuer resource.
+- __install_crds__ _(bool)_: Whether to install Custom Resource Definitions.
 
 #### Example Custom Configuration
 

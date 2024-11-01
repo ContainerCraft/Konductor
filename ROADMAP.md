@@ -13,6 +13,7 @@
    - [Logging, Monitoring, and Alerting](#logging-monitoring-and-alerting)
    - [Networking](#networking)
    - [Cost Management](#cost-management)
+
 5. [Design Principles](#design-principles)
 6. [Implementation Roadmap](#implementation-roadmap)
    - [Phase 1: Foundations](#phase-1-foundations)
@@ -21,12 +22,13 @@
    - [Phase 4: Application Onboarding](#phase-4-application-onboarding)
    - [Phase 5: Multi-Cloud Expansion](#phase-5-multi-cloud-expansion)
    - [Phase 6: Optimization and Scaling](#phase-6-optimization-and-scaling)
+
 7. [Roles and Responsibilities](#roles-and-responsibilities)
 8. [Risks and Mitigation Strategies](#risks-and-mitigation-strategies)
 9. [Conclusion](#conclusion)
 10. [Appendices](#appendices)
-    - [A. Glossary](#a-glossary)
-    - [B. References](#b-references)
+   - [A. Glossary](#a-glossary)
+   - [B. References](#b-references)
 
 ---
 
@@ -52,7 +54,6 @@ Centralized governance is achieved through policy propagation and centralized se
 - **Centralized Governance**: Maintain centralized policies, secrets, and configurations for consistent management across all environments.
 - **Scalability and Modularity**: Design for horizontal scalability and modularity to accommodate growth and technological changes.
 
-
 ## Key Components
 
 ### Account Structure
@@ -60,16 +61,18 @@ Centralized governance is achieved through policy propagation and centralized se
 #### Organizational Hierarchy
 
 - **Root Organization**: The top-level entity for each cloud provider.
-  - **Security OU**:
-    - **Log Archive Account**: Central repository for logs.
-    - **Security Tools Account**: Hosts security tools and services.
-  - **Infrastructure OU**:
-    - **Networking Account**: Manages shared networking resources.
-    - **Shared Services Account**: Houses services shared across the organization.
-  - **Applications OU**:
-    - **Development Accounts**: Environments for development teams.
-    - **Testing Accounts**: Isolated testing environments.
-    - **Production Accounts**: Live environments for production workloads.
+   - **Security OU**:
+      - **Log Archive Account**: Central repository for logs.
+      - **Security Tools Account**: Hosts security tools and services.
+
+   - **Infrastructure OU**:
+      - **Networking Account**: Manages shared networking resources.
+      - **Shared Services Account**: Houses services shared across the organization.
+
+   - **Applications OU**:
+      - **Development Accounts**: Environments for development teams.
+      - **Testing Accounts**: Isolated testing environments.
+      - **Production Accounts**: Live environments for production workloads.
 
 #### Account Provisioning
 
@@ -80,63 +83,73 @@ Centralized governance is achieved through policy propagation and centralized se
 
 - **Centralized IAM**: Implement a unified IAM strategy across all cloud providers.
 - **Roles and Policies**:
-  - Define IAM roles with the principle of least privilege.
-  - Manage IAM policies and role assignments programmatically.
+   - Define IAM roles with the principle of least privilege.
+   - Manage IAM policies and role assignments programmatically.
+
 - **User and Group Management**:
-  - Integrate with centralized identity providers (e.g., Azure AD, Okta).
-  - Group users by function and assign appropriate permissions.
+   - Integrate with centralized identity providers (e.g., Azure AD, Okta).
+   - Group users by function and assign appropriate permissions.
 
 ### Infrastructure as Code (IaC)
 
 - **Tooling**: Utilize a programming language (e.g., Python) with an IaC framework that supports multi-cloud provisioning.
 - **Repository Structure**:
-  - **Modular Design**: Create reusable modules for common infrastructure components.
-  - **Environment Separation**: Maintain separate configurations for development, testing, and production environments.
+   - **Modular Design**: Create reusable modules for common infrastructure components.
+   - **Environment Separation**: Maintain separate configurations for development, testing, and production environments.
+
 - **CI/CD Integration**:
-  - Automate deployment pipelines with tools like Jenkins, GitHub Actions, or GitLab CI.
-  - Implement GitOps practices to ensure that Git is the single source of truth.
+   - Automate deployment pipelines with tools like Jenkins, GitHub Actions, or GitLab CI.
+   - Implement GitOps practices to ensure that Git is the single source of truth.
 
 ### Compliance and Governance
 
 - **Policy as Code**:
-  - Define compliance controls within the IaC configurations.
-  - Embed policies for standards like FISMA and NIST directly into code.
+   - Define compliance controls within the IaC configurations.
+   - Embed policies for standards like FISMA and NIST directly into code.
+
 - **Automated Enforcement**:
-  - Use tagging and labeling to propagate compliance metadata to all resources.
-  - Implement automated checks during deployment to enforce compliance.
+   - Use tagging and labeling to propagate compliance metadata to all resources.
+   - Implement automated checks during deployment to enforce compliance.
+
 - **Auditability**:
-  - Maintain detailed logs of infrastructure changes.
-  - Utilize version control history for audit trails.
+   - Maintain detailed logs of infrastructure changes.
+   - Utilize version control history for audit trails.
 
 ### Logging, Monitoring, and Alerting
 
 - **Centralized Logging**:
-  - Aggregate logs from all resources into centralized logging services.
-  - Ensure logs are stored securely and comply with data retention policies.
+   - Aggregate logs from all resources into centralized logging services.
+   - Ensure logs are stored securely and comply with data retention policies.
+
 - **Monitoring Tools**:
-  - Deploy monitoring solutions (e.g., Prometheus, Grafana) to collect metrics.
+   - Deploy monitoring solutions (e.g., Prometheus, Grafana) to collect metrics.
+
 - **Alerting Mechanisms**:
-  - Configure alerts for performance issues, security incidents, and compliance violations.
-  - Integrate with incident management systems for timely response.
+   - Configure alerts for performance issues, security incidents, and compliance violations.
+   - Integrate with incident management systems for timely response.
 
 ### Networking
 
 - **Standardized Network Topology**:
-  - Define network architectures using IaC for consistency.
-  - Include components like virtual networks, subnets, and routing configurations.
+   - Define network architectures using IaC for consistency.
+   - Include components like virtual networks, subnets, and routing configurations.
+
 - **Security Controls**:
-  - Manage security groups, network access control lists (ACLs), and firewall rules programmatically.
+   - Manage security groups, network access control lists (ACLs), and firewall rules programmatically.
+
 - **Cross-Cloud Connectivity**:
-  - Implement VPNs or cloud interconnects for secure communication between different cloud environments.
+   - Implement VPNs or cloud interconnects for secure communication between different cloud environments.
 
 ### Cost Management
 
 - **Cost Monitoring**:
-  - Implement tools to aggregate and analyze cost data across all cloud providers.
+   - Implement tools to aggregate and analyze cost data across all cloud providers.
+
 - **Tagging for Cost Allocation**:
-  - Enforce tagging standards to facilitate cost tracking by project, environment, and department.
+   - Enforce tagging standards to facilitate cost tracking by project, environment, and department.
+
 - **Budgeting and Alerts**:
-  - Set up cost thresholds and receive alerts to prevent budget overruns.
+   - Set up cost thresholds and receive alerts to prevent budget overruns.
 
 ---
 

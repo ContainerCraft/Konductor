@@ -9,15 +9,17 @@ Welcome to the **Core Module** of the Kargo KubeVirt Kubernetes PaaS project! Th
 - [Introduction](#introduction)
 - [Getting Started](#getting-started)
 - [Core Module Overview](#core-module-overview)
-  - [Module Structure](#module-structure)
-  - [Key Components](#key-components)
+   - [Module Structure](#module-structure)
+   - [Key Components](#key-components)
+
 - [Detailed Explanation of Core Files](#detailed-explanation-of-core-files)
-  - [config.py](#configpy)
-  - [deployment.py](#deploymentpy)
-  - [metadata.py](#metadatapy)
-  - [resource_helpers.py](#resource_helperspy)
-  - [types.py](#typespy)
-  - [utils.py](#utilspy)
+   - [config.py](#configpy)
+   - [deployment.py](#deploymentpy)
+   - [metadata.py](#metadatapy)
+   - [resource_helpers.py](#resource_helperspy)
+   - [types.py](#typespy)
+   - [utils.py](#utilspy)
+
 - [Best Practices](#best-practices)
 - [Troubleshooting and FAQs](#troubleshooting-and-faqs)
 - [Contributing to the Core Module](#contributing-to-the-core-module)
@@ -36,25 +38,32 @@ The Core Module is the heart of the Kargo KubeVirt Kubernetes PaaS project. It p
 If you're new to Kargo or DevOps, start here!
 
 - **Prerequisites**:
-  - Basic understanding of Python and Kubernetes.
-  - [Pulumi CLI](https://www.pulumi.com/docs/get-started/) installed.
-  - Access to a Kubernetes cluster (minikube, kind, or cloud-based).
+
+   - Basic understanding of Python and Kubernetes.
+   - [Pulumi CLI](https://www.pulumi.com/docs/get-started/) installed.
+   - Access to a Kubernetes cluster (minikube, kind, or cloud-based).
 
 - **Setup Steps**:
-  1. **Clone the Repository**:
-     ```bash
-     git clone https://github.com/ContainerCraft/Kargo.git
-     cd Kargo/pulumi
-     ```
-  2. **Install Dependencies**:
-     ```bash
-     pip install -r requirements.txt
-     ```
-  3. **Configure Pulumi**:
-     ```bash
-     pulumi login
-     pulumi stack init dev
-     ```
+
+1. **Clone the Repository**:
+
+```bash
+git clone https://github.com/ContainerCraft/Kargo.git
+cd Kargo/pulumi
+```
+
+2. **Install Dependencies**:
+
+```bash
+pip install -r requirements.txt
+```
+
+3. **Configure Pulumi**:
+
+```bash
+pulumi login
+pulumi stack init dev
+```
 
 ---
 
@@ -138,10 +147,10 @@ deploy_module('kubevirt', init['config'], ...)
 
 - **Singleton Pattern**: Ensures a single source of truth for metadata.
 - **Metadata Functions**:
-  - `set_global_labels(labels)`
-  - `set_global_annotations(annotations)`
-  - `get_global_labels()`
-  - `get_global_annotations()`
+   - `set_global_labels(labels)`
+   - `set_global_annotations(annotations)`
+   - `get_global_labels()`
+   - `get_global_annotations()`
 
 **Usage Example**:
 

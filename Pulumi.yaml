@@ -6,5 +6,5 @@ options:
   refresh: always
 runtime:
   name: python
-  options:
-    virtualenv: venv
+# options:
+#   virtualenv: venv

@@ -1,9 +1,11 @@
 # Project Roadmap: Comprehensive AWS Organization and IAM Management with Pulumi
 
 ## Introduction
+
 This project aims to develop a comprehensive AWS Organization and IAM Management program using Pulumi and Python. It will focus on demonstrating high-quality AWS infrastructure automation setups, including AWS Organizations, Control Tower, IAM policies, roles, users, groups, and associated permissions. The primary audience for this project is senior platform engineering teams who require real-world, scalable, and modular infrastructure automation solutions.
 
 ## Goals and Objectives
+
 - Demonstrate the setup of an AWS Organization with nested Organizational Units (OUs).
 - Implement AWS Control Tower for multi-account governance.
 - Configure and manage IAM roles, policies, users, and groups.
@@ -12,20 +14,25 @@ This project aims to develop a comprehensive AWS Organization and IAM Management
 ## Plan of Action
 
 ### 1. Code Structure and Modules
+
 1. **Core Module**: Handles configuration management, deployment orchestration, metadata management, and utility functions.
 2. **Infrastructure Module**: Manages AWS-specific resources, including AWS Organization, Control Tower, IAM roles, policies, users, groups, and their permissions.
 3. **Utils Module**: Provides helper functions for common tasks and resource transformations.
 
 ### 2. Defining Configuration Structures
+
 1. **Configuration File (Pulumi.aws.yaml)**:
+
    - Centralize all configurations, including AWS Organization details, Control Tower settings, IAM configurations, and global tags.
    - Use nested structures to define tenant accounts, workloads, and associated tags.
 
 2. **Type-Safe Data Classes**:
+
    - Define data classes for AWS configurations using Python's `dataclasses` module.
    - Ensure type safety and clarity by using well-defined data structures.
 
 ### 3. AWS Organization Setup
+
 1. **Creating AWS Organizations**:
    - Define a function to create AWS Organizations with all features enabled.
 
@@ -64,10 +71,12 @@ def create_organizational_units(organization: aws.organizations.Organization, co
 ```
 
 ### 4. AWS Control Tower Setup
+
 1. **Enabling AWS Control Tower**:
    - Placeholder function to enable AWS Control Tower (hypothetical until AWS provides full programmatic support).
 
 ### 5. IAM Management
+
 1. **Creating IAM Roles and Policies**:
    - Define functions to create IAM roles for Control Tower and other specific needs.
    - Attach necessary policies to these roles.
@@ -139,6 +148,7 @@ def create_iam_resources(tenant_provider: aws.Provider, tenant_account: aws.orga
 ```
 
 ### 6. Deploying Workloads in Tenant Accounts
+
 1. **Deploying Various Workloads**:
    - Define functions for deploying EKS clusters, RDS instances, Lambda functions, etc.
    - Utilize tenant-specific AWS Providers for these deployments.
@@ -177,6 +187,7 @@ def deploy_lambda_function(tenant_provider: aws.Provider, tenant_account: aws.or
 ```
 
 ### 7. Secrets Management
+
 1. **Creating Secrets in AWS Secrets Manager**:
    - Define a function to create secrets in AWS Secrets Manager for tenant accounts.
 
@@ -206,6 +217,7 @@ def create_secrets(tenant_provider: aws.Provider, tenant_account: aws.organizati
 ```
 
 ### 8. Main Execution and Resource Management
+
 1. **Main Execution Function**:
    - Define the main function to call all other functions in sequence, ensuring appropriate dependencies and order of execution.
 
@@ -253,18 +265,25 @@ if __name__ == "__main__":
 ```
 
 ### 9. Documentation and Best Practices
+
 1. **Comprehensive Docstrings and Comments**:
+
    - Ensure all functions and classes are well-documented with detailed docstrings and inline comments.
 
 2. **Developer Guide**:
+
    - Create a detailed developer guide to explain the project structure, codebase, and contribution guidelines.
 
 ### 10. Testing and Validation
+
 1. **Unit Testing**:
+
    - Write unit tests for critical functions to ensure functionality and prevent regressions.
 
 2. **Integration Testing**:
+
    - Deploy the infrastructure in a test environment and validate its correctness and robustness.
 
 3. **Error Handling**:
+
    - Implement robust error handling and logging to aid in troubleshooting and debugging.

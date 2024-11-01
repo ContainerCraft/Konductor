@@ -26,7 +26,7 @@ Follow the steps below to set up your environment:
 
 Authenticate with your Pulumi account:
 
-```bash {"id":"01J97M1349ZY70MQVHDE43DNY5","name":"login","tag":"setup"}
+```bash {"name":"login","tag":"setup"}
 pulumi login && pulumi install
 
 ```
@@ -37,9 +37,9 @@ Use Pulumi to load environment variables, configuration files, and credentials:
 
 * NOTE: Replace `<organization>`, `<project>`, and `<stack>` with your Pulumi organization, project name, and stack name.
 
-```bash {"id":"01J97M1349ZY70MQVHDGAFVNEB","name":"load-environments-and-secrets","tag":"setup"}
+```bash {"name":"load-environments-and-secrets","tag":"setup"}
 export ENVIRONMENT="containercraft/NavtecaAwsCredentialsConfigSmce/navteca-aws-credentials-config-smce"
-eval $(pulumi env open --format=shell $ENVIRONMENT | tee ../.tmpenv; direnv allow)
+eval $(pulumi env open --format=shell $ENVIRONMENT | tee .tmpenv; direnv allow)
 echo "Loaded environment $ENVIRONMENT"
 
 alias aws='aws --profile smdc-cba'
@@ -50,7 +50,7 @@ alias aws='aws --profile smdc-cba'
 
 Get Caller Identity to verify your AWS identity:
 
-```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHDFZQZQZT","name":"validate-aws-identity","tag":"validate-aws"}
+```bash {"excludeFromRunAll":"true","name":"validate-aws-identity","tag":"validate-aws"}
 aws --profile smdc-cba sts get-caller-identity
 
 ```
@@ -59,7 +59,7 @@ aws --profile smdc-cba sts get-caller-identity
 
 Deploy the infrastructure as code (IaC) using Pulumi:
 
-```bash {"id":"01J97M1349ZY70MQVHDFZQZQZT","name":"deploy-iac","tag":"setup"}
+```bash {"name":"deploy-iac","tag":"setup"}
 git remote add origin https://github.com/containercraft/konductor || true
 git config remote.origin.url https://github.com/containercraft/konductor || true
 pulumi up --yes --stack containercraft/scip-ops-prod --skip-preview=true --refresh=true
@@ -70,7 +70,7 @@ pulumi up --yes --stack containercraft/scip-ops-prod --skip-preview=true --refre
 
 Clone the SMCE CLI repository && Symlink `smce` cli:
 
-```bash {"id":"01J97M1349ZY70MQVHDMSP1MHQ","name":"install-smce-cli","tag":"setup"}
+```bash {"name":"install-smce-cli","tag":"setup"}
 cd ~
 rm -rf ~/smce-cli ~/.local/bin/smce
 ln -sf $GIT_CONFIG ~/.gitconfig
@@ -92,7 +92,7 @@ Set up AWS Multi-Factor Authentication (MFA):
 
 > TODO: enhance smce-cli to auto-export mfa env vars
 
-```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHDT7NEEM1","name":"smce-aws-mfa","tag":"aws"}
+```bash {"excludeFromRunAll":"true","name":"smce-aws-mfa","tag":"aws"}
 smce awsconfig mfa
 
 ```
@@ -101,7 +101,7 @@ smce awsconfig mfa
 
 List S3 buckets to confirm AWS access && Verify your AWS identity:
 
-```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHE452WAP0","name":"validate-aws-s3-ls","tag":"validate-aws"}
+```bash {"excludeFromRunAll":"true","name":"validate-aws-s3-ls","tag":"validate-aws"}
 aws s3 ls
 aws sts get-caller-identity
 
@@ -111,21 +111,21 @@ aws sts get-caller-identity
 
 Update your kubeconfig file to interact with your EKS cluster:
 
-```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHE78ZE70R","name":"aws-get-ops-kubeconfig","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","name":"aws-get-ops-kubeconfig","tag":"kubeconfig"}
 aws eks update-kubeconfig --profile main --region us-east-1 --name smce-gitops
 
 ```
 
 Generate a new Kubernetes configuration:
 
-```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHDZVHZ3TQ","name":"generate-smce-kubeconfig","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","name":"generate-smce-kubeconfig","tag":"kubeconfig"}
 smce kubeconfig generate
 
 ```
 
 Generate an authentication token for the EKS cluster:
 
-```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHE9A2GZGB","name":"generate-eks-auth-token","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","name":"generate-eks-auth-token","tag":"kubeconfig"}
 aws eks get-token --region us-east-1 --cluster-name smce-gitops --output json
 
 ```
@@ -136,21 +136,21 @@ Replace `<mfa-device-arn>` with your MFA device's ARN and provide your MFA token
 
 List available Kubernetes contexts:
 
-```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHEE3CJ1YZ","name":"validate-kubeconfig-context-list","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","name":"validate-kubeconfig-context-list","tag":"kubeconfig"}
 kubectl --kubeconfig ~/.kube/smce config get-contexts
 
 ```
 
 Retrieve the list of nodes in your Kubernetes cluster:
 
-```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHEGY0QEQW","name":"validate-kube-get-nodes","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","name":"validate-kube-get-nodes","tag":"kubeconfig"}
 kubectl --kubeconfig ~/.kube/smce get nodes
 
 ```
 
 Check the Kubernetes client and server versions with verbose output:
 
-```bash {"excludeFromRunAll":"true","id":"01J97M1349ZY70MQVHEHTZNV1Y","name":"validate-kube-get-version","tag":"kubeconfig"}
+```bash {"excludeFromRunAll":"true","name":"validate-kube-get-version","tag":"kubeconfig"}
 kubectl version -v=8
 
 ```
@@ -170,7 +170,7 @@ By following these steps, you've set up your environment to interact with AWS se
 
 **Note:** If you encounter authentication issues due to MFA requirements, test temporary session credentials using the following command:
 
-```bash {"excludeFromRunAll":"true","id":"01J9CGCF9R0EWGHNN32BMZCGZY","name":"aws-sts-get-session-token","tag":"dbg"}
+```bash {"excludeFromRunAll":"true","name":"aws-sts-get-session-token","tag":"dbg"}
 aws sts get-session-token \
   --duration-seconds 129600 \
   --profile default \
@@ -181,7 +181,7 @@ aws sts get-session-token \
 
 ## Bonus: Launch Kubernetes in Docker
 
-```bash {"excludeFromRunAll":"true","id":"01J9CGCF9R0EWGHNN32BMZCGZY","name":"task-run-kubernetes","tag":"tind"}
+```bash {"excludeFromRunAll":"true","name":"task-run-kubernetes","tag":"tind"}
 cd ..
 task kubernetes
 

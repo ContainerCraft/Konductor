@@ -22,17 +22,19 @@ This document is intended for developers who want to contribute to the Konductor
 
 The project is organized into modular components to ensure scalability and maintainability. Below is an overview of the key components:
 
-- **`__main__.py`**: The entry point of the Pulumi program.
+- __`__main__.py`__: The entry point of the Pulumi program.
 - **`core/`**: Contains shared utilities and libraries.
-  - **`config.py`**: Handles configuration loading and validation using Pydantic.
-  - **`deployment.py`**: Manages deployment orchestration and module integration.
-  - **`metadata.py`**: Manages global metadata, labels, and annotations.
-  - **`utils.py`**: Provides generic utility functions.
+   - **`config.py`**: Handles configuration loading and validation using Pydantic.
+   - **`deployment.py`**: Manages deployment orchestration and module integration.
+   - **`metadata.py`**: Manages global metadata, labels, and annotations.
+   - **`utils.py`**: Provides generic utility functions.
+
 - **`modules/`**: Contains individual modules, each in its own directory.
-  - **`modules/<module_name>/types.py`**: Defines Pydantic models for module configurations.
-  - **`modules/<module_name>/deploy.py`**: Contains module-specific deployment logic.
-  - **`modules/<module_name>/*.py`**: Contains other module-specific functions and components.
-  - **`modules/<module_name>/README.md`**: Module-specific documentation.
+   - __`modules/<module_name>/types.py`__: Defines Pydantic models for module configurations.
+   - __`modules/<module_name>/deploy.py`__: Contains module-specific deployment logic.
+   - __`modules/<module_name>/*.py`__: Contains other module-specific functions and components.
+   - __`modules/<module_name>/README.md`__: Module-specific documentation.
+
 - **`requirements.txt`**: Lists the dependencies for the project.
 
 ### Example Directory Structure
@@ -78,10 +80,10 @@ pulumi/
 
 ### Naming Conventions
 
-- **Files and Directories**: Use `snake_case` for file and directory names.
+- __Files and Directories__: Use `snake_case` for file and directory names.
 - **Classes**: Use `PascalCase` for class names.
-- **Variables and Functions**: Use `snake_case` for variable and function names.
-- **Constants**: Use `UPPER_SNAKE_CASE` for constants.
+- __Variables and Functions__: Use `snake_case` for variable and function names.
+- __Constants__: Use `UPPER_SNAKE_CASE` for constants.
 
 ### Configuration Management
 
@@ -92,15 +94,18 @@ pulumi/
 ### Module Integration
 
 - **Deployment Functions**: Follow the standard function signature for deployment functions.
-  ```python
-  def deploy_<module_name>(
-      config: ModuleNameConfig,
-      global_depends_on: List[pulumi.Resource],
-      providers: Dict[str, Any],
-  ) -> pulumi.Resource:
-      # Deployment logic
-  ```
-- **Configuration Loading**: Use the `get_module_config` function to load and validate configurations.
+
+```python
+def deploy_<module_name>(
+    config: ModuleNameConfig,
+    global_depends_on: List[pulumi.Resource],
+    providers: Dict[str, Any],
+) -> pulumi.Resource:
+    # Deployment logic
+```
+
+- __Configuration Loading__: Use the `get_module_config` function to load and validate configurations.
+
 - **Providers**: Access required providers from the `providers` dictionary passed to deployment functions.
 
 ---
@@ -110,34 +115,45 @@ pulumi/
 ### Fork and Clone the Repository
 
 1. **Fork the repository** on GitHub.
+
 2. **Clone the forked repository** to your local machine.
-   ```sh
-   git clone https://github.com/your-username/konductor.git
-   cd konductor/pulumi
-   ```
+
+```sh
+git clone https://github.com/your-username/konductor.git
+cd konductor/pulumi
+```
 
 ### Set Up Development Environment
 
 1. **Create a virtual environment**:
-   ```sh
-   python -m venv venv
-   source venv/bin/activate
-   ```
+
+```sh
+python -m venv venv
+source venv/bin/activate
+```
+
 2. **Install dependencies**:
-   ```sh
-   pip install -r requirements.txt
-   ```
+
+```sh
+pip install -r requirements.txt
+```
+
 3. **Configure Pulumi**:
-   ```sh
-   pulumi login
-   pulumi stack init dev
-   ```
+
+```sh
+pulumi login
+pulumi stack init dev
+```
+
 4. **Set Up Cloud Provider Credentials**:
-   - For AWS:
-     ```sh
-     aws configure
-     ```
-   - For other providers, follow their respective setup instructions.
+
+- For AWS:
+
+```sh
+aws configure
+```
+
+- For other providers, follow their respective setup instructions.
 
 ### Create a Feature Branch
 
@@ -155,14 +171,17 @@ git checkout -b feature/new-module
 ### Commit and Push
 
 1. **Commit your changes** with clear and concise messages.
-   ```sh
-   git add .
-   git commit -m "Add new module: description"
-   ```
+
+```sh
+git add .
+git commit -m "Add new module: description"
+```
+
 2. **Push to your fork**:
-   ```sh
-   git push origin feature/new-module
-   ```
+
+```sh
+git push origin feature/new-module
+```
 
 ### Create a Pull Request
 
@@ -177,32 +196,38 @@ git checkout -b feature/new-module
 ### Example: Adding a New Module
 
 1. **Create Module Directory**:
-   ```sh
-   mkdir modules/new_module
-   touch modules/new_module/__init__.py
-   ```
+
+```sh
+mkdir modules/new_module
+touch modules/new_module/__init__.py
+```
+
 2. **Define Configuration Model**:
-   ```python
-   # modules/new_module/types.py
 
-   from pydantic import BaseModel
+```python
+# modules/new_module/types.py
 
-   class NewModuleConfig(BaseModel):
-       enabled: bool = False
-       # ... other configuration fields ...
-   ```
+from pydantic import BaseModel
+
+class NewModuleConfig(BaseModel):
+    enabled: bool = False
+    # ... other configuration fields ...
+```
+
 3. **Implement Deployment Logic**:
-   ```python
-   # modules/new_module/deploy.py
 
-   def deploy_new_module(
-       config: NewModuleConfig,
-       global_depends_on: List[pulumi.Resource],
-       providers: Dict[str, Any],
-   ) -> pulumi.Resource:
-       # Deployment logic
-   ```
-4. **Update `__main__.py`**:
+```python
+# modules/new_module/deploy.py
+
+def deploy_new_module(
+    config: NewModuleConfig,
+    global_depends_on: List[pulumi.Resource],
+    providers: Dict[str, Any],
+) -> pulumi.Resource:
+    # Deployment logic
+```
+
+4. __Update `__main__.py`__:
    - Add the module to `modules_to_deploy`.
    - Ensure the module is correctly loaded and deployed.
 

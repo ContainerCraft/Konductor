@@ -9,10 +9,12 @@
    - [Part 1: Refactoring AWS Module to Align with Kubernetes Modules](#part-1-refactoring-aws-module-to-align-with-kubernetes-modules)
    - [Part 2: Adjusting Version Handling to Be Exclusive to Kubernetes Modules](#part-2-adjusting-version-handling-to-be-exclusive-to-kubernetes-modules)
    - [Part 3: Improving Configuration Schema and Type System Using Pydantic](#part-3-improving-configuration-schema-and-type-system-using-pydantic)
+
 5. [Detailed Implementation Steps](#detailed-implementation-steps)
    - [Part 1 Steps](#part-1-steps)
    - [Part 2 Steps](#part-2-steps)
    - [Part 3 Steps](#part-3-steps)
+
 6. [Additional Considerations](#additional-considerations)
 7. [Conclusion](#conclusion)
 8. [Appendix: Understanding Pydantic](#appendix-understanding-pydantic)
@@ -40,16 +42,18 @@ This document serves as a comprehensive roadmap and educational resource for ref
 ### Current Situation
 
 - **Kubernetes Modules**:
-  - Each module resides under `pulumi/modules/<module_name>/`.
-  - Contains `types.py` for configuration, `deploy.py` for deployment logic, and `README.md` for documentation.
-  - Deployment functions have a consistent signature and return values.
-  - Dynamic module discovery and deployment are handled via `core/deployment.py` and `__main__.py`.
+
+   - Each module resides under `pulumi/modules/<module_name>/`.
+   - Contains `types.py` for configuration, `deploy.py` for deployment logic, and `README.md` for documentation.
+   - Deployment functions have a consistent signature and return values.
+   - Dynamic module discovery and deployment are handled via `core/deployment.py` and `__main__.py`.
 
 - **AWS Module**:
-  - Does not conform to the structure of Kubernetes modules.
-  - Has a different code organization and deployment function signature.
-  - Integration with the core module and dynamic discovery is inconsistent.
-  - Version handling is not aligned with the strategy used for Kubernetes modules.
+
+   - Does not conform to the structure of Kubernetes modules.
+   - Has a different code organization and deployment function signature.
+   - Integration with the core module and dynamic discovery is inconsistent.
+   - Version handling is not aligned with the strategy used for Kubernetes modules.
 
 ### Issues Identified
 
@@ -65,29 +69,29 @@ This document serves as a comprehensive roadmap and educational resource for ref
 
 - **Goal**: Restructure the AWS module to match the directory and code structure of Kubernetes modules, ensuring consistency across the codebase.
 - **Actions**:
-  - Move AWS module files under `pulumi/modules/aws/`.
-  - Define configuration data classes in `types.py` without unnecessary version attributes.
-  - Update the deployment logic in `deploy.py` to match the standard function signature.
-  - Modify `__main__.py` and core modules to include and deploy the AWS module consistently.
+   - Move AWS module files under `pulumi/modules/aws/`.
+   - Define configuration data classes in `types.py` without unnecessary version attributes.
+   - Update the deployment logic in `deploy.py` to match the standard function signature.
+   - Modify `__main__.py` and core modules to include and deploy the AWS module consistently.
 
 ### Part 2: Adjusting Version Handling to Be Exclusive to Kubernetes Modules
 
 - **Goal**: Ensure that version locking mechanisms are exclusive to Kubernetes modules and remove unnecessary version interfaces from cloud provider modules like AWS.
 - **Actions**:
-  - Update `core/config.py` and `core/deployment.py` to handle versioning exclusively for Kubernetes modules.
-  - Adjust module discovery functions to accommodate modules with and without versioning.
-  - Remove version handling code from cloud provider modules.
-  - Optionally, implement a utility to extract versions from `requirements.txt` for logging purposes.
+   - Update `core/config.py` and `core/deployment.py` to handle versioning exclusively for Kubernetes modules.
+   - Adjust module discovery functions to accommodate modules with and without versioning.
+   - Remove version handling code from cloud provider modules.
+   - Optionally, implement a utility to extract versions from `requirements.txt` for logging purposes.
 
 ### Part 3: Improving Configuration Schema and Type System Using Pydantic
 
 - **Goal**: Enhance the configuration schema by using Pydantic models for type safety, validation, and flexibility, allowing module maintainers to define complex configurations independently.
 - **Actions**:
-  - Integrate Pydantic into the project.
-  - Each module defines its own Pydantic configuration model in `types.py`.
-  - Centralize configuration loading and validation in `core/config.py`.
-  - Update deployment functions to use validated configuration objects.
-  - Provide clear error reporting and documentation.
+   - Integrate Pydantic into the project.
+   - Each module defines its own Pydantic configuration model in `types.py`.
+   - Centralize configuration loading and validation in `core/config.py`.
+   - Update deployment functions to use validated configuration objects.
+   - Provide clear error reporting and documentation.
 
 ---
 
@@ -105,9 +109,10 @@ This document serves as a comprehensive roadmap and educational resource for ref
 
 - Create the directory `pulumi/modules/aws/` if it doesn't exist.
 - Move existing AWS module files into this directory:
-  - `types.py`: Defines configuration data classes.
-  - `deploy.py`: Contains deployment logic.
-  - `README.md`: Provides module documentation.
+   - `types.py`: Defines configuration data classes.
+   - `deploy.py`: Contains deployment logic.
+   - `README.md`: Provides module documentation.
+
 - Ensure the directory contains an `__init__.py` file to make it a Python package.
 
 #### Step 2: Define Configuration Data Classes in `types.py`
@@ -149,7 +154,7 @@ class AWSConfig(BaseModel):
 
 #### Step 3: Update Deployment Logic in `deploy.py`
 
-**Action**: Update the AWS module's `deploy.py` to contain a deployment function `deploy_aws_module` with a consistent signature and remove any version handling.
+__Action__: Update the AWS module's `deploy.py` to contain a deployment function `deploy_aws_module` with a consistent signature and remove any version handling.
 
 **Reasoning**: Aligning the function signature with other modules ensures consistent deployment patterns and simplifies the core deployment logic.
 
@@ -198,7 +203,7 @@ def deploy_aws_module(
 
 #### Step 4: Modify `__main__.py` to Include AWS Module
 
-**Action**: Update `pulumi/__main__.py` to include and deploy the AWS module consistently with other modules.
+__Action__: Update `pulumi/__main__.py` to include and deploy the AWS module consistently with other modules.
 
 **Reasoning**: This ensures that the AWS module is integrated into the deployment process in the same way as Kubernetes modules.
 
@@ -278,7 +283,7 @@ if __name__ == "__main__":
 
 #### Step 5: Adjust `core/deployment.py` to Handle Providers and Versioning
 
-**Action**: Modify `deploy_module` in `pulumi/core/deployment.py` to handle modules with and without versioning.
+__Action__: Modify `deploy_module` in `pulumi/core/deployment.py` to handle modules with and without versioning.
 
 **Reasoning**: The core deployment function needs to accommodate both Kubernetes modules (which use versioning) and cloud provider modules (which do not).
 
@@ -336,7 +341,7 @@ def deploy_module(
 
 #### Step 6: Update `core/config.py` to Handle Versioning Exclusively for Kubernetes Modules
 
-**Action**: Adjust `get_module_config` to include version information only for Kubernetes modules.
+__Action__: Adjust `get_module_config` to include version information only for Kubernetes modules.
 
 **Reasoning**: Cloud provider modules do not need version information in their configuration.
 
@@ -390,7 +395,7 @@ def get_module_config(
 
 #### Step 7: Adjust Module Discovery Functions
 
-**Action**: Ensure `discover_config_class` and `discover_deploy_function` work correctly for all modules.
+__Action__: Ensure `discover_config_class` and `discover_deploy_function` work correctly for all modules.
 
 **Reasoning**: These functions need to dynamically import the appropriate classes and functions for each module, regardless of whether they handle versioning.
 
@@ -429,10 +434,11 @@ def discover_deploy_function(module_name: str) -> Callable:
 **Implementation**:
 
 - **In `types.py`**:
-  - Ensure no `version` field is present in the configuration models.
+   - Ensure no `version` field is present in the configuration models.
+
 - **In `deploy.py`**:
-  - Ensure deployment functions do not return version information.
-  - Remove any logic that deals with versioning.
+   - Ensure deployment functions do not return version information.
+   - Remove any logic that deals with versioning.
 
 **Explanation**:
 
@@ -478,15 +484,15 @@ def get_module_version_from_requirements(module_name: str) -> Optional[str]:
 
 - Install Pydantic:
 
-  ```bash
-  pip install pydantic
-  ```
+```bash
+pip install pydantic
+```
 
 - Add to `requirements.txt`:
 
-  ```
-  pydantic>=1.8.2
-  ```
+```
+pydantic>=1.8.2
+```
 
 #### Step 11: Define Base Configuration Classes
 
@@ -515,40 +521,40 @@ class BaseConfig(BaseModel):
 
 - **For AWS Module**:
 
-  ```python
-  # pulumi/modules/aws/types.py
+```python
+# pulumi/modules/aws/types.py
 
-  from pydantic import BaseModel, root_validator
-  from typing import Optional, List, Dict, Any
+from pydantic import BaseModel, root_validator
+from typing import Optional, List, Dict, Any
 
-  class AWSConfig(BaseModel):
-      enabled: bool = False
-      profile: Optional[str] = None
-      region: str
-      account_id: Optional[str] = None
-      landingzones: List[Dict[str, Any]] = []
+class AWSConfig(BaseModel):
+    enabled: bool = False
+    profile: Optional[str] = None
+    region: str
+    account_id: Optional[str] = None
+    landingzones: List[Dict[str, Any]] = []
 
-      @root_validator
-      def check_region(cls, values):
-          region = values.get('region')
-          if not region:
-              raise ValueError('region must be specified for AWS module')
-          return values
-  ```
+    @root_validator
+    def check_region(cls, values):
+        region = values.get('region')
+        if not region:
+            raise ValueError('region must be specified for AWS module')
+        return values
+```
 
 - **For Kubernetes Module**:
 
-  ```python
-  # pulumi/modules/cert_manager/types.py
+```python
+# pulumi/modules/cert_manager/types.py
 
-  from pydantic import BaseModel
+from pydantic import BaseModel
 
-  class CertManagerConfig(BaseModel):
-      enabled: bool = False
-      version: str = "latest"
-      namespace: str = "cert-manager"
-      install_crds: bool = True
-  ```
+class CertManagerConfig(BaseModel):
+    enabled: bool = False
+    version: str = "latest"
+    namespace: str = "cert-manager"
+    install_crds: bool = True
+```
 
 **Explanation**:
 
@@ -641,14 +647,15 @@ def deploy_aws_module(
 **Implementation**:
 
 - Errors are caught in `get_module_config` and logged with detailed information.
+
 - Example error message:
 
-  ```
-  Configuration error in module 'aws':
-  1 validation error for AWSConfig
-  region
-    field required (type=value_error.missing)
-  ```
+```
+Configuration error in module 'aws':
+1 validation error for AWSConfig
+region
+  field required (type=value_error.missing)
+```
 
 #### Step 16: Document Configuration Schemas
 
@@ -660,34 +667,37 @@ def deploy_aws_module(
 
 - **Example for AWS Module**:
 
-  ```markdown
-  # AWS Module Configuration
+```markdown
+# AWS Module Configuration
 
-  ## Configuration Schema
+## Configuration Schema
 
-  ```yaml
-  aws:
-    enabled: true
-    profile: "default"
-    region: "us-west-2"
-    account_id: "123456789012"
-    landingzones:
-      - name: "tenant1"
-        email: "tenant1@example.com"
-        # Add other fields as needed
-  ```
+```yaml
+aws:
+  enabled: true
+  profile: "default"
+  region: "us-west-2"
+  account_id: "123456789012"
+  landingzones:
+    - name: "tenant1"
+      email: "tenant1@example.com"
+      # Add other fields as needed
+```
 
-  ## Configuration Fields
+## Configuration Fields
 
-  - **enabled** *(bool)*: Enable or disable the AWS module.
-  - **profile** *(string)*: AWS CLI profile to use.
-  - **region** *(string, required)*: AWS region.
-  - **account_id** *(string)*: AWS account ID.
-  - **landingzones** *(list)*: List of landing zone configurations.
-    - **name** *(string)*: Name of the landing zone.
-    - **email** *(string)*: Email associated with the landing zone.
-    - *...*
-  ```
+- **enabled** *(bool)*: Enable or disable the AWS module.
+- **profile** *(string)*: AWS CLI profile to use.
+- **region** *(string, required)*: AWS region.
+- __account_id__ _(string)_: AWS account ID.
+- **landingzones** *(list)*: List of landing zone configurations.
+   - **name** *(string)*: Name of the landing zone.
+   - **email** *(string)*: Email associated with the landing zone.
+   - *...*
+
+```
+
+```
 
 **Explanation**:
 
@@ -711,8 +721,8 @@ def deploy_<module_name>_module(
     # Deployment logic
 ```
 
-- **Kubernetes Modules**: Return a tuple `(version, primary_resource)`.
-- **Cloud Provider Modules**: Return the `primary_resource`.
+- __Kubernetes Modules__: Return a tuple `(version, primary_resource)`.
+- __Cloud Provider Modules__: Return the `primary_resource`.
 
 ### Code Comments and Docstrings
 
@@ -765,29 +775,29 @@ To ensure that all developers are comfortable with Pydantic and its usage in the
 
 1. **Installation**:
 
-   ```bash
-   pip install pydantic
-   ```
+```bash
+pip install pydantic
+```
 
 2. **Defining a Model**:
 
-   ```python
-   from pydantic import BaseModel
+```python
+from pydantic import BaseModel
 
-   class ModuleConfig(BaseModel):
-       enabled: bool = False
-       name: str
-       version: str = "latest"
-   ```
+class ModuleConfig(BaseModel):
+    enabled: bool = False
+    name: str
+    version: str = "latest"
+```
 
 3. **Validation and Usage**:
 
-   ```python
-   try:
-       config = ModuleConfig(**user_input)
-   except ValidationError as e:
-       print(e)
-   ```
+```python
+try:
+    config = ModuleConfig(**user_input)
+except ValidationError as e:
+    print(e)
+```
 
 #### Advanced Features
 

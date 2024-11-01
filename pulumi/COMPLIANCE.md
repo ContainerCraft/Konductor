@@ -9,6 +9,7 @@
 3. [Compliance Strategy](#compliance-strategy)
    - [Objectives](#objectives)
    - [Key Innovations](#key-innovations)
+
 4. [Implementation Details](#implementation-details)
    - [Compliance Metadata Management](#compliance-metadata-management)
    - [Automatic Propagation Mechanism](#automatic-propagation-mechanism)
@@ -16,18 +17,22 @@
    - [Configuration Schema](#configuration-schema)
    - [Version Management](#version-management)
    - [Stack Outputs and Reporting](#stack-outputs-and-reporting)
+
 5. [Developer Expectations and Best Practices](#developer-expectations-and-best-practices)
    - [Module Autonomy](#module-autonomy)
    - [Integration with Compliance Framework](#integration-with-compliance-framework)
    - [Coding Standards](#coding-standards)
+
 6. [User Experience (UX)](#user-experience-ux)
    - [Simplified Configuration](#simplified-configuration)
    - [Deployment Workflow](#deployment-workflow)
    - [Validation and Error Handling](#validation-and-error-handling)
+
 7. [Business Stakeholder Value](#business-stakeholder-value)
    - [Accelerated Time-to-Compliance](#accelerated-time-to-compliance)
    - [Auditability and Transparency](#auditability-and-transparency)
    - [Risk Reduction](#risk-reduction)
+
 8. [Conclusion](#conclusion)
 9. [Appendix](#appendix)
    - [Glossary](#glossary)
@@ -82,11 +87,11 @@ In the modern regulatory landscape, organizations face increasing pressure to co
 
 - **Configuration Dictionaries**: Compliance-related metadata is defined in a central configuration file (e.g., `Pulumi.<stack>.yaml`) under a dedicated `compliance` section.
 - **Metadata Types**:
-  - **Regulatory Controls**: NIST, FISMA, ISO control identifiers.
-  - **Component Versions**: Versions of deployed components and dependencies.
-  - **Source Control Information**: Git repository URLs, commit hashes, branches.
-  - **Identity Information**: Cloud provider identities (e.g., AWS STS `GetCallerIdentity`, Kubernetes User and Service Account, etc. outputs).
-  - **Organizational Metadata**: Owner information, environment tags, project identifiers.
+   - **Regulatory Controls**: NIST, FISMA, ISO control identifiers.
+   - **Component Versions**: Versions of deployed components and dependencies.
+   - **Source Control Information**: Git repository URLs, commit hashes, branches.
+   - **Identity Information**: Cloud provider identities (e.g., AWS STS `GetCallerIdentity`, Kubernetes User and Service Account, etc. outputs).
+   - **Organizational Metadata**: Owner information, environment tags, project identifiers.
 
 **Example Configuration**:
 
@@ -124,11 +129,12 @@ config:
 **Technical Implementation**:
 
 - **Core Compliance Module** (`core/compliance.py`):
-  - Provides functions to access compliance metadata.
-  - Supplies utility functions to format and apply metadata to resources.
+   - Provides functions to access compliance metadata.
+   - Supplies utility functions to format and apply metadata to resources.
+
 - **Module Integration**:
-  - Modules import the core compliance utilities.
-  - Apply compliance metadata during resource instantiation.
+   - Modules import the core compliance utilities.
+   - Apply compliance metadata during resource instantiation.
 
 **Example in Module Deployment**:
 
@@ -169,13 +175,14 @@ def deploy_aws_module(
 **Example Tags and Labels**:
 
 - **Tags**:
-  - `compliance:nist-controls=AC-2,IA-5`
-  - `compliance:owner=compliance-team@example.com`
-  - `compliance:project-id=proj-12345`
+   - `compliance:nist-controls=AC-2,IA-5`
+   - `compliance:owner=compliance-team@example.com`
+   - `compliance:project-id=proj-12345`
+
 - **Labels**:
-  - `compliance/nist-controls: "AC-2,IA-5"`
-  - `compliance/owner: "compliance-team@example.com"`
-  - `compliance/project-id: "proj-12345"`
+   - `compliance/nist-controls: "AC-2,IA-5"`
+   - `compliance/owner: "compliance-team@example.com"`
+   - `compliance/project-id: "proj-12345"`
 
 ### Configuration Schema
 
@@ -378,7 +385,7 @@ The Konductor IaC codebase embodies a strategic approach to compliance managemen
 - **ISO/IEC 27001 Information Security Management**: [https://www.iso.org/isoiec-27001-information-security.html](https://www.iso.org/isoiec-27001-information-security.html)
 - **Pulumi Documentation**: [https://www.pulumi.com/docs/](https://www.pulumi.com/docs/)
 - **Pydantic Documentation**: [https://pydantic-docs.helpmanual.io/](https://pydantic-docs.helpmanual.io/)
-- **AWS STS GetCallerIdentity**: [https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html)
+- __AWS STS GetCallerIdentity__: [https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html](https://docs.aws.amazon.com/STS/latest/APIReference/API_GetCallerIdentity.html)
 
 ---
 
