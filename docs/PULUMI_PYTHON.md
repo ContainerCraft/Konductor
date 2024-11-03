@@ -5,32 +5,35 @@ This document outlines the development practices, techniques, and requirements f
 ## Table of Contents
 
 - [Project Setup](#project-setup)
-  - [Dependency Management with Poetry](#dependency-management-with-poetry)
-  - [Initializing the Project](#initializing-the-project)
+   - [Dependency Management with Poetry](#dependency-management-with-poetry)
+   - [Initializing the Project](#initializing-the-project)
+
 - [Enforcing Type Checking with Pyright](#enforcing-type-checking-with-pyright)
-  - [Installing Pyright](#installing-pyright)
-  - [Configuring Pyright](#configuring-pyright)
-  - [Integrating Pyright with Pulumi](#integrating-pyright-with-pulumi)
-  - [Editor Integration](#editor-integration)
+   - [Installing Pyright](#installing-pyright)
+   - [Configuring Pyright](#configuring-pyright)
+   - [Integrating Pyright with Pulumi](#integrating-pyright-with-pulumi)
+   - [Editor Integration](#editor-integration)
+
 - [Using Pythonic Input Types with TypedDict](#using-pythonic-input-types-with-typeddict)
-  - [Advantages of TypedDict](#advantages-of-typeddict)
-  - [Implementing TypedDict in Resources](#implementing-typeddict-in-resources)
-  - [Example: Kubernetes Deployment](#example-kubernetes-deployment)
+   - [Advantages of TypedDict](#advantages-of-typeddict)
+   - [Implementing TypedDict in Resources](#implementing-typeddict-in-resources)
+   - [Example: Kubernetes Deployment](#example-kubernetes-deployment)
+
 - [Best Practices](#best-practices)
-  - [Adherence to DRY Principle](#adherence-to-dry-principle)
-  - [Modular Code Organization](#modular-code-organization)
-  - [Consistent Coding Standards](#consistent-coding-standards)
+   - [Adherence to DRY Principle](#adherence-to-dry-principle)
+   - [Modular Code Organization](#modular-code-organization)
+   - [Consistent Coding Standards](#consistent-coding-standards)
+
 - [Code Standards and Guidelines](#code-standards-and-guidelines)
-  - [Naming Conventions](#naming-conventions)
-  - [Type Annotations](#type-annotations)
-  - [Error Handling](#error-handling)
+   - [Naming Conventions](#naming-conventions)
+   - [Type Annotations](#type-annotations)
+   - [Error Handling](#error-handling)
+
 - [Further Reading](#further-reading)
 
 ## Project Setup
 
 ### Dependency Management with Poetry
-
-We use [Poetry](https://python-poetry.org/) for dependency management and packaging. Poetry ensures that our development environment is consistent, dependencies are properly managed, and collaboration is streamlined.
 
 Ensure that `poetry` is added to your system's PATH. Refer to the [official installation guide](https://python-poetry.org/docs/#installation) for detailed instructions.
 
@@ -38,41 +41,43 @@ Ensure that `poetry` is added to your system's PATH. Refer to the [official inst
 
 1. **Initialize Poetry:**
 
-   If not already initialized, set up Poetry in the project directory:
+If not already initialized, set up Poetry in the project directory:
 
-   ```bash
-   poetry install
-   ```
+```bash
+poetry install
+```
 
-   This command will create a virtual environment and install all dependencies specified in `pyproject.toml`.
+This command will create a virtual environment and install all dependencies specified in `pyproject.toml`.
+
+We use [Poetry](https://python-poetry.org/) for dependency management and packaging. Poetry ensures that our development environment is consistent, dependencies are properly managed, and collaboration is streamlined.
 
 2. **Activate the Virtual Environment:**
 
-   ```bash
-   poetry shell
-   ```
+```bash
+poetry shell
+```
 
-   Alternatively, you can prefix commands with `poetry run`.
+Alternatively, you can prefix commands with `poetry run`.
 
 3. **Configure Pulumi to Use Poetry:**
 
-   Ensure that `Pulumi.yaml` specifies Poetry as the toolchain:
+Ensure that `Pulumi.yaml` specifies Poetry as the toolchain:
 
-   ```yaml
-   name: your-pulumi-project
-   runtime:
-     name: python
-     options:
-       toolchain: poetry
-   ```
+```yaml
+name: your-pulumi-project
+runtime:
+  name: python
+  options:
+    toolchain: poetry
+```
 
 4. **Install Pulumi Dependencies:**
 
-   ```bash
-   pulumi install
-   ```
+```bash
+pulumi install
+```
 
-   This command ensures that Pulumi recognizes and utilizes the Poetry-managed environment.
+This command ensures that Pulumi recognizes and utilizes the Poetry-managed environment.
 
 ## Enforcing Type Checking with Pyright
 
@@ -112,23 +117,23 @@ Configure Pulumi to run Pyright before deployments:
 
 1. **Update `Pulumi.yaml`:**
 
-   ```yaml
-   name: your-pulumi-project
-   runtime:
-     name: python
-     options:
-       typechecker: pyright
-   ```
+```yaml
+name: your-pulumi-project
+runtime:
+  name: python
+  options:
+    typechecker: pyright
+```
 
 2. **Run Pulumi Commands:**
 
-   Pyright will automatically run during Pulumi operations:
+Pyright will automatically run during Pulumi operations:
 
-   ```bash
-   pulumi up
-   ```
+```bash
+pulumi up
+```
 
-   If type errors are detected, the deployment will halt, and errors will be displayed.
+If type errors are detected, the deployment will halt, and errors will be displayed.
 
 ### Editor Integration
 
@@ -142,13 +147,13 @@ For real-time type checking and enhanced development experience:
 
 2. **Configure Type Checking Mode:**
 
-   Add the following to `settings.json`:
+Add the following to `settings.json`:
 
-   ```json
-   {
-     "python.analysis.typeCheckingMode": "strict"
-   }
-   ```
+```json
+{
+  "python.analysis.typeCheckingMode": "strict"
+}
+```
 
 ## Using Pythonic Input Types with TypedDict
 
@@ -266,9 +271,9 @@ deployment = Deployment(
 
 ### Naming Conventions
 
-- **Variables and Functions**: Use `snake_case`.
+- __Variables and Functions__: Use `snake_case`.
 - **Classes and Exceptions**: Use `PascalCase`.
-- **Constants**: Use `UPPER_SNAKE_CASE`.
+- __Constants__: Use `UPPER_SNAKE_CASE`.
 
 ### Type Annotations
 
