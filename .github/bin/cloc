@@ -1,8 +1,8 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail
 
 # Script to count non-comment, non-docstring lines of Python code in Pulumi IaC
-# Usage: ./cloc
+# Usage: ~$ cloc
 # Description: Analyzes Python code in the ./pulumi directory, excluding:
 #   - Comments (lines starting with #)
 #   - Empty lines and whitespace
