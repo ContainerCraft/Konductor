@@ -15,11 +15,12 @@ from core.utils import get_latest_helm_chart_version
 
 from .types import PrometheusConfig
 
+
 def deploy_prometheus_module(
-        config_prometheus: PrometheusConfig,
-        global_depends_on: List[pulumi.Resource],
-        k8s_provider: k8s.Provider,
-    ) -> Tuple[str, Optional[pulumi.Resource]]:
+    config_prometheus: PrometheusConfig,
+    global_depends_on: List[pulumi.Resource],
+    k8s_provider: k8s.Provider,
+) -> Tuple[str, Optional[pulumi.Resource]]:
     """
     Deploys the Prometheus module and returns the version and the deployed resource.
 
@@ -43,11 +44,12 @@ def deploy_prometheus_module(
 
     return prometheus_version, prometheus_resource
 
+
 def deploy_prometheus(
-        config_prometheus: PrometheusConfig,
-        depends_on: List[pulumi.Resource],
-        k8s_provider: k8s.Provider,
-    ) -> Tuple[str, Optional[pulumi.Resource]]:
+    config_prometheus: PrometheusConfig,
+    depends_on: List[pulumi.Resource],
+    k8s_provider: k8s.Provider,
+) -> Tuple[str, Optional[pulumi.Resource]]:
     """
     Deploys Prometheus using Helm and sets up necessary services.
     """
@@ -84,18 +86,18 @@ def deploy_prometheus(
                     "users": {
                         "allow_sign_up": False,
                         "auto_assign_org": True,
-                        "auto_assign_org_role": "Admin"
+                        "auto_assign_org_role": "Admin",
                     },
                     "auth.proxy": {
                         "enabled": True,
                         "header_name": "X-WEBAUTH-USER",
                         "auto_sign_up": True,
-                        "headers": "Groups:X-WEBAUTH-GROUPS"
-                    }
+                        "headers": "Groups:X-WEBAUTH-GROUPS",
+                    },
                 }
             }
         }
-    else :
+    else:
         prometheus_helm_values = {}
 
     # Create the Helm Release
@@ -127,13 +129,14 @@ def deploy_prometheus(
 
     return version, release
 
+
 def create_prometheus_services(
-        config_prometheus: PrometheusConfig,
-        k8s_provider: k8s.Provider,
-        namespace: str,
-        parent: pulumi.Resource,
-        depends_on: List[pulumi.Resource],
-    ) -> List[k8s.core.v1.Service]:
+    config_prometheus: PrometheusConfig,
+    k8s_provider: k8s.Provider,
+    namespace: str,
+    parent: pulumi.Resource,
+    depends_on: List[pulumi.Resource],
+) -> List[k8s.core.v1.Service]:
     """
     Creates Prometheus, Grafana, and Alertmanager services.
 
@@ -167,7 +170,7 @@ def create_prometheus_services(
             "port": 9090,
             "targetPort": 9090,
             "selector": "app.kubernetes.io/name",
-        }
+        },
     ]
 
     # Create services from list of service definitions
@@ -183,19 +186,21 @@ def create_prometheus_services(
             ),
             spec=k8s.core.v1.ServiceSpecArgs(
                 type="ClusterIP",
-                ports=[k8s.core.v1.ServicePortArgs(
-                    name="http-web",
-                    port=service_def["port"],
-                    protocol="TCP",
-                    target_port=service_def["targetPort"],
-                )],
+                ports=[
+                    k8s.core.v1.ServicePortArgs(
+                        name="http-web",
+                        port=service_def["port"],
+                        protocol="TCP",
+                        target_port=service_def["targetPort"],
+                    )
+                ],
                 selector={service_def["selector"]: service_def["name"]},
             ),
             opts=pulumi.ResourceOptions(
                 provider=k8s_provider,
                 parent=parent,
                 depends_on=depends_on,
-            )
+            ),
         )
         services.append(service)
 

@@ -18,6 +18,8 @@ Before you begin, ensure you have the following installed:
 - **Kubectl**: For interacting with Kubernetes clusters.
 - **sudo**: For executing administrative commands.
 
+> NOTE: All dependencies are automatically supplied in the [ghcr.io/containercraft/devcontainer](https://github.com/containercraft/devcontainer) image powering the VSCode Dev Container included in this repository by the [.devcontainer/devcontainer.json](.devcontainer/devcontainer.json) and [.devcontainer/Dockerfile](.devcontainer/Dockerfile).
+
 ## Steps to Recreate
 
 Follow the steps below to set up your environment:

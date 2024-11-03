@@ -19,11 +19,12 @@ import json
 import os
 import pulumi
 import requests
-from typing import Any, Dict, Tuple, Optional
-from .types import ComplianceConfig
+from typing import Any, Dict, Tuple
 
 # Default versions URL template
-DEFAULT_VERSIONS_URL_TEMPLATE = 'https://raw.githubusercontent.com/ContainerCraft/Kargo/rerefactor/pulumi/'
+DEFAULT_VERSIONS_URL_TEMPLATE = (
+    "https://raw.githubusercontent.com/ContainerCraft/Kargo/rerefactor/pulumi/"
+)
 
 # Module enabled defaults: Setting a module to True enables the module by default
 DEFAULT_ENABLED_CONFIG = {
@@ -35,6 +36,7 @@ DEFAULT_ENABLED_CONFIG = {
     "containerized_data_importer": True,
     "prometheus": True,
 }
+
 
 def coerce_to_bool(value: Any) -> bool:
     """
@@ -49,14 +51,15 @@ def coerce_to_bool(value: Any) -> bool:
     if isinstance(value, bool):
         return value
     if isinstance(value, str):
-        return value.lower() == 'true'
+        return value.lower() == "true"
     return bool(value)
 
+
 def get_module_config(
-        module_name: str,
-        config: pulumi.Config,
-        default_versions: Dict[str, Any],
-    ) -> Tuple[Dict[str, Any], bool]:
+    module_name: str,
+    config: pulumi.Config,
+    default_versions: Dict[str, Any],
+) -> Tuple[Dict[str, Any], bool]:
     """
     Retrieves and prepares the configuration for a module.
 
@@ -73,21 +76,28 @@ def get_module_config(
     module_config = config.get_object(module_name) or {}
 
     # Retrieve enabled status from configuration or defaults to defined default setting
-    enabled_value = module_config.pop('enabled', DEFAULT_ENABLED_CONFIG.get(module_name, False))
+    enabled_value = module_config.pop(
+        "enabled", DEFAULT_ENABLED_CONFIG.get(module_name, False)
+    )
     module_enabled = coerce_to_bool(enabled_value)
 
     # Include 'compliance' config into 'module_config' for AWS module
-    if module_name == 'aws':
-        compliance_config_dict = config.get_object('compliance') or {}
-        module_config['compliance'] = compliance_config_dict
+    if module_name == "aws":
+        compliance_config_dict = config.get_object("compliance") or {}
+        module_config["compliance"] = compliance_config_dict
 
     # Only set the version if it is *not* the aws module
     if module_name != "aws":
-        module_config['version'] = module_config.get('version', default_versions.get(module_name))
+        module_config["version"] = module_config.get(
+            "version", default_versions.get(module_name)
+        )
 
     return module_config, module_enabled
 
-def load_default_versions(config: pulumi.Config, force_refresh: bool = False) -> Dict[str, Any]:
+
+def load_default_versions(
+    config: pulumi.Config, force_refresh: bool = False
+) -> Dict[str, Any]:
     """
     Loads the default versions for modules based on the specified configuration settings.
 
@@ -107,7 +117,7 @@ def load_default_versions(config: pulumi.Config, force_refresh: bool = False) ->
     Raises:
         Exception: If default versions cannot be loaded from any source.
     """
-    cache_file = '/tmp/default_versions.json'
+    cache_file = "/tmp/default_versions.json"
     if not force_refresh and os.path.exists(cache_file):
         try:
             with open(cache_file) as f:
@@ -116,15 +126,15 @@ def load_default_versions(config: pulumi.Config, force_refresh: bool = False) ->
             pulumi.log.warn(f"Error reading cache file: {e}")
 
     stack_name = pulumi.get_stack()
-    default_versions_source = config.get('default_versions.source')
-    versions_channel = config.get('versions.channel') or 'stable'
-    versions_stack_name = coerce_to_bool(config.get('versions.stack_name')) or False
+    default_versions_source = config.get("default_versions.source")
+    versions_channel = config.get("versions.channel") or "stable"
+    versions_stack_name = coerce_to_bool(config.get("versions.stack_name")) or False
     default_versions = {}
 
     # Function to try loading default versions from file
     def load_versions_from_file(file_path: str) -> dict:
         try:
-            with open(file_path, 'r') as f:
+            with open(file_path, "r") as f:
                 versions = json.load(f)
                 pulumi.log.info(f"Loaded default versions from file: {file_path}")
                 return versions
@@ -144,42 +154,49 @@ def load_default_versions(config: pulumi.Config, force_refresh: bool = False) ->
             return {}
 
     if default_versions_source:
-        if default_versions_source.startswith(('http://', 'https://')):
+        if default_versions_source.startswith(("http://", "https://")):
             default_versions = load_versions_from_url(default_versions_source)
         else:
             default_versions = load_versions_from_file(default_versions_source)
 
         if not default_versions:
-            raise Exception(f"Failed to load default versions from specified source: {default_versions_source}")
+            raise Exception(
+                f"Failed to load default versions from specified source: {default_versions_source}"
+            )
 
     else:
         if versions_stack_name:
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            stack_versions_path = os.path.join(current_dir, '..', 'versions', f'{stack_name}.json')
+            stack_versions_path = os.path.join(
+                current_dir, "..", "versions", f"{stack_name}.json"
+            )
             default_versions = load_versions_from_file(stack_versions_path)
 
         if not default_versions:
             current_dir = os.path.dirname(os.path.abspath(__file__))
-            default_versions_path = os.path.join(current_dir, '..', 'default_versions.json')
+            default_versions_path = os.path.join(
+                current_dir, "..", "default_versions.json"
+            )
             default_versions = load_versions_from_file(default_versions_path)
 
         if not default_versions:
-            versions_url = f'{DEFAULT_VERSIONS_URL_TEMPLATE}{versions_channel}_versions.json'
+            versions_url = (
+                f"{DEFAULT_VERSIONS_URL_TEMPLATE}{versions_channel}_versions.json"
+            )
             default_versions = load_versions_from_url(versions_url)
 
         if not default_versions:
             raise Exception("Cannot proceed without default versions.")
 
-    with open(cache_file, 'w') as f:
+    with open(cache_file, "w") as f:
         json.dump(default_versions, f)
 
     return default_versions
 
+
 def export_results(
-        versions: Dict[str, str],
-        configurations: Dict[str, Dict[str, Any]],
-        compliance: Any
-    ):
+    versions: Dict[str, str], configurations: Dict[str, Dict[str, Any]], compliance: Any
+):
     """
     Exports the results of the deployment processes including versions, configurations, and compliance information.
 
@@ -189,7 +206,7 @@ def export_results(
         compliance (Any): The compliance configuration, can be ComplianceConfig or a dictionary.
     """
     # Convert compliance to a dictionary if it's a Pydantic model
-    if hasattr(compliance, 'dict'):
+    if hasattr(compliance, "dict"):
         compliance_dict = compliance.dict()
     else:
         compliance_dict = compliance

@@ -23,10 +23,10 @@ from .types import CertManagerConfig
 
 
 def deploy_cert_manager_module(
-        config_cert_manager: CertManagerConfig,
-        global_depends_on: List[pulumi.Resource],
-        k8s_provider: k8s.Provider,
-    ) -> Tuple[str, k8s.helm.v3.Release, str]:
+    config_cert_manager: CertManagerConfig,
+    global_depends_on: List[pulumi.Resource],
+    k8s_provider: k8s.Provider,
+) -> Tuple[str, k8s.helm.v3.Release, str]:
     """
     Deploys the cert-manager module and returns the version, release resource, and CA certificate.
     """
@@ -46,10 +46,10 @@ def deploy_cert_manager_module(
 
 
 def deploy_cert_manager(
-        config_cert_manager: CertManagerConfig,
-        depends_on: List[pulumi.Resource],
-        k8s_provider: k8s.Provider,
-    ) -> Tuple[str, k8s.helm.v3.Release, str]:
+    config_cert_manager: CertManagerConfig,
+    depends_on: List[pulumi.Resource],
+    k8s_provider: k8s.Provider,
+) -> Tuple[str, k8s.helm.v3.Release, str]:
     """
     Deploys cert-manager using Helm and sets up cluster issuers,
     ensuring that CRDs are available before creating custom resources.
@@ -74,7 +74,7 @@ def deploy_cert_manager(
     chart_repo_url = "https://charts.jetstack.io"
 
     # TODO: re-implement into the get_module_config function and adopt across all modules to reduce code duplication
-    if version == 'latest' or version is None:
+    if version == "latest" or version is None:
         version = get_latest_helm_chart_version(chart_repo_url, chart_name)
         log.info(f"Setting cert-manager chart version to latest: {version}")
     else:
@@ -96,7 +96,9 @@ def deploy_cert_manager(
         ),
         opts=pulumi.ResourceOptions(
             parent=namespace_resource,
-            custom_timeouts=pulumi.CustomTimeouts(create="8m", update="4m", delete="4m"),
+            custom_timeouts=pulumi.CustomTimeouts(
+                create="8m", update="4m", delete="4m"
+            ),
         ),
         k8s_provider=k8s_provider,
         depends_on=[namespace_resource] + depends_on,
@@ -116,13 +118,18 @@ def deploy_cert_manager(
         ],
         k8s_provider=k8s_provider,
         depends_on=[release],
-        parent=release
+        parent=release,
     )
 
     # Create Cluster Issuers using the helper function
     # TODO:
     # - make self-signed-issuer configurable enabled/disabled from boolean set in cert_manager/types.py CertManagerConfig class, default to enabled.
-    cluster_issuer_root, cluster_issuer_ca_certificate, cluster_issuer, ca_secret = create_cluster_issuers(
+    (
+        cluster_issuer_root,
+        cluster_issuer_ca_certificate,
+        cluster_issuer,
+        ca_secret,
+    ) = create_cluster_issuers(
         cluster_issuer_name, namespace, release, crds, k8s_provider
     )
 
@@ -138,12 +145,13 @@ def deploy_cert_manager(
 
     return version, release, ca_data_tls_crt_b64
 
+
 def create_cluster_issuers(
-        cluster_issuer_name: str,
-        namespace: str,
-        release: k8s.helm.v3.Release,
-        crds: List[pulumi.Resource],
-        k8s_provider: k8s.Provider,
+    cluster_issuer_name: str,
+    namespace: str,
+    release: k8s.helm.v3.Release,
+    crds: List[pulumi.Resource],
+    k8s_provider: k8s.Provider,
 ) -> Tuple[
     Optional[k8s.apiextensions.CustomResource],
     Optional[k8s.apiextensions.CustomResource],
@@ -183,7 +191,9 @@ def create_cluster_issuers(
                 parent=release,
                 provider=k8s_provider,
                 depends_on=crds,
-                custom_timeouts=pulumi.CustomTimeouts(create="5m", update="5m", delete="5m"),
+                custom_timeouts=pulumi.CustomTimeouts(
+                    create="5m", update="5m", delete="5m"
+                ),
             ),
         )
 
@@ -215,7 +225,9 @@ def create_cluster_issuers(
                 parent=cluster_issuer_root,
                 provider=k8s_provider,
                 depends_on=[cluster_issuer_root],
-                custom_timeouts=pulumi.CustomTimeouts(create="5m", update="5m", delete="10m"),
+                custom_timeouts=pulumi.CustomTimeouts(
+                    create="5m", update="5m", delete="10m"
+                ),
             ),
         )
 
@@ -236,7 +248,9 @@ def create_cluster_issuers(
                 parent=cluster_issuer_ca_certificate,
                 provider=k8s_provider,
                 depends_on=[cluster_issuer_ca_certificate],
-                custom_timeouts=pulumi.CustomTimeouts(create="5m", update="5m", delete="5m"),
+                custom_timeouts=pulumi.CustomTimeouts(
+                    create="5m", update="5m", delete="5m"
+                ),
             ),
         )
 
@@ -249,12 +263,17 @@ def create_cluster_issuers(
                     parent=cluster_issuer_ca_certificate,
                     provider=k8s_provider,
                     depends_on=[cluster_issuer_ca_certificate],
-                )
+                ),
             )
         else:
             ca_secret = None
 
-        return cluster_issuer_root, cluster_issuer_ca_certificate, cluster_issuer, ca_secret
+        return (
+            cluster_issuer_root,
+            cluster_issuer_ca_certificate,
+            cluster_issuer,
+            ca_secret,
+        )
 
     except Exception as e:
         log.error(f"Error during the creation of cluster issuers: {str(e)}")
@@ -266,10 +285,10 @@ def generate_helm_values(config_cert_manager: CertManagerConfig) -> Dict[str, An
     Generates Helm values for the CertManager deployment.
     """
     return {
-        'replicaCount': 1,
-        'installCRDs': config_cert_manager.install_crds,
-        'resources': {
-            'limits': {'cpu': '500m', 'memory': '1024Mi'},
-            'requests': {'cpu': '250m', 'memory': '512Mi'},
+        "replicaCount": 1,
+        "installCRDs": config_cert_manager.install_crds,
+        "resources": {
+            "limits": {"cpu": "500m", "memory": "1024Mi"},
+            "requests": {"cpu": "250m", "memory": "512Mi"},
         },
     }

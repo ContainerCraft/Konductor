@@ -30,6 +30,10 @@ vars:
         echo "unknown"
       fi
 
+  # New Python-specific vars
+  python_version: "3.8"
+  poetry_version: "1.7.1"
+
 tasks:
   ##################################################################################
   # Meta & Utility Tasks
@@ -39,6 +43,7 @@ tasks:
   default:
     desc: "Run all tasks to set up and configure a Kargo Kubevirt Kubernetes Platform."
     cmds:
+      - task: dev-setup
       - task: deploy
 
   # Task to print environment variables, useful for debugging
@@ -141,21 +146,22 @@ tasks:
   configure:
     desc: "Configure Pulumi stack settings."
     cmds:
-      - source .envrc && pulumi stack select --create {{.pulumi_stack_identifier}}
-      - source .envrc && pulumi config set --path kubernetes.context admin@{{.cluster_name}}
-      - source .envrc && pulumi config set --path kubernetes.kubeconfig {{.kube_config_file}}
-      - source .envrc && pulumi config set --path kubernetes.distribution talos
-      - source .envrc && pulumi config set --path cilium.enabled false
-      - source .envrc && pulumi config set --path vm.enabled false
+      - source .envrc && poetry run pulumi stack select --create {{.pulumi_stack_identifier}}
+      - source .envrc && poetry run pulumi config set --path kubernetes.context admin@{{.cluster_name}}
+      - source .envrc && poetry run pulumi config set --path kubernetes.kubeconfig {{.kube_config_file}}
+      - source .envrc && poetry run pulumi config set --path kubernetes.distribution talos
+      - source .envrc && poetry run pulumi config set --path cilium.enabled false
+      - source .envrc && poetry run pulumi config set --path vm.enabled false
 
   # Task to deploy Pulumi infrastructure
   iac-deploy:
     desc: "Deploy Pulumi infrastructure."
+    deps: [type-check]
     cmds:
       - task: iac-cancel
-      - source .envrc && pulumi up --yes --skip-preview --refresh --continue-on-error --stack {{.pulumi_stack_identifier}} || true
+      - source .envrc && poetry run pulumi up --yes --skip-preview --refresh --continue-on-error --stack {{.pulumi_stack_identifier}} || true
       - task: all-pods-ready
-      - source .envrc && pulumi up --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
+      - source .envrc && poetry run pulumi up --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
       - task: all-pods-ready
 
   # Task to destroy Pulumi infrastructure
@@ -165,14 +171,14 @@ tasks:
       - task: iac-cancel
       - |
         source .envrc
-        pulumi down --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}} || true
-        pulumi down --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
+        poetry run pulumi down --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}} || true
+        poetry run pulumi down --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
 
   # Task to cancel the Pulumi update process
   iac-cancel:
     desc: "Cancel the Pulumi update."
     cmds:
-      - source .envrc && pulumi cancel --yes --stack {{.pulumi_stack_identifier}} 2>/dev/null || true
+      - source .envrc && poetry run pulumi cancel --yes --stack {{.pulumi_stack_identifier}} 2>/dev/null || true
 
   # Task to clean up all Pulumi resources
   iac-clean:
@@ -180,6 +186,15 @@ tasks:
     cmds:
       - task: iac-cancel
       - source .envrc && pulumi down --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}} 2>/dev/null || true
+
+  # Add pre-commit hook task
+  pre-commit:
+    desc: "Run pre-commit checks"
+    cmds:
+      - task: type-check
+      - task: format
+      - task: lint
+      - task: test
 
   ##################################################################################
   # Talos Tasks
@@ -236,3 +251,41 @@ tasks:
       - task: kubernetes-deploy
       - task: kubernetes-ready
       - task: all-pods-ready
+
+  ##################################################################################
+  # Python Development Tasks
+  ##################################################################################
+
+  poetry-update:
+    desc: "Update Poetry dependencies"
+    cmds:
+      - poetry update
+      - poetry install
+
+  type-check:
+    desc: "Run Pyright type checking"
+    cmds:
+      - poetry run pyright pulumi/
+
+  format:
+    desc: "Format Python code with Black"
+    cmds:
+      - poetry run black pulumi/
+
+  lint:
+    desc: "Run Pylint"
+    cmds:
+      - poetry run pylint pulumi/
+
+  test:
+    desc: "Run Python tests"
+    cmds:
+      - poetry run pytest
+
+  dev-setup:
+    desc: "Complete development environment setup"
+    cmds:
+      - task: type-check
+      - task: format
+      - task: lint
+      - task: configure

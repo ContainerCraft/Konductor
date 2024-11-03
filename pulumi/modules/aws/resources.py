@@ -31,28 +31,38 @@ from .types import (
     AWSConfig,
     GlobalTags,
 )
-from core.metadata import set_global_labels, set_global_annotations, generate_compliance_labels
+from core.metadata import (
+    set_global_labels,
+    set_global_annotations,
+    generate_compliance_labels,
+)
 from core.utils import set_resource_metadata
+
 
 def fetch_sts_identity(aws_provider: aws.Provider) -> pulumi.Output[Dict[str, str]]:
     try:
-        identity = aws.get_caller_identity(opts=pulumi.InvokeOptions(provider=aws_provider))
+        identity = aws.get_caller_identity(
+            opts=pulumi.InvokeOptions(provider=aws_provider)
+        )
 
         # Map the output to a dictionary with explicit keys
-        return pulumi.Output.from_input({
-            "account_id": identity.account_id,
-            "arn": identity.arn,
-            "id": identity.id,
-            "user_id": identity.user_id
-        })
+        return pulumi.Output.from_input(
+            {
+                "account_id": identity.account_id,
+                "arn": identity.arn,
+                "id": identity.id,
+                "user_id": identity.user_id,
+            }
+        )
     except Exception as e:
         log.error(f"Error fetching STS Caller Identity: {str(e)}")
         raise
 
+
 def create_s3_bucket(
-        bucket_name: str,
-        aws_provider: aws.Provider,
-    ) -> aws.s3.Bucket:
+    bucket_name: str,
+    aws_provider: aws.Provider,
+) -> aws.s3.Bucket:
     """
     Creates an S3 Bucket with the specified tags.
 
@@ -66,21 +76,24 @@ def create_s3_bucket(
         aws.s3.Bucket: The created S3 bucket.
     """
     # Compliance labels now part of global transformations; ensure bucket tags are included.
-    bucket = aws.s3.Bucket(
-        bucket_name,
-        opts=ResourceOptions(provider=aws_provider)
-    )
+    bucket = aws.s3.Bucket(bucket_name, opts=ResourceOptions(provider=aws_provider))
 
     return bucket
 
+
 def get_organization_details(provider: aws.Provider):
     try:
-        return aws.organizations.get_organization(opts=pulumi.InvokeOptions(provider=aws_provider))
+        return aws.organizations.get_organization(
+            opts=pulumi.InvokeOptions(provider=aws_provider)
+        )
     except Exception as e:
         log.warn(f"Failed to get existing organization: {str(e)}")
     return None
 
-def setup_organization_units(org_details, config: AWSConfig, tags: dict, aws_provider: aws.Provider):
+
+def setup_organization_units(
+    org_details, config: AWSConfig, tags: dict, aws_provider: aws.Provider
+):
     if org_details.roots:
         root_id = org_details.roots[0].id
         if config.control_tower.enabled:
@@ -88,10 +101,11 @@ def setup_organization_units(org_details, config: AWSConfig, tags: dict, aws_pro
                 "example-ou",
                 name="example-ou",
                 parent_id=root_id,
-                opts=pulumi.ResourceOptions(provider=aws_provider)
+                opts=pulumi.ResourceOptions(provider=aws_provider),
             )
     else:
         log.warn("No roots found in the organization.")
+
 
 def create_organization(aws_provider: aws.Provider) -> aws.organizations.Organization:
     """
@@ -111,7 +125,9 @@ def create_organization(aws_provider: aws.Provider) -> aws.organizations.Organiz
         )
 
         # Use .apply to log the organization ID
-        organization.id.apply(lambda org_id: log.info(f"Organization created with ID: {org_id}"))
+        organization.id.apply(
+            lambda org_id: log.info(f"Organization created with ID: {org_id}")
+        )
 
         return organization
 
@@ -119,7 +135,10 @@ def create_organization(aws_provider: aws.Provider) -> aws.organizations.Organiz
         log.error(f"Failed to create organization: {str(e)}")
         raise
 
-def get_organization_root_id(organization_data: aws.organizations.GetOrganizationResult) -> str:
+
+def get_organization_root_id(
+    organization_data: aws.organizations.GetOrganizationResult,
+) -> str:
     """
     Retrieves the root ID of the AWS Organization from the organization data.
 
@@ -142,9 +161,10 @@ def get_organization_root_id(organization_data: aws.organizations.GetOrganizatio
         log.error(f"Error fetching organization roots: {str(e)}")
         raise
 
+
 def get_or_create_organization(
-        aws_provider: aws.Provider,
-    ) -> Tuple[aws.organizations.Organization, aws.organizations.GetOrganizationResult]:
+    aws_provider: aws.Provider,
+) -> Tuple[aws.organizations.Organization, aws.organizations.GetOrganizationResult]:
     """
     Retrieves the existing AWS Organization or creates a new one if it doesn't exist.
 
@@ -162,7 +182,7 @@ def get_or_create_organization(
         organization = aws.organizations.Organization.get(
             resource_name="existing_organization",
             id=organization_data.id,
-            opts=pulumi.ResourceOptions(provider=aws_provider)
+            opts=pulumi.ResourceOptions(provider=aws_provider),
         )
         return organization, organization_data
 
@@ -173,11 +193,12 @@ def get_or_create_organization(
         # return organization
         raise Exception("Unable to retrieve or create the AWS Organization")
 
+
 def create_organizational_units(
     organization: aws.organizations.Organization,
     root_id: str,
     ou_names: List[str],
-    aws_provider: aws.Provider
+    aws_provider: aws.Provider,
 ) -> Dict[str, aws.organizations.OrganizationalUnit]:
     """
     Creates Organizational Units (OUs) under the specified AWS Organization.
@@ -199,13 +220,14 @@ def create_organizational_units(
                 resource_name=f"ou_{ou_name.lower()}",
                 name=ou_name,
                 parent_id=root_id,
-                opts=ResourceOptions(provider=aws_provider, parent=organization)
+                opts=ResourceOptions(provider=aws_provider, parent=organization),
             )
             ou_map[ou_name] = ou
     else:
         log.warn("Root ID is not available; cannot create Organizational Units.")
 
     return ou_map
+
 
 def setup_control_tower(control_tower_config: ControlTowerConfig) -> None:
     """
@@ -217,15 +239,16 @@ def setup_control_tower(control_tower_config: ControlTowerConfig) -> None:
     if control_tower_config.enabled:
         # Placeholder for Control Tower setup logic
         # AWS Control Tower does not currently support full automation via API/IaC
-        log.info("AWS Control Tower setup is enabled. Manual configuration may be required.")
+        log.info(
+            "AWS Control Tower setup is enabled. Manual configuration may be required."
+        )
     else:
         log.info("AWS Control Tower setup is disabled.")
 
+
 def create_iam_users(
-        iam_users: List[IAMUserConfig],
-        tags: Dict[str, str],
-        aws_provider: aws.Provider
-    ) -> None:
+    iam_users: List[IAMUserConfig], tags: Dict[str, str], aws_provider: aws.Provider
+) -> None:
     """
     Creates IAM users and associates them with groups and policies.
 
@@ -239,7 +262,7 @@ def create_iam_users(
             name=user_config.name,
             opts=pulumi.ResourceOptions(
                 provider=aws_provider,
-            )
+            ),
         )
 
         for group_name in user_config.groups:
@@ -248,7 +271,7 @@ def create_iam_users(
                 name=group_name,
                 opts=pulumi.ResourceOptions(
                     provider=aws_provider,
-                )
+                ),
             )
             aws.iam.UserGroupMembership(
                 resource_name=f"{user_config.name}_{group_name}_membership",
@@ -256,7 +279,7 @@ def create_iam_users(
                 groups=[iam_group.name],
                 opts=pulumi.ResourceOptions(
                     provider=aws_provider,
-                )
+                ),
             )
 
         for policy_arn in user_config.policies:
@@ -266,8 +289,9 @@ def create_iam_users(
                 policy_arn=policy_arn,
                 opts=pulumi.ResourceOptions(
                     provider=aws_provider,
-                )
+                ),
             )
+
 
 def create_tenant_accounts(
     organization: aws.organizations.Organization,
@@ -305,11 +329,12 @@ def create_tenant_accounts(
 
     return tenant_accounts
 
+
 def assume_role_in_tenant_account(
     tenant_account: aws.organizations.Account,
     role_name: str,
     region: str,
-    aws_provider: aws.Provider
+    aws_provider: aws.Provider,
 ) -> aws.Provider:
     """
     Assumes a role in the tenant account to perform operations.
@@ -323,8 +348,8 @@ def assume_role_in_tenant_account(
     Returns:
         aws.Provider: AWS provider configured for the tenant account.
     """
-    return tenant_account.id.apply(lambda account_id:
-        aws.Provider(
+    return tenant_account.id.apply(
+        lambda account_id: aws.Provider(
             f"tenant_provider_{account_id}",
             assume_role=aws.ProviderAssumeRoleArgs(
                 role_arn=f"arn:aws:iam::{account_id}:role/{role_name}",
@@ -334,10 +359,11 @@ def assume_role_in_tenant_account(
         )
     )
 
+
 def deploy_tenant_resources(
     tenant_provider: aws.Provider,
     tenant_account: aws.organizations.Account,
-    tenant_config: TenantAccountConfig
+    tenant_config: TenantAccountConfig,
 ) -> None:
     """
     Deploys resources in the tenant account based on the configuration.
@@ -348,10 +374,12 @@ def deploy_tenant_resources(
         tenant_config: Configuration for the tenant account.
     """
     if not tenant_config:
-        log.warn(f"Configuration for tenant account '{tenant_account.name}' is missing.")
+        log.warn(
+            f"Configuration for tenant account '{tenant_account.name}' is missing."
+        )
         return
 
-    if 'bucket' in tenant_config.features:
+    if "bucket" in tenant_config.features:
         bucket = aws.s3.Bucket(
             resource_name=f"{tenant_account.name}_bucket",
             bucket=tenant_account.name.apply(lambda x: f"{x}-bucket"),
@@ -360,7 +388,7 @@ def deploy_tenant_resources(
         )
         pulumi.export(f"{tenant_account.name}_bucket_name", bucket.bucket)
 
-    if 'ec2' in tenant_config.features:
+    if "ec2" in tenant_config.features:
         ec2_instance = aws.ec2.Instance(
             resource_name=f"{tenant_account.name}_instance",
             ami="ami-0c94855ba95c71c99",
@@ -368,6 +396,7 @@ def deploy_tenant_resources(
             opts=ResourceOptions(provider=tenant_provider, parent=tenant_account),
         )
         pulumi.export(f"{tenant_account.name}_instance_id", ec2_instance.id)
+
 
 def create_vpc(
     vpc_name: str,
@@ -398,6 +427,7 @@ def create_vpc(
     )
     return vpc
 
+
 def create_subnet(
     subnet_name: str,
     cidr_block: str,
@@ -427,6 +457,7 @@ def create_subnet(
         opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return subnet
+
 
 def create_security_group(
     sg_name: str,
@@ -481,6 +512,7 @@ def create_security_group(
     )
     return sg
 
+
 def create_internet_gateway(
     igw_name: str,
     vpc_id: str,
@@ -508,6 +540,7 @@ def create_internet_gateway(
     )
     return igw
 
+
 def create_route_table(
     rt_name: str,
     vpc_id: str,
@@ -534,6 +567,7 @@ def create_route_table(
         opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return rt
+
 
 def create_route(
     route_name: str,
@@ -568,6 +602,7 @@ def create_route(
     )
     return route
 
+
 def create_subnet_route_table_association(
     association_name: str,
     subnet_id: str,
@@ -597,6 +632,7 @@ def create_subnet_route_table_association(
         opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return association
+
 
 def create_security_group_rule(
     rule_name: str,
@@ -639,6 +675,7 @@ def create_security_group_rule(
         opts=opts.merge(ResourceOptions(provider=aws_provider)),
     )
     return rule
+
 
 def create_ec2_instance(
     instance_name: str,

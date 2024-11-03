@@ -1,0 +1,40 @@
+{
+    "include": [
+        "pulumi"
+    ],
+    "exclude": [
+        "**/node_modules",
+        "**/__pycache__",
+        "**/.pytest_cache",
+        ".venv",
+        "venv"
+    ],
+    "ignore": [],
+    "defineConstant": {
+        "DEBUG": true
+    },
+    "stubPath": "typings",
+    "pythonVersion": "3.10",
+    "pythonPlatform": "All",
+    "typeCheckingMode": "basic",
+    "reportPrivateUsage": "warning",
+    "strictListInference": false,
+    "reportMissingImports": "warning",
+    "useLibraryCodeForTypes": true,
+    "reportMissingTypeStubs": false,
+    "strictParameterNoneValue": false,
+    "strictDictionaryInference": false,
+    "reportUntypedBaseClass": "warning",
+    "reportInvalidTypeVarUse": "warning",
+    "reportUnknownMemberType": "warning",
+    "reportUnknownLambdaType": "warning",
+    "reportMissingTypeArgument": "warning",
+    "reportUnknownArgumentType": "warning",
+    "reportUnknownVariableType": "warning",
+    "reportUnknownParameterType": "warning",
+    "reportMissingParameterType": "warning",
+    "reportUntypedClassDecorator": "warning",
+    "reportPropertyTypeMismatch": "warning",
+    "reportUntypedFunctionDecorator": "warning",
+    "reportInvalidStringEscapeSequence": "warning"
+}

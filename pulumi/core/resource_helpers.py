@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any, List, Callable
 from .metadata import get_global_labels, get_global_annotations
 from .utils import set_resource_metadata
 
+
 def create_namespace(
     name: str,
     labels: Optional[Dict[str, str]] = None,
@@ -91,6 +92,7 @@ def create_namespace(
         opts=opts,
     )
 
+
 def create_custom_resource(
     name: str,
     args: Dict[str, Any],
@@ -112,8 +114,10 @@ def create_custom_resource(
         k8s.apiextensions.CustomResource: The created CustomResource.
     """
     try:
-        if 'kind' not in args or 'apiVersion' not in args:
-            raise ValueError("The 'args' dictionary must include 'kind' and 'apiVersion' keys.")
+        if "kind" not in args or "apiVersion" not in args:
+            raise ValueError(
+                "The 'args' dictionary must include 'kind' and 'apiVersion' keys."
+            )
 
         if opts is None:
             opts = pulumi.ResourceOptions()
@@ -125,8 +129,10 @@ def create_custom_resource(
 
         def custom_resource_transform(resource_args: pulumi.ResourceTransformationArgs):
             props = resource_args.props
-            if 'metadata' in props:
-                set_resource_metadata(props['metadata'], global_labels, global_annotations)
+            if "metadata" in props:
+                set_resource_metadata(
+                    props["metadata"], global_labels, global_annotations
+                )
             return pulumi.ResourceTransformationResult(props, resource_args.opts)
 
         opts = pulumi.ResourceOptions.merge(
@@ -139,13 +145,13 @@ def create_custom_resource(
         )
 
         # Ensure metadata and spec are included if specified
-        metadata = args.get('metadata', {})
-        spec = args.get('spec', {})
+        metadata = args.get("metadata", {})
+        spec = args.get("spec", {})
 
         return k8s.apiextensions.CustomResource(
             resource_name=name,
-            api_version=args['apiVersion'],
-            kind=args['kind'],
+            api_version=args["apiVersion"],
+            kind=args["kind"],
             metadata=metadata,
             spec=spec,
             opts=opts,
@@ -155,11 +161,19 @@ def create_custom_resource(
         pulumi.log.error(f"Failed to create custom resource '{name}': {e}")
         raise
 
+
 def create_helm_release(
     name: str,
     args: k8s.helm.v3.ReleaseArgs,
     opts: Optional[pulumi.ResourceOptions] = None,
-    transformations: Optional[List[Callable[[pulumi.ResourceTransformationArgs], Optional[pulumi.ResourceTransformationResult]]]] = None,
+    transformations: Optional[
+        List[
+            Callable[
+                [pulumi.ResourceTransformationArgs],
+                Optional[pulumi.ResourceTransformationResult],
+            ]
+        ]
+    ] = None,
     k8s_provider: Optional[k8s.Provider] = None,
     depends_on: Optional[List[pulumi.Resource]] = None,
 ) -> k8s.helm.v3.Release:
@@ -189,11 +203,13 @@ def create_helm_release(
 
     def helm_resource_transform(resource_args: pulumi.ResourceTransformationArgs):
         props = resource_args.props
-        if 'metadata' in props:
-            set_resource_metadata(props['metadata'], global_labels, global_annotations)
-        elif 'spec' in props and isinstance(props['spec'], dict):
-            if 'metadata' in props['spec']:
-                set_resource_metadata(props['spec']['metadata'], global_labels, global_annotations)
+        if "metadata" in props:
+            set_resource_metadata(props["metadata"], global_labels, global_annotations)
+        elif "spec" in props and isinstance(props["spec"], dict):
+            if "metadata" in props["spec"]:
+                set_resource_metadata(
+                    props["spec"]["metadata"], global_labels, global_annotations
+                )
         return pulumi.ResourceTransformationResult(props, resource_args.opts)
 
     transformations.append(helm_resource_transform)
@@ -208,6 +224,7 @@ def create_helm_release(
     )
 
     return k8s.helm.v3.Release(name, args, opts=opts)
+
 
 def create_secret(
     name: str,
@@ -240,8 +257,8 @@ def create_secret(
 
     def secret_resource_transform(resource_args: pulumi.ResourceTransformationArgs):
         props = resource_args.props
-        if 'metadata' in props:
-            set_resource_metadata(props['metadata'], global_labels, global_annotations)
+        if "metadata" in props:
+            set_resource_metadata(props["metadata"], global_labels, global_annotations)
         return pulumi.ResourceTransformationResult(props, resource_args.opts)
 
     # Merge resource options
@@ -257,11 +274,19 @@ def create_secret(
     # Constructor call
     return k8s.core.v1.Secret(name, opts, **args)
 
+
 def create_config_file(
     name: str,
     file: str,
     opts: Optional[pulumi.ResourceOptions] = None,
-    transformations: Optional[List[Callable[[pulumi.ResourceTransformationArgs], Optional[pulumi.ResourceTransformationResult]]]] = None,
+    transformations: Optional[
+        List[
+            Callable[
+                [pulumi.ResourceTransformationArgs],
+                Optional[pulumi.ResourceTransformationResult],
+            ]
+        ]
+    ] = None,
     k8s_provider: Optional[k8s.Provider] = None,
     depends_on: Optional[List[pulumi.Resource]] = None,
 ) -> k8s.yaml.ConfigFile:
@@ -291,11 +316,13 @@ def create_config_file(
 
     def config_file_transform(resource_args: pulumi.ResourceTransformationArgs):
         props = resource_args.props
-        if 'metadata' in props:
-            set_resource_metadata(props['metadata'], global_labels, global_annotations)
-        elif 'spec' in props and isinstance(props['spec'], dict):
-            if 'metadata' in props['spec']:
-                set_resource_metadata(props['spec']['metadata'], global_labels, global_annotations)
+        if "metadata" in props:
+            set_resource_metadata(props["metadata"], global_labels, global_annotations)
+        elif "spec" in props and isinstance(props["spec"], dict):
+            if "metadata" in props["spec"]:
+                set_resource_metadata(
+                    props["spec"]["metadata"], global_labels, global_annotations
+                )
         return pulumi.ResourceTransformationResult(props, resource_args.opts)
 
     transformations.append(config_file_transform)
@@ -310,6 +337,7 @@ def create_config_file(
     )
 
     return k8s.yaml.ConfigFile(name, file, opts=opts)
+
 
 # ------------------------------------------------------------------------------
 # Metadata

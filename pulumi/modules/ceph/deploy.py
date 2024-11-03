@@ -3,7 +3,14 @@ from pulumi_kubernetes import helm, Provider
 from src.lib.namespace import create_namespace
 from src.lib.helm_chart_versions import get_latest_helm_chart_version
 
-def deploy_rook_operator(name: str, k8s_provider: Provider, kubernetes_distribution: str, project_name: str, namespace: str):
+
+def deploy_rook_operator(
+    name: str,
+    k8s_provider: Provider,
+    kubernetes_distribution: str,
+    project_name: str,
+    namespace: str,
+):
     """
     Deploy Ceph Operator using the Helm chart.
 
@@ -33,14 +40,15 @@ def deploy_rook_operator(name: str, k8s_provider: Provider, kubernetes_distribut
         name,
         chart="rook-ceph",
         version=chart_version,
-        #values=helm_values,
+        # values=helm_values,
         values={},
         namespace=namespace,
         repository_opts={"repo": "https://charts.rook.io/release"},
-        opts=pulumi.ResourceOptions(provider=k8s_provider)
+        opts=pulumi.ResourceOptions(provider=k8s_provider),
     )
 
-    return(release, chart_version)
+    return (release, chart_version)
+
 
 def gen_helm_values(kubernetes_distribution: str, project_name: str):
     """
@@ -57,10 +65,9 @@ def gen_helm_values(kubernetes_distribution: str, project_name: str):
     Raises:
         ValueError: If the specified Kubernetes distribution is not supported.
     """
-    common_values = {
-    }
+    common_values = {}
 
-    if kubernetes_distribution == 'kind':
+    if kubernetes_distribution == "kind":
         # Kind-specific Helm values
         return {
             **common_values,
@@ -69,10 +76,12 @@ def gen_helm_values(kubernetes_distribution: str, project_name: str):
             },
             "logLevel": "INFO",
         }
-    elif kubernetes_distribution == 'talos':
+    elif kubernetes_distribution == "talos":
         # Talos-specific Helm values per the Talos Docs
         return {
             **common_values,
         }
     else:
-        raise ValueError(f"Unsupported Kubernetes distribution: {kubernetes_distribution}")
+        raise ValueError(
+            f"Unsupported Kubernetes distribution: {kubernetes_distribution}"
+        )

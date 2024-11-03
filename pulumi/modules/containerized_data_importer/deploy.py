@@ -15,11 +15,12 @@ from core.resource_helpers import create_namespace, create_custom_resource
 
 from .types import CdiConfig
 
+
 def deploy_containerized_data_importer_module(
-        config_cdi: CdiConfig,
-        global_depends_on: List[pulumi.Resource],
-        k8s_provider: k8s.Provider,
-    ) -> Tuple[Optional[str], Optional[pulumi.Resource]]:
+    config_cdi: CdiConfig,
+    global_depends_on: List[pulumi.Resource],
+    k8s_provider: k8s.Provider,
+) -> Tuple[Optional[str], Optional[pulumi.Resource]]:
     """
     Deploys the Containerized Data Importer (CDI) module and returns the version and the deployed resource.
 
@@ -34,7 +35,11 @@ def deploy_containerized_data_importer_module(
     try:
         log.info("Starting deployment of CDI module")
 
-        version = config_cdi.version if config_cdi.version and config_cdi.version != "latest" else fetch_latest_version()
+        version = (
+            config_cdi.version
+            if config_cdi.version and config_cdi.version != "latest"
+            else fetch_latest_version()
+        )
         log.info(f"Using CDI version: {version}")
 
         # Create namespace
@@ -59,7 +64,7 @@ def deploy_containerized_data_importer_module(
             opts=pulumi.ResourceOptions(
                 provider=k8s_provider,
                 parent=namespace_resource,
-            )
+            ),
         )
 
         # Ensure dependencies on operator and namespace
@@ -106,8 +111,10 @@ def deploy_containerized_data_importer_module(
                 parent=operator_resource,
                 depends_on=namespace_resource,
                 provider=k8s_provider,
-                custom_timeouts=pulumi.CustomTimeouts(create="1m", update="1m", delete="1m"),
-            )
+                custom_timeouts=pulumi.CustomTimeouts(
+                    create="1m", update="1m", delete="1m"
+                ),
+            ),
         )
 
         log.info("CDI module deployment complete")
@@ -116,6 +123,7 @@ def deploy_containerized_data_importer_module(
     except Exception as e:
         log.error(f"Deployment of CDI module failed: {str(e)}")
         raise
+
 
 # Function to fetch the latest stable semantic version from GitHub releases
 # TODO: consider making github latest release version fetching a shared utility function & adopting across all modules to reduce code duplication
@@ -127,10 +135,14 @@ def fetch_latest_version() -> str:
         str: Latest stable version string.
     """
     try:
-        latest_release_url = 'https://github.com/kubevirt/containerized-data-importer/releases/latest'
-        tag = requests.get(latest_release_url, allow_redirects=False).headers.get('location')
-        version = tag.split('/')[-1]
-        version = version.lstrip('v')
+        latest_release_url = (
+            "https://github.com/kubevirt/containerized-data-importer/releases/latest"
+        )
+        tag = requests.get(latest_release_url, allow_redirects=False).headers.get(
+            "location"
+        )
+        version = tag.split("/")[-1]
+        version = version.lstrip("v")
         log.info(f"Fetched latest CDI version: {version}")
         return version
     except Exception as e:

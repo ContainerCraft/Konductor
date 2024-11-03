@@ -7,7 +7,11 @@ import pulumi
 import pulumi_kubernetes as k8s
 from pulumi import log
 
-from core.resource_helpers import create_namespace, create_custom_resource, create_config_file
+from core.resource_helpers import (
+    create_namespace,
+    create_custom_resource,
+    create_config_file,
+)
 from core.utils import wait_for_crds
 from .types import HostPathProvisionerConfig
 
@@ -75,11 +79,17 @@ def deploy_hostpath_provisioner(
     )
 
     # Determine version to use
-    version = get_latest_version() if config_hostpath_provisioner.version == "latest" else config_hostpath_provisioner.version
+    version = (
+        get_latest_version()
+        if config_hostpath_provisioner.version == "latest"
+        else config_hostpath_provisioner.version
+    )
 
     # Transformation function to enforce namespace override on all resources
     # TODO: consider implementing as a utility or resource helper function and adopting directly in core/resource_helpers.py in applicable functions.
-    def enforce_namespace(resource_args: pulumi.ResourceTransformationArgs) -> pulumi.ResourceTransformationResult:
+    def enforce_namespace(
+        resource_args: pulumi.ResourceTransformationArgs,
+    ) -> pulumi.ResourceTransformationResult:
         """
         Transformation function to enforce namespace on all resources.
         """
@@ -87,24 +97,24 @@ def deploy_hostpath_provisioner(
         namespace_conflict = False
 
         # Handle ObjectMetaArgs case
-        if isinstance(props.get('metadata'), k8s.meta.v1.ObjectMetaArgs):
-            meta = props['metadata']
+        if isinstance(props.get("metadata"), k8s.meta.v1.ObjectMetaArgs):
+            meta = props["metadata"]
             if meta.namespace and meta.namespace != namespace:
                 namespace_conflict = True
             updated_meta = k8s.meta.v1.ObjectMetaArgs(
                 name=meta.name,
                 namespace=namespace,
                 labels=meta.labels,
-                annotations=meta.annotations
+                annotations=meta.annotations,
             )
-            props['metadata'] = updated_meta
+            props["metadata"] = updated_meta
 
         # Handle dictionary style metadata
-        elif isinstance(props.get('metadata'), dict):
-            meta = props['metadata']
-            if 'namespace' in meta and meta['namespace'] != namespace:
+        elif isinstance(props.get("metadata"), dict):
+            meta = props["metadata"]
+            if "namespace" in meta and meta["namespace"] != namespace:
                 namespace_conflict = True
-            meta['namespace'] = namespace
+            meta["namespace"] = namespace
 
         # TODO: document when/if this case is applicable and why this approach is used.
         if namespace_conflict:
@@ -115,7 +125,7 @@ def deploy_hostpath_provisioner(
     # Deploy the webhook
     # TODO: consider relocating url variable into the HostpathProvisionerConfig class as a property for better user configuration.
     # TODO: consider supporting remote and local path webhook.yaml sources.
-    webhook_url = f'https://github.com/kubevirt/hostpath-provisioner-operator/releases/download/v{version}/webhook.yaml'
+    webhook_url = f"https://github.com/kubevirt/hostpath-provisioner-operator/releases/download/v{version}/webhook.yaml"
     webhook = create_config_file(
         name="hostpath-provisioner-webhook",
         file=webhook_url,
@@ -123,15 +133,17 @@ def deploy_hostpath_provisioner(
             provider=k8s_provider,
             parent=namespace_resource,
             depends_on=depends_on,
-            custom_timeouts=pulumi.CustomTimeouts(create="10m", update="5m", delete="5m"),
-            transformations=[enforce_namespace]
+            custom_timeouts=pulumi.CustomTimeouts(
+                create="10m", update="5m", delete="5m"
+            ),
+            transformations=[enforce_namespace],
         ),
     )
 
     # Deploy the operator
     # TODO: consider relocating url variable into the HostpathProvisionerConfig class as a property for better user configuration.
     # TODO: consider supporting remote and local path operator.yaml sources.
-    operator_url = f'https://github.com/kubevirt/hostpath-provisioner-operator/releases/download/v{version}/operator.yaml'
+    operator_url = f"https://github.com/kubevirt/hostpath-provisioner-operator/releases/download/v{version}/operator.yaml"
     operator = create_config_file(
         name="hostpath-provisioner-operator",
         file=operator_url,
@@ -139,8 +151,10 @@ def deploy_hostpath_provisioner(
             provider=k8s_provider,
             parent=webhook,
             depends_on=depends_on,
-            custom_timeouts=pulumi.CustomTimeouts(create="10m", update="5m", delete="5m"),
-            transformations=[enforce_namespace]
+            custom_timeouts=pulumi.CustomTimeouts(
+                create="10m", update="5m", delete="5m"
+            ),
+            transformations=[enforce_namespace],
         ),
     )
 
@@ -165,22 +179,22 @@ def deploy_hostpath_provisioner(
             },
             "spec": {
                 "imagePullPolicy": "IfNotPresent",
-                "storagePools": [{
-                    "name": "ssd",
-                    "path": config_hostpath_provisioner.hostpath,
-                }],
-                "workload": {
-                    "nodeSelector": {
-                        "kubernetes.io/os": "linux"
+                "storagePools": [
+                    {
+                        "name": "ssd",
+                        "path": config_hostpath_provisioner.hostpath,
                     }
-                }
+                ],
+                "workload": {"nodeSelector": {"kubernetes.io/os": "linux"}},
             },
         },
         opts=pulumi.ResourceOptions(
             parent=operator,
             depends_on=depends_on + crds,
             provider=k8s_provider,
-            custom_timeouts=pulumi.CustomTimeouts(create="10m", update="5m", delete="5m")
+            custom_timeouts=pulumi.CustomTimeouts(
+                create="10m", update="5m", delete="5m"
+            ),
         ),
     )
 
@@ -209,10 +223,12 @@ def get_latest_version() -> str:
         str: The latest version number.
     """
     try:
-        tag_url = 'https://github.com/kubevirt/hostpath-provisioner-operator/releases/latest'
+        tag_url = (
+            "https://github.com/kubevirt/hostpath-provisioner-operator/releases/latest"
+        )
         response = requests.get(tag_url, allow_redirects=False)
-        final_url = response.headers.get('location')
-        version = final_url.split('/')[-1].lstrip('v')
+        final_url = response.headers.get("location")
+        version = final_url.split("/")[-1].lstrip("v")
         return version
     except Exception as e:
         log.error(f"Error fetching the latest version: {e}")
@@ -267,6 +283,8 @@ def create_storage_class(
         opts=pulumi.ResourceOptions(
             parent=parent,
             provider=k8s_provider,
-            custom_timeouts=pulumi.CustomTimeouts(create="5m", update="5m", delete="5m")
+            custom_timeouts=pulumi.CustomTimeouts(
+                create="5m", update="5m", delete="5m"
+            ),
         ),
     )

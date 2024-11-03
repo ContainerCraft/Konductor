@@ -7,6 +7,7 @@ Defines the data structure for the Prometheus module configuration.
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
 
+
 @dataclass
 class PrometheusConfig:
     version: Optional[str] = None
@@ -16,11 +17,13 @@ class PrometheusConfig:
     annotations: Dict[str, Any] = field(default_factory=dict)
 
     @staticmethod
-    def merge(user_config: Dict[str, Any]) -> 'PrometheusConfig':
+    def merge(user_config: Dict[str, Any]) -> "PrometheusConfig":
         default_config = PrometheusConfig()
         for key, value in user_config.items():
             if hasattr(default_config, key):
                 setattr(default_config, key, value)
             else:
-                pulumi.log.warn(f"Unknown configuration key '{key}' in prometheus config.")
+                pulumi.log.warn(
+                    f"Unknown configuration key '{key}' in prometheus config."
+                )
         return default_config

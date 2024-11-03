@@ -20,16 +20,21 @@ from packaging.version import parse as parse_version, InvalidVersion, Version
 
 
 # Set up basic logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 # Function to update global resource tags, labels, and annotations from compliance config spec
-def set_resource_metadata(metadata: Any, global_labels: Dict[str, str], global_annotations: Dict[str, str]):
+def set_resource_metadata(
+    metadata: Any, global_labels: Dict[str, str], global_annotations: Dict[str, str]
+):
     """
     Updates resource metadata with global labels and annotations.
     """
     if isinstance(metadata, dict):
-        metadata.setdefault('labels', {}).update(global_labels)
-        metadata.setdefault('annotations', {}).update(global_annotations)
+        metadata.setdefault("labels", {}).update(global_labels)
+        metadata.setdefault("annotations", {}).update(global_annotations)
     elif isinstance(metadata, k8s.meta.v1.ObjectMetaArgs):
         if metadata.labels is None:
             metadata.labels = {}
@@ -38,23 +43,32 @@ def set_resource_metadata(metadata: Any, global_labels: Dict[str, str], global_a
             metadata.annotations = {}
         metadata.annotations.update(global_annotations)
 
+
 # Function to apply global resource tags, labels, and annotations to all yaml objects
-def generate_global_transformations(global_labels: Dict[str, str], global_annotations: Dict[str, str]):
+def generate_global_transformations(
+    global_labels: Dict[str, str], global_annotations: Dict[str, str]
+):
     """
     Generates global transformations for resources.
     """
-    def global_transform(args: pulumi.ResourceTransformationArgs) -> Optional[pulumi.ResourceTransformationResult]:
+
+    def global_transform(
+        args: pulumi.ResourceTransformationArgs,
+    ) -> Optional[pulumi.ResourceTransformationResult]:
         props = args.props
 
-        if 'metadata' in props:
-            set_resource_metadata(props['metadata'], global_labels, global_annotations)
-        elif 'spec' in props and isinstance(props['spec'], dict):
-            if 'metadata' in props['spec']:
-                set_resource_metadata(props['spec']['metadata'], global_labels, global_annotations)
+        if "metadata" in props:
+            set_resource_metadata(props["metadata"], global_labels, global_annotations)
+        elif "spec" in props and isinstance(props["spec"], dict):
+            if "metadata" in props["spec"]:
+                set_resource_metadata(
+                    props["spec"]["metadata"], global_labels, global_annotations
+                )
 
         return pulumi.ResourceTransformationResult(props, args.opts)
 
     pulumi.runtime.register_stack_transformation(global_transform)
+
 
 # Function to fetch the latest stable version of a Helm chart from a helm chart index.yaml url
 def get_latest_helm_chart_version(repo_url: str, chart_name: str) -> str:
@@ -69,21 +83,25 @@ def get_latest_helm_chart_version(repo_url: str, chart_name: str) -> str:
         str: The latest stable version of the chart.
     """
     try:
-        index_url = repo_url.rstrip('/') + '/index.yaml'
+        index_url = repo_url.rstrip("/") + "/index.yaml"
 
         logging.info(f"Fetching Helm repository index from URL: {index_url}")
         response = requests.get(index_url)
         response.raise_for_status()
 
         index = yaml.safe_load(response.content)
-        if chart_name in index['entries']:
-            chart_versions = index['entries'][chart_name]
-            stable_versions = [v for v in chart_versions if is_stable_version(v['version'])]
+        if chart_name in index["entries"]:
+            chart_versions = index["entries"][chart_name]
+            stable_versions = [
+                v for v in chart_versions if is_stable_version(v["version"])
+            ]
             if not stable_versions:
                 logging.info(f"No stable versions found for chart '{chart_name}'.")
                 return "Chart not found"
-            latest_chart = max(stable_versions, key=lambda x: parse_version(x['version']))
-            return latest_chart['version'].lstrip('v')
+            latest_chart = max(
+                stable_versions, key=lambda x: parse_version(x["version"])
+            )
+            return latest_chart["version"].lstrip("v")
         else:
             logging.info(f"No chart named '{chart_name}' found in repository.")
             return "Chart not found"
@@ -94,6 +112,7 @@ def get_latest_helm_chart_version(repo_url: str, chart_name: str) -> str:
     except yaml.YAMLError as e:
         logging.error(f"Error parsing Helm repository index YAML: {e}")
         return f"Error parsing YAML: {e}"
+
 
 # Sanity check Helm chart versions for stable releases
 def is_stable_version(version_str: str) -> bool:
@@ -108,9 +127,14 @@ def is_stable_version(version_str: str) -> bool:
     """
     try:
         parsed_version = parse_version(version_str)
-        return isinstance(parsed_version, Version) and not parsed_version.is_prerelease and not parsed_version.is_devrelease
+        return (
+            isinstance(parsed_version, Version)
+            and not parsed_version.is_prerelease
+            and not parsed_version.is_devrelease
+        )
     except InvalidVersion:
         return False
+
 
 # Function to extract the repository name from a Git remote URL
 def extract_repo_name(remote_url: str) -> str:
@@ -123,14 +147,19 @@ def extract_repo_name(remote_url: str) -> str:
     Returns:
         str: The repository name.
     """
-    match = re.search(r'[:/]([^/:]+/[^/\.]+)(\.git)?$', remote_url)
+    match = re.search(r"[:/]([^/:]+/[^/\.]+)(\.git)?$", remote_url)
     if match:
         return match.group(1)
     return remote_url
 
 
 # Function to wait for a list of CRDs to be present
-def wait_for_crds(crd_names: List[str], k8s_provider: k8s.Provider, depends_on: List[pulumi.Resource], parent: pulumi.Resource) -> List[pulumi.Resource]:
+def wait_for_crds(
+    crd_names: List[str],
+    k8s_provider: k8s.Provider,
+    depends_on: List[pulumi.Resource],
+    parent: pulumi.Resource,
+) -> List[pulumi.Resource]:
     """
     Waits for the specified CRDs to be present and ensures dependencies.
 
@@ -168,9 +197,15 @@ def wait_for_crds(crd_names: List[str], k8s_provider: k8s.Provider, depends_on: 
 
     return crds
 
+
 # HACK: Create a dummy CRD definition to use during pulumi dry_run / preview runs if CRDs are not found.
 # TODO: Solve this in a more elegant way.
-def create_dummy_crd(crd_name: str, k8s_provider: k8s.Provider, depends_on: List[pulumi.Resource], parent: pulumi.Resource) -> Optional[k8s.yaml.ConfigFile]:
+def create_dummy_crd(
+    crd_name: str,
+    k8s_provider: k8s.Provider,
+    depends_on: List[pulumi.Resource],
+    parent: pulumi.Resource,
+) -> Optional[k8s.yaml.ConfigFile]:
     """
     Create a dummy CRD definition to use during preview runs.
 
@@ -183,10 +218,10 @@ def create_dummy_crd(crd_name: str, k8s_provider: k8s.Provider, depends_on: List
     Returns:
         Optional[k8s.yaml.ConfigFile]: The dummy CRD resource.
     """
-    parts = crd_name.split('.')
+    parts = crd_name.split(".")
     plural = parts[0]
-    group = '.'.join(parts[1:])
-    kind = ''.join(word.title() for word in plural.split('_'))
+    group = ".".join(parts[1:])
+    kind = "".join(word.title() for word in plural.split("_"))
 
     dummy_crd_yaml_template = """
 apiVersion: apiextensions.k8s.io/v1
@@ -213,7 +248,7 @@ spec:
     )
 
     try:
-        with tempfile.NamedTemporaryFile(delete=False, mode='w') as temp_file:
+        with tempfile.NamedTemporaryFile(delete=False, mode="w") as temp_file:
             temp_file.write(dummy_crd_yaml)
             temp_file_path = temp_file.name
 
@@ -224,7 +259,7 @@ spec:
                 parent=parent,
                 depends_on=depends_on,
                 provider=k8s_provider,
-            )
+            ),
         )
         return dummy_crd
     finally:

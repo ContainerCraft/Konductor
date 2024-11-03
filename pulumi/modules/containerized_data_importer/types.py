@@ -7,6 +7,7 @@ Defines the data structure for the Containerized Data Importer (CDI) module conf
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
 
+
 @dataclass
 class CdiConfig:
     version: Optional[str] = "latest"
@@ -15,7 +16,7 @@ class CdiConfig:
     annotations: Dict[str, Any] = field(default_factory=dict)
 
     @staticmethod
-    def merge(user_config: Dict[str, Any]) -> 'CdiConfig':
+    def merge(user_config: Dict[str, Any]) -> "CdiConfig":
         default_config = CdiConfig()
         for key, value in user_config.items():
             if hasattr(default_config, key):

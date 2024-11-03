@@ -2,9 +2,10 @@ name: konductor
 description: DevOps Platform IaC Template Repository
 main: ./pulumi
 stackConfigDir: ./pulumi/stacks
-options:
-  refresh: always
 runtime:
   name: python
-# options:
-#   virtualenv: venv
+  options:
+    toolchain: poetry
+    typechecker: pyright
+options:
+  refresh: always

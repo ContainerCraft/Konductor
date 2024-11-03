@@ -1,8 +1,10 @@
 # pulumi/__main__.py
 
-from pulumi import log
+import pulumi
+
 from core.config import export_results
 from core.deployment import initialize_pulumi, deploy_modules
+
 
 def main():
     try:
@@ -30,8 +32,8 @@ def main():
         # - Modules are set to enabled=false by defualt, override this to enable by default in DEFAULT_ENABLED_CONFIG.
         modules_to_deploy = [
             "aws",
-            #"cert_manager",
-            #"prometheus"
+            # "cert_manager",
+            # "prometheus"
         ]
 
         # Deploy modules
@@ -45,15 +47,16 @@ def main():
             k8s_provider,
             versions,
             configurations,
-            compliance_config
+            compliance_config,
         )
 
         # Export stack outputs.
         export_results(versions, configurations, compliance_config)
 
     except Exception as e:
-        log.error(f"Deployment failed: {str(e)}")
+        pulumi.log.error(f"Deployment failed: {str(e)}")
         raise
+
 
 # Entry point for the Pulumi program.
 # TODO:

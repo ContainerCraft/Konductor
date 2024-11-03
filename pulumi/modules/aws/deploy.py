@@ -33,7 +33,9 @@ MODULE_NAME = "aws"
 MODULE_VERSION = "0.0.1"
 
 
-def deploy_aws_module(config: AWSConfig, global_depends_on: List[pulumi.Resource]) -> Tuple[str, pulumi.Resource]:
+def deploy_aws_module(
+    config: AWSConfig, global_depends_on: List[pulumi.Resource]
+) -> Tuple[str, pulumi.Resource]:
     """
     Deploys the AWS module resources.
 
@@ -75,7 +77,7 @@ def deploy_aws_module(config: AWSConfig, global_depends_on: List[pulumi.Resource
                 organization,
                 root_id,
                 ["SecOps", "Infrastructure", "Applications"],
-                aws_provider
+                aws_provider,
             )
 
             # Create Tenant Accounts under 'Applications' OU
@@ -83,10 +85,7 @@ def deploy_aws_module(config: AWSConfig, global_depends_on: List[pulumi.Resource
             if ou_applications:
                 tenant_configs = load_tenant_account_configs()
                 tenant_accounts = create_tenant_accounts(
-                    organization,
-                    ou_applications,
-                    tenant_configs,
-                    aws_provider
+                    organization, ou_applications, tenant_configs, aws_provider
                 )
 
                 # Deploy resources for each tenant
@@ -95,15 +94,13 @@ def deploy_aws_module(config: AWSConfig, global_depends_on: List[pulumi.Resource
                         tenant_account=tenant_account,
                         role_name="OrganizationAccountAccessRole",
                         region=config.region,
-                        aws_provider=aws_provider
+                        aws_provider=aws_provider,
                     )
 
                     tenant_config = tenant_configs.get(tenant_account.name)
                     if tenant_config:
                         deploy_tenant_resources(
-                            tenant_provider,
-                            tenant_account,
-                            tenant_config
+                            tenant_provider, tenant_account, tenant_config
                         )
 
         # Return Dictionary of AWS Module Resources to global configuration dictionary
@@ -111,7 +108,7 @@ def deploy_aws_module(config: AWSConfig, global_depends_on: List[pulumi.Resource
             "ops_data_bucket": s3_bucket.id,
             "organization": organization.id,
             "organization_arn": organization.arn,
-            "aws_module_tags": module_tags
+            "aws_module_tags": module_tags,
         }
 
         # Return the module version and the main resource

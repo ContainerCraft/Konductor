@@ -16,11 +16,12 @@ from core.resource_helpers import create_namespace, create_custom_resource
 
 from .types import MultusConfig
 
+
 def deploy_multus_module(
-        config_multus: MultusConfig,
-        global_depends_on: List[pulumi.Resource],
-        k8s_provider: k8s.Provider,
-    ) -> Tuple[str, Optional[pulumi.Resource]]:
+    config_multus: MultusConfig,
+    global_depends_on: List[pulumi.Resource],
+    k8s_provider: k8s.Provider,
+) -> Tuple[str, Optional[pulumi.Resource]]:
     """
     Deploys the Multus module and returns the version and the deployed resource.
     """
@@ -35,11 +36,12 @@ def deploy_multus_module(
 
     return multus_version, multus_resource
 
+
 def deploy_multus(
-        config_multus: MultusConfig,
-        depends_on: List[pulumi.Resource],
-        k8s_provider: k8s.Provider,
-    ) -> Tuple[str, Optional[pulumi.Resource]]:
+    config_multus: MultusConfig,
+    depends_on: List[pulumi.Resource],
+    k8s_provider: k8s.Provider,
+) -> Tuple[str, Optional[pulumi.Resource]]:
     """
     Deploys Multus using YAML manifest and creates a NetworkAttachmentDefinition,
     ensuring proper paths for host mounts.
@@ -66,11 +68,9 @@ def deploy_multus(
             parent=namespace_resource,
             transformations=[transform_host_path],
             custom_timeouts=pulumi.CustomTimeouts(
-                create="8m",
-                update="8m",
-                delete="2m"
-            )
-        )
+                create="8m", update="8m", delete="2m"
+            ),
+        ),
     )
 
     # Create NetworkAttachmentDefinition
@@ -85,7 +85,10 @@ def deploy_multus(
                 "namespace": config_multus.namespace,
             },
             "spec": {
-                "config": pulumi.Output.all(config_multus.bridge_name, config_multus.bridge_name).apply(lambda args: f'''
+                "config": pulumi.Output.all(
+                    config_multus.bridge_name, config_multus.bridge_name
+                ).apply(
+                    lambda args: f"""
                 {{
                     "cniVersion": "0.3.1",
                     "name": "{args[0]}",
@@ -99,7 +102,8 @@ def deploy_multus(
                             "type": "tuning"
                         }}
                     ]
-                }}''')
+                }}"""
+                )
             },
         },
         opts=pulumi.ResourceOptions(
@@ -114,11 +118,16 @@ def deploy_multus(
         ),
     )
 
-    pulumi.export('network_attachment_definition', network_attachment_definition.metadata['name'])
+    pulumi.export(
+        "network_attachment_definition", network_attachment_definition.metadata["name"]
+    )
 
     return version, multus
 
-def transform_host_path(args: pulumi.ResourceTransformationArgs) -> pulumi.ResourceTransformationResult:
+
+def transform_host_path(
+    args: pulumi.ResourceTransformationArgs,
+) -> pulumi.ResourceTransformationResult:
     """
     Transforms the host paths in the Multus DaemonSet.
 
@@ -127,20 +136,23 @@ def transform_host_path(args: pulumi.ResourceTransformationArgs) -> pulumi.Resou
     """
     obj = args.props
 
-    if obj.get('kind', '') == 'DaemonSet' and obj.get('metadata', {}).get('name', '') == 'kube-multus-ds':
-        containers = obj['spec']['template']['spec'].get('containers', [])
+    if (
+        obj.get("kind", "") == "DaemonSet"
+        and obj.get("metadata", {}).get("name", "") == "kube-multus-ds"
+    ):
+        containers = obj["spec"]["template"]["spec"].get("containers", [])
         for container in containers:
-            volume_mounts = container.get('volumeMounts', [])
+            volume_mounts = container.get("volumeMounts", [])
             for vm in volume_mounts:
-                current_path = vm.get('mountPath', '').rstrip('/')
-                if current_path == '/run/netns':
-                    vm['mountPath'] = '/var/run/netns'
+                current_path = vm.get("mountPath", "").rstrip("/")
+                if current_path == "/run/netns":
+                    vm["mountPath"] = "/var/run/netns"
 
-        volumes = obj['spec']['template']['spec'].get('volumes', [])
+        volumes = obj["spec"]["template"]["spec"].get("volumes", [])
         for vol in volumes:
-            if 'hostPath' in vol:
-                current_path = vol['hostPath'].get('path', '').rstrip('/')
-                if current_path == '/run/netns':
-                    vol['hostPath']['path'] = '/var/run/netns'
+            if "hostPath" in vol:
+                current_path = vol["hostPath"].get("path", "").rstrip("/")
+                if current_path == "/run/netns":
+                    vol["hostPath"]["path"] = "/var/run/netns"
 
     return pulumi.ResourceTransformationResult(props=obj, opts=args.opts)

@@ -1,11 +1,13 @@
 import base64
 import os
 
+
 def encode_file_to_base64(file_name):
     file_path = os.path.join(os.path.dirname(__file__), "assets", file_name)
     with open(file_path, "rb") as file:
         encoded_string = base64.b64encode(file.read()).decode("utf-8")
     return encoded_string
+
 
 def return_encoded_assets():
     # Define file names
@@ -25,7 +27,7 @@ def return_encoded_assets():
         "kubevirt_icon": kubevirt_icon,
         "prometheus_icon": prometheus_icon,
         "alertmanager_icon": alertmanager_icon,
-        "grafana_icon": grafana_icon
+        "grafana_icon": grafana_icon,
     }
 
     return assets

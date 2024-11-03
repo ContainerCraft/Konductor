@@ -42,11 +42,12 @@ from core.resource_helpers import (
 )
 from .types import KubeVirtConfig
 
+
 def deploy_kubevirt_module(
-        config_kubevirt: KubeVirtConfig,
-        global_depends_on: List[pulumi.Resource],
-        k8s_provider: k8s.Provider,
-    ) -> Tuple[Optional[str], k8s.apiextensions.CustomResource]:
+    config_kubevirt: KubeVirtConfig,
+    global_depends_on: List[pulumi.Resource],
+    k8s_provider: k8s.Provider,
+) -> Tuple[Optional[str], k8s.apiextensions.CustomResource]:
     """
     Deploys the KubeVirt module and returns the version and the deployed resource.
     """
@@ -65,11 +66,12 @@ def deploy_kubevirt_module(
 
     return kubevirt_version, kubevirt_resource
 
+
 def deploy_kubevirt(
-        config_kubevirt: KubeVirtConfig,
-        depends_on: List[pulumi.Resource],
-        k8s_provider: k8s.Provider,
-    ) -> Tuple[str, Optional[pulumi.Resource]]:
+    config_kubevirt: KubeVirtConfig,
+    depends_on: List[pulumi.Resource],
+    k8s_provider: k8s.Provider,
+) -> Tuple[str, Optional[pulumi.Resource]]:
     """
     Deploys KubeVirt operator and creates the KubeVirt CustomResource,
     ensuring that the CRD is available before creating the CustomResource.
@@ -93,7 +95,7 @@ def deploy_kubevirt(
 
     # Determine latest version release from GitHub Releases
     # TODO: reimplement into the get_module_config function and adopt across all modules to reduce code duplication
-    if version == 'latest' or version is None:
+    if version == "latest" or version is None:
         version = get_latest_kubevirt_version()
         log.info(f"Setting KubeVirt release version to latest: {version}")
     else:
@@ -104,7 +106,7 @@ def deploy_kubevirt(
     transformed_yaml = _transform_yaml(kubevirt_operator_yaml, namespace)
 
     # Write transformed YAML to a temporary file
-    with tempfile.NamedTemporaryFile(delete=False, mode='w') as temp_file:
+    with tempfile.NamedTemporaryFile(delete=False, mode="w") as temp_file:
         yaml.dump_all(transformed_yaml, temp_file)
         temp_file_path = temp_file.name
 
@@ -112,7 +114,7 @@ def deploy_kubevirt(
     try:
         # Deploy KubeVirt operator using the helper function
         operator = create_config_file(
-            name='kubevirt-operator',
+            name="kubevirt-operator",
             file=temp_file_path,
             opts=pulumi.ResourceOptions(
                 parent=namespace_resource,
@@ -136,7 +138,7 @@ def deploy_kubevirt(
         ],
         k8s_provider=k8s_provider,
         depends_on=depends_on,
-        parent=operator
+        parent=operator,
     )
 
     # Create the KubeVirt resource always
@@ -191,11 +193,12 @@ def get_latest_kubevirt_version() -> str:
     """
 
     # TODO: relocate this URL to a default in the KubevirtConfig class and allow for an override
-    url = 'https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt'
+    url = "https://storage.googleapis.com/kubevirt-prow/release/kubevirt/kubevirt/stable.txt"
     response = requests.get(url)
     if response.status_code != 200:
         raise Exception(f"Failed to fetch latest KubeVirt version from {url}")
     return response.text.strip().lstrip("v")
+
 
 def download_kubevirt_operator_yaml(version: str) -> Any:
     """
@@ -204,11 +207,12 @@ def download_kubevirt_operator_yaml(version: str) -> Any:
 
     # TODO: relocate this URL to a default in the KubevirtConfig class and allow for an override
     # TODO: support remote or local kubevirt-operator.yaml file
-    url = f'https://github.com/kubevirt/kubevirt/releases/download/v{version}/kubevirt-operator.yaml'
+    url = f"https://github.com/kubevirt/kubevirt/releases/download/v{version}/kubevirt-operator.yaml"
     response = requests.get(url)
     if response.status_code != 200:
         raise Exception(f"Failed to download KubeVirt operator YAML from {url}")
     return list(yaml.safe_load_all(response.text))
+
 
 # Function to remove Namespace resources from the YAML data and replace other object namespaces with the specified namespace value as an override
 def _transform_yaml(yaml_data: Any, namespace: str) -> List[Dict[str, Any]]:
@@ -217,9 +221,9 @@ def _transform_yaml(yaml_data: Any, namespace: str) -> List[Dict[str, Any]]:
     """
     transformed = []
     for resource in yaml_data:
-        if resource.get('kind') == 'Namespace':
+        if resource.get("kind") == "Namespace":
             continue
-        if 'metadata' in resource:
-            resource['metadata']['namespace'] = namespace
+        if "metadata" in resource:
+            resource["metadata"]["namespace"] = namespace
         transformed.append(resource)
     return transformed

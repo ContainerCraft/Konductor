@@ -20,7 +20,11 @@ from typing import Dict, Any, Optional
 import pulumi
 from pulumi import log, Config, ResourceTransformationResult, ResourceTransformationArgs
 from pulumi_aws import Provider
-from core.metadata import get_global_labels, generate_compliance_labels, generate_git_labels
+from core.metadata import (
+    get_global_labels,
+    generate_compliance_labels,
+    generate_git_labels,
+)
 from core.types import ComplianceConfig
 from .types import AWSConfig, TenantAccountConfig
 from .taggable import TAGGABLE_RESOURCES
@@ -28,6 +32,7 @@ from .taggable import TAGGABLE_RESOURCES
 # Constants
 MODULE_NAME = "aws"
 MODULE_VERSION = "0.0.1"
+
 
 def initialize_aws_provider(config: AWSConfig) -> Provider:
     """
@@ -40,9 +45,11 @@ def initialize_aws_provider(config: AWSConfig) -> Provider:
         Provider: An initialized AWS Provider for resource management.
     """
     aws_config = pulumi.Config("aws")
-    aws_access_key = os.getenv('AWS_ACCESS_KEY_ID') or aws_config.get("access_key_id")
-    aws_secret_key = os.getenv('AWS_SECRET_ACCESS_KEY') or aws_config.get("secret_access_key")
-    profile = os.getenv('AWS_PROFILE') or config.profile
+    aws_access_key = os.getenv("AWS_ACCESS_KEY_ID") or aws_config.get("access_key_id")
+    aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY") or aws_config.get(
+        "secret_access_key"
+    )
+    profile = os.getenv("AWS_PROFILE") or config.profile
 
     return Provider(
         "awsProvider",
@@ -52,6 +59,7 @@ def initialize_aws_provider(config: AWSConfig) -> Provider:
         region=config.region,
     )
 
+
 def generate_global_transformations(global_tags: Dict[str, str]) -> None:
     """
     Registers a global transformation to apply tags to AWS resources that support tagging.
@@ -59,7 +67,10 @@ def generate_global_transformations(global_tags: Dict[str, str]) -> None:
     Args:
         global_tags (Dict[str, str]): The global tags to apply.
     """
-    def global_transform(args: ResourceTransformationArgs) -> Optional[ResourceTransformationResult]:
+
+    def global_transform(
+        args: ResourceTransformationArgs,
+    ) -> Optional[ResourceTransformationResult]:
         resource_type = args.type_
 
         # Check if the resource type is in the list of taggable resources
@@ -68,9 +79,9 @@ def generate_global_transformations(global_tags: Dict[str, str]) -> None:
             opts = args.opts
 
             # Merge existing tags with global tags
-            tags = props.get('tags') or {}
+            tags = props.get("tags") or {}
             tags.update(global_tags)
-            props['tags'] = tags
+            props["tags"] = tags
 
             return ResourceTransformationResult(props, opts)
         else:
@@ -79,9 +90,13 @@ def generate_global_transformations(global_tags: Dict[str, str]) -> None:
 
     pulumi.runtime.register_stack_transformation(global_transform)
 
+
 # pulumi/modules/aws/config.py
 
-def generate_tags(config: AWSConfig, compliance_config: ComplianceConfig, git_info: Dict[str, str]) -> Dict[str, str]:
+
+def generate_tags(
+    config: AWSConfig, compliance_config: ComplianceConfig, git_info: Dict[str, str]
+) -> Dict[str, str]:
     """
     Generates tags for AWS resources, including compliance and Git metadata.
 
@@ -106,7 +121,7 @@ def generate_tags(config: AWSConfig, compliance_config: ComplianceConfig, git_in
     }
 
     # Log generated tags for visibility
-    #pulumi.log.info(f"Generated AWS tags: {json.dumps(aws_module_tags, indent=2)}")
+    # pulumi.log.info(f"Generated AWS tags: {json.dumps(aws_module_tags, indent=2)}")
 
     # Register the global transformation
     generate_global_transformations(aws_module_tags)
@@ -125,11 +140,11 @@ def load_aws_config() -> AWSConfig:
         ValueError: If there's an issue with the AWS configuration format.
     """
     config = Config()
-    aws_config_dict = config.get_object('aws') or {}
-    compliance_config_dict = config.get_object('compliance') or {}
+    aws_config_dict = config.get_object("aws") or {}
+    compliance_config_dict = config.get_object("compliance") or {}
 
     # Include the compliance config into the aws_config_dict
-    aws_config_dict['compliance'] = compliance_config_dict
+    aws_config_dict["compliance"] = compliance_config_dict
 
     try:
         aws_config = AWSConfig.merge(aws_config_dict)
@@ -148,8 +163,8 @@ def load_tenant_account_configs() -> Dict[str, TenantAccountConfig]:
         Dict[str, TenantAccountConfig]: Configurations for each tenant account.
     """
     config = Config()
-    aws_config_dict = config.get_object('aws') or {}
-    tenant_accounts_list = aws_config_dict.get('landingzones', [])
+    aws_config_dict = config.get_object("aws") or {}
+    tenant_accounts_list = aws_config_dict.get("landingzones", [])
     tenant_accounts = {}
 
     for tenant in tenant_accounts_list:
@@ -157,6 +172,8 @@ def load_tenant_account_configs() -> Dict[str, TenantAccountConfig]:
             tenant_config = TenantAccountConfig(**tenant)
             tenant_accounts[tenant_config.name] = tenant_config
         except Exception as e:
-            log.warn(f"Invalid tenant account configuration for '{tenant.get('name', 'unknown')}': {e}")
+            log.warn(
+                f"Invalid tenant account configuration for '{tenant.get('name', 'unknown')}': {e}"
+            )
 
     return tenant_accounts

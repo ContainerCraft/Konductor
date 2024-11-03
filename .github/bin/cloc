@@ -1,0 +1,69 @@
+#!/bin/bash
+set -euo pipefail
+
+# Script to count non-comment, non-docstring lines of Python code in Pulumi IaC
+# Usage: ./cloc
+# Description: Analyzes Python code in the ./pulumi directory, excluding:
+#   - Comments (lines starting with #)
+#   - Empty lines and whitespace
+#   - Docstrings (multi-line strings between """ or ''')
+#   - Inline comments (# after code)
+
+# Ensure we're in the root directory
+cd "$(dirname "$0")/../.." || exit 1
+
+# Verify pulumi directory exists
+if [[ ! -d "./pulumi" ]]; then
+    echo "Error: ./pulumi directory not found!"
+    exit 1
+fi
+
+echo "Analyzing Python code in Pulumi Infrastructure as Code (IaC) directory..."
+echo "Excluding comments, docstrings, and blank lines..."
+
+# Count lines across all Python files
+total_lines=$(find ./pulumi -name "*.py" -type f -exec awk '
+    BEGIN {
+        in_docstring = 0
+        count = 0
+    }
+    {
+        # Store original line for inline comment handling
+        original = $0
+        # Trim leading/trailing whitespace
+        line = $0
+        gsub(/^[ \t]+|[ \t]+$/, "", line)
+
+        # Skip empty lines
+        if (line == "") { next }
+
+        # Skip full comment lines
+        if (line ~ /^#/) { next }
+
+        # Handle triple-quoted docstrings (both single and double quotes)
+        if (line ~ /^"""/ || line ~ /"""$/ || line ~ /^'\'''\'''\''/ || line ~ /'\'''\'''\''$/) {
+            in_docstring = !in_docstring
+            next
+        }
+        if (in_docstring) { next }
+
+        # Remove inline comments
+        sub(/#.*$/, "", original)
+        # Trim whitespace after removing inline comment
+        gsub(/^[ \t]+|[ \t]+$/, "", original)
+        # Skip if line becomes empty after removing inline comment
+        if (original == "") { next }
+
+        # Count this line
+        count++
+    }
+    END { print count }
+' {} \; | awk '{total += $1} END {print total}')
+
+# Verify we got a valid number
+if [[ ! "$total_lines" =~ ^[0-9]+$ ]]; then
+    echo "Error: Failed to count lines properly!"
+    exit 1
+fi
+
+echo "Total lines of Python code: ${total_lines}"

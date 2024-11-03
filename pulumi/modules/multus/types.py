@@ -8,6 +8,7 @@ from dataclasses import dataclass, field
 from typing import Optional, Dict, Any
 import pulumi
 
+
 @dataclass
 class MultusConfig:
     version: str = "master"
@@ -17,7 +18,7 @@ class MultusConfig:
     annotations: Dict[str, Any] = field(default_factory=dict)
 
     @staticmethod
-    def merge(user_config: Dict[str, Any]) -> 'MultusConfig':
+    def merge(user_config: Dict[str, Any]) -> "MultusConfig":
         default_config = MultusConfig()
         for key, value in user_config.items():
             if hasattr(default_config, key):

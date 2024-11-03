@@ -26,10 +26,11 @@ from .metadata import (
     set_global_labels,
     set_global_annotations,
     generate_compliance_labels,
-    generate_compliance_annotations
+    generate_compliance_annotations,
 )
 from .utils import generate_global_transformations
 from .types import ComplianceConfig
+
 
 def initialize_pulumi() -> Dict[str, Any]:
     """
@@ -55,7 +56,7 @@ def initialize_pulumi() -> Dict[str, Any]:
         kubernetes_config = config.get_object("kubernetes") or {}
         kubernetes_context = kubernetes_config.get("context")
 
-        kubeconfig = kubernetes_config.get("kubeconfig") or os.getenv('KUBECONFIG')
+        kubeconfig = kubernetes_config.get("kubeconfig") or os.getenv("KUBECONFIG")
 
         # Initialize the Kubernetes provider.
         k8s_provider = Provider(
@@ -75,11 +76,11 @@ def initialize_pulumi() -> Dict[str, Any]:
         configurations["source_repository"] = {
             "remote": git_info["remote"],
             "branch": git_info["branch"],
-            "commit": git_info["commit"]
+            "commit": git_info["commit"],
         }
 
         # Retrieve compliance metadata from pulumi configuration.
-        compliance_config_dict = config.get_object('compliance') or {}
+        compliance_config_dict = config.get_object("compliance") or {}
         compliance_config = ComplianceConfig.merge(compliance_config_dict)
         pulumi.log.info(f"Compliance Config: {compliance_config}")
 
@@ -114,6 +115,7 @@ def initialize_pulumi() -> Dict[str, Any]:
         log.error(f"Initialization error: {str(e)}")
         raise
 
+
 def deploy_module(
     module_name: str,
     config: pulumi.Config,
@@ -146,14 +148,18 @@ def deploy_module(
     if not isinstance(global_depends_on, list):
         raise TypeError("global_depends_on must be a list")
     if not isinstance(k8s_provider, k8s.Provider):
-        raise TypeError("k8s_provider must be an instance of pulumi_kubernetes.Provider")
+        raise TypeError(
+            "k8s_provider must be an instance of pulumi_kubernetes.Provider"
+        )
     if not isinstance(versions, dict):
         raise TypeError("versions must be a dictionary")
     if not isinstance(configurations, dict):
         raise TypeError("configurations must be a dictionary")
 
     # Retrieve module configuration and enabled status.
-    module_config_dict, module_enabled = get_module_config(module_name, config, default_versions)
+    module_config_dict, module_enabled = get_module_config(
+        module_name, config, default_versions
+    )
 
     if module_enabled:
         ModuleConfigClass = discover_config_class(module_name)
@@ -164,9 +170,12 @@ def deploy_module(
         deploy_func_args = inspect.signature(deploy_func).parameters.keys()
         config_arg_name = list(deploy_func_args)[0]
 
-        deploy_kwargs = {config_arg_name: config_obj, "global_depends_on": global_depends_on}
+        deploy_kwargs = {
+            config_arg_name: config_obj,
+            "global_depends_on": global_depends_on,
+        }
 
-        if module_name != 'aws':
+        if module_name != "aws":
             deploy_kwargs["k8s_provider"] = k8s_provider
 
         try:
@@ -178,7 +187,9 @@ def deploy_module(
                 version, release = result
                 module_aux_meta = None
             else:
-                raise ValueError(f"Unexpected return value structure from {module_name} deploy function")
+                raise ValueError(
+                    f"Unexpected return value structure from {module_name} deploy function"
+                )
 
             versions[module_name] = version
             configurations[module_name] = {"enabled": module_enabled}
@@ -194,6 +205,7 @@ def deploy_module(
             raise
     else:
         log.info(f"Module {module_name} is not enabled.")
+
 
 def discover_config_class(module_name: str) -> Type:
     """
@@ -224,6 +236,7 @@ def discover_config_class(module_name: str) -> Type:
 
     raise ValueError(f"No configuration class found in modules.{module_name}.types")
 
+
 def discover_deploy_function(module_name: str) -> Callable:
     """
     Discovers and returns the deploy function from the module's deploy.py.
@@ -238,19 +251,22 @@ def discover_deploy_function(module_name: str) -> Callable:
     function_name = f"deploy_{module_name}_module"
     deploy_function = getattr(deploy_module, function_name, None)
     if not deploy_function:
-        raise ValueError(f"No deploy function named '{function_name}' found in modules.{module_name}.deploy")
+        raise ValueError(
+            f"No deploy function named '{function_name}' found in modules.{module_name}.deploy"
+        )
     return deploy_function
 
+
 def deploy_modules(
-        modules: List[str],
-        config: pulumi.Config,
-        default_versions: Dict[str, Any],
-        global_depends_on: List[pulumi.Resource],
-        k8s_provider: Provider,
-        versions: Dict[str, str],
-        configurations: Dict[str, Dict[str, Any]],
-        compliance_config: ComplianceConfig,
-    ) -> None:
+    modules: List[str],
+    config: pulumi.Config,
+    default_versions: Dict[str, Any],
+    global_depends_on: List[pulumi.Resource],
+    k8s_provider: Provider,
+    versions: Dict[str, str],
+    configurations: Dict[str, Dict[str, Any]],
+    compliance_config: ComplianceConfig,
+) -> None:
     """
     Iterates over a list of modules and deploys each configured and enabled module.
 

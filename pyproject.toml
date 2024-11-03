@@ -1,0 +1,50 @@
+[tool.poetry]
+name = "konductor"
+version = "0.1.0"
+description = "DevOps Platform IaC Template Repository"
+authors = ["Your Name <your.email@example.com>"]
+readme = "README.md"
+packages = [{include = "pulumi"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+pulumi = "^3.0.0"
+pulumi-aws = "^6.0.0"
+pulumi-kubernetes = "^4.0.0"
+pulumi-aws-native = "^0.90.0"
+pydantic = "^2.0.0"
+gitpython = "^3.1.0"
+semver = "^3.0.0"
+packaging = "^23.0"
+pyright = "^1.1.387"
+
+[tool.poetry.group.dev.dependencies]
+pyright = "^1.1.0"
+black = "^23.0.0"
+pylint = "^3.0.0"
+pytest = "^7.0.0"
+pytest-cov = "^4.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.pyright]
+include = ["pulumi"]
+exclude = ["**/node_modules", "**/__pycache__"]
+typeCheckingMode = "basic"
+useLibraryCodeForTypes = true
+reportMissingImports = "warning"
+reportMissingTypeStubs = false
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+
+[tool.pylint.messages_control]
+disable = [
+    "C0103",  # invalid-name
+    "C0330",  # bad-continuation
+    "R0903",  # too-few-public-methods
+]
