@@ -6,7 +6,10 @@ requests>=2.25.1
 packaging>=20.9
 kubernetes>=4.7.1
 beautifulsoup4
+GitPython
+semver
 
 pulumi>=3.0.0
 pulumi-aws>=5.0.0
 pulumi_kubernetes>=4.11.0
+

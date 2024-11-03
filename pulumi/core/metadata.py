@@ -11,14 +11,14 @@ This module manages global metadata, labels, and annotations.
 It includes functions to generate compliance and Git-related metadata.
 """
 
+import os
 import re
+import git
 import json
+import semver
 import threading
-import subprocess
-import dataclasses
-from typing import Dict, Any
+from typing import Dict, Optional
 
-import pulumi
 from pulumi import log
 
 from .types import ComplianceConfig
@@ -73,25 +73,6 @@ def get_global_annotations() -> Dict[str, str]:
         Dict[str, str]: The global annotations.
     """
     return MetadataSingleton()._data["_global_annotations"]
-
-# Function to collect Git repository information
-# TODO: re-implement this function to use the GitPython library or other more pythonic approach
-# TODO: add support for fetching and returning the latest git release semver
-def collect_git_info() -> Dict[str, str]:
-    """
-    Collects Git repository information.
-
-    Returns:
-        Dict[str, str]: The Git information.
-    """
-    try:
-        remote = subprocess.check_output(['git', 'config', '--get', 'remote.origin.url'], stderr=subprocess.STDOUT).strip().decode('utf-8')
-        branch = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD'], stderr=subprocess.STDOUT).strip().decode('utf-8')
-        commit = subprocess.check_output(['git', 'rev-parse', 'HEAD'], stderr=subprocess.STDOUT).strip().decode('utf-8')
-        return {'remote': remote, 'branch': branch, 'commit': commit}
-    except subprocess.CalledProcessError as e:
-        log.error(f"Error fetching git information: {e}")
-        return {'remote': 'N/A', 'branch': 'N/A', 'commit': 'N/A'}
 
 def generate_git_labels(git_info: Dict[str, str]) -> Dict[str, str]:
     """
@@ -248,3 +229,175 @@ def sanitize_tag_value(value: str) -> str:
     # Include colons ':' in the allowed characters
     sanitized = re.sub(r'[^a-zA-Z0-9\s_./:=+\-@]', '-', value)
     return sanitized[:256]
+
+def collect_git_info() -> Dict[str, str]:
+    """
+    Collects Git repository information using GitPython.
+    Includes repository details, latest tag/release version, and commit information.
+    Falls back gracefully with informative logging.
+
+    Returns:
+        Dict[str, str]: Git information including:
+            - remote: Repository remote URL
+            - branch: Current branch name
+            - commit: Current commit hash
+            - commit_short: Shortened commit hash
+            - commit_date: Commit timestamp
+            - latest_tag: Latest semver tag
+            - latest_release: Latest release version
+            - dirty: Whether working tree has uncommitted changes
+    """
+    git_info = {
+        'remote': 'N/A',
+        'branch': 'N/A',
+        'commit': 'N/A',
+        'commit_short': 'N/A',
+        'commit_date': 'N/A',
+        'latest_tag': 'N/A',
+        'latest_release': 'N/A',
+        'dirty': 'false'
+    }
+
+    try:
+        # Initialize repo object
+        repo = git.Repo(search_parent_directories=True)
+
+        # Get remote URL (try multiple methods)
+        try:
+            remote_url = get_remote_url(repo)
+            git_info['remote'] = remote_url
+        except Exception as e:
+            log.warn(f"Failed to get remote URL: {str(e)}")
+
+        # Get current branch
+        try:
+            git_info['branch'] = repo.active_branch.name
+        except TypeError:
+            # Handle detached HEAD state
+            git_info['branch'] = 'HEAD'
+        except Exception as e:
+            log.warn(f"Failed to get branch name: {str(e)}")
+
+        # Get commit information
+        try:
+            commit = repo.head.commit
+            git_info.update({
+                'commit': commit.hexsha,
+                'commit_short': commit.hexsha[:8],
+                'commit_date': commit.committed_datetime.isoformat(),
+            })
+        except Exception as e:
+            log.warn(f"Failed to get commit information: {str(e)}")
+
+        # Get latest tag and release information
+        try:
+            latest_tag = get_latest_semver_tag(repo)
+            if latest_tag:
+                git_info['latest_tag'] = latest_tag
+                git_info['latest_release'] = str(semver.VersionInfo.parse(latest_tag.lstrip('v')))
+        except Exception as e:
+            log.warn(f"Failed to get tag/release information: {str(e)}")
+
+        # Check if working tree is dirty
+        git_info['dirty'] = str(repo.is_dirty()).lower()
+
+        log.info(f"Successfully collected git info: {git_info}")
+
+    except git.exc.InvalidGitRepositoryError:
+        log.warn("Not a git repository. Using default values.")
+    except Exception as e:
+        log.warn(f"Error collecting git information: {str(e)}")
+        log.warn("Using default values for git information")
+
+    return git_info
+
+def get_remote_url(repo: git.Repo) -> str:
+    """
+    Gets the remote URL using multiple fallback methods.
+
+    Args:
+        repo: GitPython Repo object
+
+    Returns:
+        str: Remote URL or 'N/A' if not found
+    """
+    # Try getting from origin remote
+    try:
+        return next(remote.url for remote in repo.remotes if remote.name == 'origin')
+    except (StopIteration, AttributeError):
+        pass
+
+    # Try getting from git config
+    try:
+        return repo.git.config('--get', 'remote.origin.url')
+    except git.exc.GitCommandError:
+        pass
+
+    # Try environment variables (useful in CI/CD)
+    for env_var in ['CI_REPOSITORY_URL', 'GITHUB_REPOSITORY', 'GIT_URL']:
+        if url := os.getenv(env_var):
+            return url
+
+    return 'N/A'
+
+def get_latest_semver_tag(repo: git.Repo) -> Optional[str]:
+    """
+    Gets the latest semantic version tag from the repository.
+    Handles both 'v' prefixed and non-prefixed tags.
+
+    Args:
+        repo: GitPython Repo object
+
+    Returns:
+        Optional[str]: Latest semver tag or None if no valid tags found
+    """
+    try:
+        # Get all tags
+        tags = [str(tag) for tag in repo.tags]
+
+        # Filter for semver tags (with or without 'v' prefix)
+        semver_tags = []
+        for tag in tags:
+            # Remove 'v' prefix if present
+            version_str = tag.lstrip('v')
+            try:
+                # Parse version and add to list if valid
+                version = semver.VersionInfo.parse(version_str)
+                semver_tags.append((version, tag))
+            except ValueError:
+                continue
+
+        # Return the latest version tag if any found
+        if semver_tags:
+            return sorted(semver_tags, key=lambda x: x[0])[-1][1]
+
+    except Exception as e:
+        log.warn(f"Error parsing semver tags: {str(e)}")
+
+    return None
+
+def sanitize_git_info(git_info: Dict[str, str]) -> Dict[str, str]:
+    """
+    Sanitizes git information for use in resource tags/labels.
+    Ensures values meet length and character requirements.
+
+    Args:
+        git_info: Raw git information dictionary
+
+    Returns:
+        Dict[str, str]: Sanitized git information
+    """
+    sanitized = {}
+    for key, value in git_info.items():
+        # Convert to lowercase and replace invalid characters
+        sanitized_value = re.sub(r'[^a-z0-9-._]', '-', str(value).lower())
+
+        # Trim to maximum allowed length (63 chars for k8s labels)
+        sanitized_value = sanitized_value[:63]
+
+        # Remove leading/trailing non-alphanumeric characters
+        sanitized_value = re.sub(r'^[^a-z0-9]+|[^a-z0-9]+$', '', sanitized_value)
+
+        sanitized[key] = sanitized_value
+
+    return sanitized
