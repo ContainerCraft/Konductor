@@ -1,190 +1,90 @@
-# Konductor DevOps Template
+# Konductor Documentation
+
+Welcome to the Konductor documentation! This comprehensive guide covers everything you need to know about using, developing for, and contributing to the Konductor Infrastructure as Code (IaC) platform.
 
 ## Introduction
 
-Welcome to the Konductor DevOps Template.
+Konductor is a powerful Infrastructure as Code (IaC) platform built on Pulumi and Python, designed to streamline DevOps workflows and Platform Engineering practices. Whether you're a platform user deploying infrastructure, a developer contributing modules, or a maintainer managing the project, you'll find the information you need in these docs.
 
-This repository includes baseline dependencies and boilerplate artifacts for operating and developing cloud infrastructure automation.
+## Documentation Structure
 
-Follow the steps below to configure AWS credentials, Kubernetes `kubectl` configuration, and verify access to AWS and EKS resources.
+Our documentation is organized into several main sections, each targeting specific user needs:
 
-## Prerequisites
+### 🚀 [Getting Started](./getting_started.md)
+Quick-start guide to help you begin using Konductor, including installation, basic setup, and your first deployment.
 
-Before you begin, ensure you have the following installed:
+### 📚 User Documentation
+- [User Guide](./user_guide/README.md): Complete guide for platform users
+- [Module Documentation](./modules/README.md): Detailed guides for individual modules
+- [FAQ & Troubleshooting](./user_guide/faq_and_troubleshooting.md): Common issues and solutions
 
-- **AWS CLI**: Version 2.x or higher.
-- **Pulumi CLI**: For managing infrastructure as code.
-- **Git**: For cloning repositories.
-- **Kubectl**: For interacting with Kubernetes clusters.
-- **sudo**: For executing administrative commands.
+### 💻 Developer Documentation
+- [Developer Guide](./developer_guide/README.md): Guide for contributing to Konductor
+- [Module Development](./developer_guide/modules/README.md): Creating and maintaining modules
+- [Contribution Guidelines](./developer_guide/contribution_guidelines.md): How to contribute
 
-> NOTE: All dependencies are automatically supplied in the [ghcr.io/containercraft/devcontainer](https://github.com/containercraft/devcontainer) image powering the VSCode Dev Container included in this repository by the [.devcontainer/devcontainer.json](.devcontainer/devcontainer.json) and [.devcontainer/Dockerfile](.devcontainer/Dockerfile).
+### 📖 Reference Documentation
+- [Pulumi Python Standards](./reference/PULUMI_PYTHON.md): Development standards and practices
+- [TypedDict Guide](./reference/TypedDict.md): Using TypedDict for configurations
+- [Style Guide](./reference/style_guide.md): Documentation and code style standards
 
-## Steps to Recreate
+### ⚖️ Compliance & Planning
+- [Compliance Guide](./compliance/COMPLIANCE.md): Compliance standards and implementation
+- [Project Roadmap](./roadmaps/ROADMAP.md): Future development plans
+- [Roadmap Addendum](./roadmaps/ROADMAP_Addendum.md): Additional planning details
 
-Follow the steps below to set up your environment:
+## Available Modules
 
-### 1. Cloud Account Logins
+Konductor includes several core modules, each with comprehensive documentation:
 
-Authenticate with your Pulumi account:
+### AWS Module
+- [User Guide](./modules/aws/README.md)
+- [Developer Guide](./developer_guide/modules/aws/README.md)
+- [Implementation Roadmap](./developer_guide/modules/aws/implementation_roadmap.md)
+- [EKS Setup Guide](./developer_guide/modules/aws/eks_donor_template.md)
+- [OpenTelemetry Integration](./developer_guide/modules/aws/eks_opentelemetry_docs.md)
 
-```bash {"name":"login","tag":"setup"}
-pulumi login && pulumi install
+### Cert Manager Module
+- [User Guide](./modules/cert_manager/README.md)
+- [Developer Guide](./developer_guide/modules/cert_manager/README.md)
+- [Installation Guide](./modules/cert_manager/installation_guide.md)
 
-```
+## Contributing
 
-### 2. Load Environment Variables and AWS Credentials
+We welcome contributions from the community! To get started:
 
-Use Pulumi to load environment variables, configuration files, and credentials:
+1. Read our [Contribution Guidelines](./developer_guide/contribution_guidelines.md)
+2. Check our [Issue Template](./contribution_templates/issue_template.md)
+3. Review our [Pull Request Template](./contribution_templates/pull_request_template.md)
+4. See our [Feature Request Template](./contribution_templates/feature_request_template.md)
 
-* NOTE: Replace `<organization>`, `<project>`, and `<stack>` with your Pulumi organization, project name, and stack name.
+## Accessibility
 
-```bash {"name":"load-environments-and-secrets","tag":"setup"}
-export ENVIRONMENT="containercraft/NavtecaAwsCredentialsConfigSmce/navteca-aws-credentials-config-smce"
-eval $(pulumi env open --format=shell $ENVIRONMENT | tee .tmpenv; direnv allow)
-echo "Loaded environment $ENVIRONMENT"
+This documentation adheres to web accessibility guidelines to ensure it's usable by everyone:
 
-alias aws='aws --profile smdc-cba'
+- Clear heading hierarchy for easy navigation
+- Alt text for all images and diagrams
+- High contrast text and proper font sizing
+- Keyboard-navigable interface
+- Screen reader compatibility
 
-```
+## Getting Help
 
-### 3. Validate AWS CLI Access
+If you need assistance:
 
-Get Caller Identity to verify your AWS identity:
+1. Check the [FAQ & Troubleshooting](./user_guide/faq_and_troubleshooting.md) guide
+2. Search existing [GitHub Issues](https://github.com/containercraft/konductor/issues)
+3. Join our [Community Discord](https://discord.gg/Jb5jgDCksX)
+4. Create a new issue using our [Issue Template](./contribution_templates/issue_template.md)
 
-```bash {"excludeFromRunAll":"true","name":"validate-aws-identity","tag":"validate-aws"}
-aws --profile smdc-cba sts get-caller-identity
+## Documentation Updates
 
-```
+This documentation is continuously improved based on user feedback and project evolution. To suggest improvements:
 
-### 3. Deploy IaC
+1. Create an issue using our documentation issue template
+2. Submit a pull request with your proposed changes
+3. Join the documentation discussions in our community channels
 
-Deploy the infrastructure as code (IaC) using Pulumi:
+## License
 
-```bash {"name":"deploy-iac","tag":"setup"}
-git remote add origin https://github.com/containercraft/konductor || true
-git config remote.origin.url https://github.com/containercraft/konductor || true
-pulumi up --yes --stack containercraft/scip-ops-prod --skip-preview=true --refresh=true
-
-```
-
-### 3. Install the SMCE CLI Tool
-
-Clone the SMCE CLI repository && Symlink `smce` cli:
-
-```bash {"name":"install-smce-cli","tag":"setup"}
-cd ~
-rm -rf ~/smce-cli ~/.local/bin/smce
-ln -sf $GIT_CONFIG ~/.gitconfig
-
-git config remote.origin.url https://git.smce.nasa.gov/smce-administration/smce-cli.git
-git clone https://git.smce.nasa.gov/smce-administration/smce-cli.git ~/smce-cli && cd ~/smce-cli && ls
-
-mkdir -p ~/.local/bin
-cp -f ~/smce-cli/smce ~/.local/bin/smce
-chmod +x ~/.local/bin/smce
-
-smce --help; true
-
-```
-
-### 4. Configure AWS and Kubernetes Using SMCE CLI
-
-Set up AWS Multi-Factor Authentication (MFA):
-
-> TODO: enhance smce-cli to auto-export mfa env vars
-
-```bash {"excludeFromRunAll":"true","name":"smce-aws-mfa","tag":"aws"}
-smce awsconfig mfa
-
-```
-
-### 7. Test AWS CLI Access
-
-List S3 buckets to confirm AWS access && Verify your AWS identity:
-
-```bash {"excludeFromRunAll":"true","name":"validate-aws-s3-ls","tag":"validate-aws"}
-aws s3 ls
-aws sts get-caller-identity
-
-```
-
-### 8. Update Kubernetes Configuration for EKS Cluster
-
-Update your kubeconfig file to interact with your EKS cluster:
-
-```bash {"excludeFromRunAll":"true","name":"aws-get-ops-kubeconfig","tag":"kubeconfig"}
-aws eks update-kubeconfig --profile main --region us-east-1 --name smce-gitops
-
-```
-
-Generate a new Kubernetes configuration:
-
-```bash {"excludeFromRunAll":"true","name":"generate-smce-kubeconfig","tag":"kubeconfig"}
-smce kubeconfig generate
-
-```
-
-Generate an authentication token for the EKS cluster:
-
-```bash {"excludeFromRunAll":"true","name":"generate-eks-auth-token","tag":"kubeconfig"}
-aws eks get-token --region us-east-1 --cluster-name smce-gitops --output json
-
-```
-
-Replace `<mfa-device-arn>` with your MFA device's ARN and provide your MFA token code in place of `$MFA_TOKEN`.
-
-### 9. Configure Kubectl Alias and Verify Kubernetes Access
-
-List available Kubernetes contexts:
-
-```bash {"excludeFromRunAll":"true","name":"validate-kubeconfig-context-list","tag":"kubeconfig"}
-kubectl --kubeconfig ~/.kube/smce config get-contexts
-
-```
-
-Retrieve the list of nodes in your Kubernetes cluster:
-
-```bash {"excludeFromRunAll":"true","name":"validate-kube-get-nodes","tag":"kubeconfig"}
-kubectl --kubeconfig ~/.kube/smce get nodes
-
-```
-
-Check the Kubernetes client and server versions with verbose output:
-
-```bash {"excludeFromRunAll":"true","name":"validate-kube-get-version","tag":"kubeconfig"}
-kubectl version -v=8
-
-```
-
-## Conclusion
-
-By following these steps, you've set up your environment to interact with AWS services and your EKS cluster. This setup is essential for deploying and managing applications using the Konductor DevOps Template.
-
-## Resources
-
-- [AWS CLI Documentation](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-welcome.html)
-- [Pulumi Documentation](https://www.pulumi.com/docs/)
-- [SMCE CLI Repository](https://git.smce.nasa.gov/smce-administration/smce-cli)
-- [Kubernetes Documentation](https://kubernetes.io/docs/home/)
-
-## Troubleshooting
-
-**Note:** If you encounter authentication issues due to MFA requirements, test temporary session credentials using the following command:
-
-```bash {"excludeFromRunAll":"true","name":"aws-sts-get-session-token","tag":"dbg"}
-aws sts get-session-token \
-  --duration-seconds 129600 \
-  --profile default \
-  --serial-number <mfa-device-arn> \
-  --token-code $MFA_TOKEN
-
-```
-
-## Bonus: Launch Kubernetes in Docker
-
-```bash {"excludeFromRunAll":"true","name":"task-run-kubernetes","tag":"tind"}
-cd ..
-task kubernetes
-
-```
+This documentation and the Konductor project are licensed under [LICENSE]. See the [LICENSE](../LICENSE) file for details.

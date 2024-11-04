@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository serves as a comprehensive template for starting new DevOps projects from scratch. It is designed to be cloned as a GitHub template repository, providing a fully-configured environment for deploying and managing cloud-native infrastructure using VSCode with Kubernetes and Pulumi boilerplate as a starting line.
+This repository serves as a comprehensive template for starting new DevOps projects from scratch. It is designed to be cloned as a GitHub template repository, providing a fully-configured environment for deploying and managing cloud-native infrastructure using VSCode with Kubernetes and Pulumi boilerplate as a starting point.
 
 Whether you're building for on-premises, cloud, or local environments, this template streamlines the setup and deployment processes, enabling you to focus on building and innovating.
 
@@ -12,9 +12,11 @@ Join the community in the [ContainerCraft Community Discord](https://discord.gg/
 
 - **AWS LandingZone**: Automated Kubernetes cluster setup using Talos.
 - **Kubernetes Deployment**: Automated Kubernetes cluster setup using Talos.
-- **Pulumi IaC Integration**: Infrastructure as Code management with Pulumi.
+- **Pulumi IaC Integration**: Infrastructure as Code management with Pulumi, using Python and best practices.
 - **Runme Integration**: Execute documented tasks directly from the README.md.
 - **GitHub Actions Support**: CI/CD pipelines configured for automated testing and deployment.
+- **Dependency Management with Poetry**: Manage Python dependencies and environments using Poetry.
+- **Strict Type Checking with Pyright**: Enforce code quality through strict type checking.
 
 ## Using This Template to Start a New Project
 
@@ -36,58 +38,143 @@ This repository is designed as a template, allowing you to quickly bootstrap new
 
 1. **Clone the Repository to Your Local Machine:**
 
-Once your new repository is created, clone it to your local machine using Git.
+   Once your new repository is created, clone it to your local machine using Git.
 
-```bash
-git clone https://github.com/YourUsername/YourNewRepoName.git
-cd YourNewRepoName
-```
+   ```bash
+   git clone https://github.com/YourUsername/YourNewRepoName.git
+   cd YourNewRepoName
+   ```
 
 2. **Initialize the Development Environment:**
 
-   If you're using [GitHub Codespaces](https://github.com/features/codespaces) or a local development environment with Docker, you can launch directly into the pre-configured environment.
+   We use [Poetry](https://python-poetry.org/) for dependency management and packaging. Poetry ensures that our development environment is consistent, dependencies are properly managed, and collaboration is streamlined.
 
-   - **GitHub Codespaces:** Click the `Code` button and select `Open with Codespaces`, or follow the instructions in the Quickstart section of this README.
-   - **Local Development:** Follow the instructions in the `Getting Started` section to set up your local environment.
+   **Install Poetry:**
+
+   Ensure that `poetry` is added to your system's PATH. Refer to the [official installation guide](https://python-poetry.org/docs/#installation) for detailed instructions.
+
+   **Install Dependencies and Create Virtual Environment:**
+
+   ```bash
+   poetry install
+   ```
+
+   **Activate the Virtual Environment:**
+
+   ```bash
+   poetry shell
+   ```
+
+   Alternatively, you can prefix commands with `poetry run`.
+
+3. **Configure Pulumi to Use Poetry:**
+
+   Ensure that `Pulumi.yaml` specifies Poetry as the toolchain:
+
+   ```yaml
+   name: your-pulumi-project
+   runtime:
+     name: python
+     options:
+       toolchain: poetry
+   ```
+
+4. **Install Pulumi Dependencies:**
+
+   ```bash
+   pulumi install
+   ```
+
+   This command ensures that Pulumi recognizes and utilizes the Poetry-managed environment.
 
 ### Step 3: Customize the Configuration
 
 1. **Update Configuration Files:**
 
    - Customize the `.env` file with your project-specific environment variables.
-   - Modify the `Taskfile.yaml` to include tasks specific to your project.
    - Adjust the Pulumi configuration files under `.pulumi` to match your cloud and infrastructure setup.
 
 2. **Set Up Your Pulumi Stack:**
 
-   Configure your Pulumi stack settings to match your project environment by following the steps in the `Getting Started` section.
+   Configure your Pulumi stack settings to match your project environment by running:
+
+   ```bash
+   pulumi stack init dev
+   ```
+
+   Replace `dev` with your desired stack name.
+
+3. **Install Pyright for Type Checking:**
+
+   We enforce strict type checking using [Pyright](https://github.com/microsoft/pyright).
+
+   **Add Pyright to the Development Dependencies:**
+
+   ```bash
+   poetry add --dev pyright
+   ```
+
+   **Configure Pyright:**
+
+   Create a `pyrightconfig.json` in the project root to define Pyright settings:
+
+   ```json
+   {
+     "include": ["**/*.py"],
+     "exclude": ["**/__pycache__/**"],
+     "reportMissingImports": true,
+     "pythonVersion": "3.8",
+     "typeCheckingMode": "strict"
+   }
+   ```
+
+   **Verify Type Checking:**
+
+   ```bash
+   poetry run pyright
+   ```
+
+4. **Editor Integration (Optional):**
+
+   For real-time type checking and enhanced development experience, integrate Pyright with your editor. If you use Visual Studio Code, install the [Pylance extension](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance) and set `"python.analysis.typeCheckingMode": "strict"` in your settings.
 
 ### Step 4: Start Developing
 
 1. **Deploy the Infrastructure:**
 
-Use the pre-configured tasks to deploy your infrastructure, as detailed in the Quickstart section.
+   Before deploying, ensure that your code passes type checking to maintain code quality.
 
-```bash
-task kubernetes
-task deploy
-```
+   **Run Type Checking:**
 
-2. **Build and Iterate:**
+   ```bash
+   poetry run pyright
+   ```
 
-   With your infrastructure deployed, you can now focus on developing your application, iterating on your DevOps processes, and refining your setup.
+   **Deploy with Pulumi:**
+
+   ```bash
+   pulumi up
+   ```
+
+   If type errors are detected, the deployment will halt, and errors will be displayed.
+
+2. **Implement Best Practices:**
+
+   - Use `TypedDict` to define resource inputs with type hints, enhancing code readability and type safety.
+   - Follow the code standards and guidelines outlined in [PULUMI_PYTHON.md](docs/PULUMI_PYTHON.md), including naming conventions, type annotations, and error handling.
+   - Organize your code into logical modules and packages for better maintainability.
 
 ### Step 5: Push Your Changes
 
 1. **Commit and Push:**
 
-After making changes, commit them to your repository.
+   After making changes, commit them to your repository.
 
-```bash
-git add .
-git commit -m "Initial setup and configuration"
-git push origin main
-```
+   ```bash
+   git add .
+   git commit -m "Initial setup and configuration"
+   git push origin main
+   ```
 
 2. **Collaborate and Contribute:**
 
@@ -95,9 +182,10 @@ git push origin main
 
 ### Tips for Success
 
-- **Keep your dependencies up to date:** Regularly update the tools and libraries used in your project.
-- **Document your changes:** Update the README and other documentation as your project evolves.
-- **Engage with the community:** Join the [ContainerCraft Community Discord](https://discord.gg/Jb5jgDCksX) to get support and share your experiences.
+- **Keep Your Dependencies Up to Date:** Regularly update the tools and libraries used in your project.
+- **Enforce Type Checking:** Use Pyright to catch type errors early in the development process.
+- **Document Your Changes:** Update the README and other documentation as your project evolves.
+- **Engage with the Community:** Join the [ContainerCraft Community Discord](https://discord.gg/Jb5jgDCksX) to get support and share your experiences.
 
 ## How-To (Boilerplate Instructions)
 
@@ -110,6 +198,7 @@ Ensure you have the following tools and accounts:
 1. [GitHub](https://github.com)
 2. [Pulumi Cloud](https://app.pulumi.com/signup)
 3. [Microsoft Edge](https://www.microsoft.com/en-us/edge) or [Google Chrome](https://www.google.com/chrome)
+4. [Poetry](https://python-poetry.org/docs/#installation)
 
 ### Quickstart
 
@@ -119,60 +208,76 @@ Follow these steps to get your environment up and running:
 
    Clone this repository to your GitHub account using the "Use this template" button.
 
-2. **Launch in GitHub Codespaces:**
+2. **Launch in GitHub Codespaces or Local Development Environment:**
 
-   Start a new GitHub Codespace with the following options:
+   - **GitHub Codespaces:** Start a new Codespace with the following options:
 
-   - **Branch:** `main`
-   - **Dev Container Configuration:** `konductor`
-   - **Region:** Your choice
-   - **Machine Type:** 4 cores, 16 GB RAM, or better
+     - **Branch:** `main`
+     - **Dev Container Configuration:** `konductor`
+     - **Region:** Your choice
+     - **Machine Type:** 4 cores, 16 GB RAM, or better
+
+   - **Local Development:** Set up your local environment using Docker or your preferred method.
 
 3. **Open the Integrated Terminal:**
 
    Use `Ctrl + `` to open the VSCode integrated terminal.
 
-4. **Authenticate Credentials:**
+4. **Initialize the Development Environment:**
 
-Login to Pulumi Cloud and other required services.
+   **Install Dependencies:**
 
-```bash {"name":"login"}
-task login
-```
+   ```bash
+   poetry install
+   ```
 
-5. **Configure the Pulumi Stack:**
+   **Activate the Virtual Environment:**
 
-Set up Pulumi stack parameters.
+   ```bash
+   poetry shell
+   ```
 
-```bash {"name":"configure"}
-export ORGANIZATION="${GITHUB_USER:-${GITHUB_REPOSITORY_OWNER:-}}"
-export DEPLOYMENT="${RepositoryName:-}"
-task configure
-```
+5. **Authenticate Credentials:**
 
-6. **Deploy Kubernetes:**
+   Login to Pulumi Cloud and other required services.
 
-Deploy Kubernetes using Talos.
+   ```bash
+   pulumi login
+   ```
 
-```bash {"excludeFromRunAll":"true","name":"kubernetes"}
-task kubernetes
-```
+6. **Configure the Pulumi Stack:**
 
-7. **Deploy the Platform:**
+   Set up Pulumi stack parameters.
 
-Deploy the KubeVirt PaaS infrastructure.
+   ```bash
+   pulumi stack init dev
+   ```
 
-```bash {"excludeFromRunAll":"true","name":"deploy"}
-task deploy
-```
+   Replace `dev` with your desired stack name.
 
-8. **Cleanup:**
+7. **Run Type Checking:**
 
-Clean up all Kubernetes and Pulumi resources when you're done.
+   Ensure your code passes type checking before deployment.
 
-```bash {"excludeFromRunAll":"true","name":"clean"}
-task clean-all
-```
+   ```bash
+   poetry run pyright
+   ```
+
+8. **Deploy the Infrastructure:**
+
+   **Deploy with Pulumi:**
+
+   ```bash
+   pulumi up
+   ```
+
+9. **Cleanup:**
+
+   Clean up all Kubernetes and Pulumi resources when you're done.
+
+   ```bash
+   pulumi destroy
+   ```
 
 ## Contributing
 
@@ -182,8 +287,8 @@ Contributions are welcome! This template is intended to evolve with the needs of
 
 Use the `act` tool to test GitHub Actions locally before pushing your changes.
 
-```bash {"excludeFromRunAll":"true"}
-task act
+```bash
+act
 ```
 
 ## Community and Support

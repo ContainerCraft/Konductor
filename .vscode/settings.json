@@ -126,6 +126,7 @@
     "/workspaces/devcontainer",
     "/workspaces/kargo"
   ],
+  "python.analysis.typeCheckingMode": "strict",
   "go.testTags": "all",
   "go.vetOnSave": "off",
   "go.buildTags": "all",
