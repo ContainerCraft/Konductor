@@ -146,12 +146,12 @@ tasks:
   configure:
     desc: "Configure Pulumi stack settings."
     cmds:
-      - source .envrc && poetry run pulumi stack select --create {{.pulumi_stack_identifier}}
-      - source .envrc && poetry run pulumi config set --path kubernetes.context admin@{{.cluster_name}}
-      - source .envrc && poetry run pulumi config set --path kubernetes.kubeconfig {{.kube_config_file}}
-      - source .envrc && poetry run pulumi config set --path kubernetes.distribution talos
-      - source .envrc && poetry run pulumi config set --path cilium.enabled false
-      - source .envrc && poetry run pulumi config set --path vm.enabled false
+      - source .envrc && pulumi stack select --create {{.pulumi_stack_identifier}}
+      - source .envrc && pulumi config set --path kubernetes.context admin@{{.cluster_name}}
+      - source .envrc && pulumi config set --path kubernetes.kubeconfig {{.kube_config_file}}
+      - source .envrc && pulumi config set --path kubernetes.distribution talos
+      - source .envrc && pulumi config set --path cilium.enabled false
+      - source .envrc && pulumi config set --path vm.enabled false
 
   # Task to deploy Pulumi infrastructure
   iac-deploy:
@@ -159,9 +159,9 @@ tasks:
     deps: [type-check]
     cmds:
       - task: iac-cancel
-      - source .envrc && poetry run pulumi up --yes --skip-preview --refresh --continue-on-error --stack {{.pulumi_stack_identifier}} || true
+      - source .envrc && pulumi up --yes --skip-preview --refresh --continue-on-error --stack {{.pulumi_stack_identifier}} || true
       - task: all-pods-ready
-      - source .envrc && poetry run pulumi up --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
+      - source .envrc && pulumi up --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
       - task: all-pods-ready
 
   # Task to destroy Pulumi infrastructure
@@ -171,14 +171,14 @@ tasks:
       - task: iac-cancel
       - |
         source .envrc
-        poetry run pulumi down --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}} || true
-        poetry run pulumi down --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
+        pulumi down --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}} || true
+        pulumi down --yes --skip-preview --refresh --stack {{.pulumi_stack_identifier}}
 
   # Task to cancel the Pulumi update process
   iac-cancel:
     desc: "Cancel the Pulumi update."
     cmds:
-      - source .envrc && poetry run pulumi cancel --yes --stack {{.pulumi_stack_identifier}} 2>/dev/null || true
+      - source .envrc && pulumi cancel --yes --stack {{.pulumi_stack_identifier}} 2>/dev/null || true
 
   # Task to clean up all Pulumi resources
   iac-clean:
