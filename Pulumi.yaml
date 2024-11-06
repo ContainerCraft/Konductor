@@ -1,7 +1,7 @@
 name: konductor
 description: DevOps Platform IaC Template Repository
-main: ./pulumi
-stackConfigDir: ./pulumi/stacks
+main: ./
+stackConfigDir: ./stacks
 runtime:
   name: python
   options:

@@ -6,14 +6,21 @@ AWS Module Deployment - Enhanced Compliance Metadata Propagation
 This script initializes the AWS provider, retrieves the STS caller identity,
 and ensures compliance metadata is propagated as tags.
 """
-
+from typing import List, Dict, Tuple, Optional, Any, TYPE_CHECKING
 import pulumi
 import pulumi_aws as aws
 from pulumi import ResourceOptions, log
-from typing import List, Dict, Tuple
 
+from core.metadata import collect_git_info
+from core.types import ComplianceConfig
 from .types import AWSConfig, TenantAccountConfig
-from .config import initialize_aws_provider, generate_tags, load_tenant_account_configs
+from .config import (
+    initialize_aws_provider,
+    generate_tags,
+    load_tenant_account_configs
+)
+from .exceptions import ResourceCreationError
+from .provider import AWSProvider
 from .resources import (
     create_s3_bucket,
     create_organization,
@@ -26,16 +33,20 @@ from .resources import (
     get_or_create_organization,
     get_organization_root_id,
 )
-from core.metadata import collect_git_info
-from core.types import ComplianceConfig
+from .security import SecurityManager
+from .networking import NetworkManager
+
+if TYPE_CHECKING:
+    from pulumi import Resource
 
 MODULE_NAME = "aws"
 MODULE_VERSION = "0.0.1"
 
 
 def deploy_aws_module(
-    config: AWSConfig, global_depends_on: List[pulumi.Resource]
-) -> Tuple[str, pulumi.Resource]:
+    config: AWSConfig,
+    global_depends_on: List[pulumi.Resource]
+) -> Tuple[str, pulumi.Resource, Dict[str, Any]]:
     """
     Deploys the AWS module resources.
 
@@ -45,6 +56,13 @@ def deploy_aws_module(
 
     Returns:
         Tuple[str, pulumi.Resource]: A tuple containing the module version and the main AWS resource deployed.
+
+    TODO:
+    - Enhance error handling with custom exception types
+    - Add rollback mechanisms for failed deployments
+    - Implement deployment status tracking
+    - Add deployment metrics collection
+    - Enhance logging with structured logging
     """
     try:
         # Initialize AWS Provider
@@ -85,7 +103,10 @@ def deploy_aws_module(
             if ou_applications:
                 tenant_configs = load_tenant_account_configs()
                 tenant_accounts = create_tenant_accounts(
-                    organization, ou_applications, tenant_configs, aws_provider
+                    organization,
+                    ou_applications,
+                    tenant_configs,
+                    aws_provider
                 )
 
                 # Deploy resources for each tenant
@@ -100,8 +121,27 @@ def deploy_aws_module(
                     tenant_config = tenant_configs.get(tenant_account.name)
                     if tenant_config:
                         deploy_tenant_resources(
-                            tenant_provider, tenant_account, tenant_config
+                            tenant_provider,
+                            tenant_account,
+                            tenant_config
                         )
+
+        # Deploy EKS if enabled
+        if config.eks and config.eks.enabled:
+            eks_cluster = provider.eks.create_cluster(
+                config.eks,
+                vpc.id,
+                [subnet.id for subnet in private_subnets],
+                opts=ResourceOptions(
+                    provider=provider.provider,
+                    depends_on=[vpc, *private_subnets]
+                )
+            )
+            module_outputs["eks_cluster"] = {
+                "name": eks_cluster.name,
+                "endpoint": eks_cluster.endpoint,
+                "version": eks_cluster.version
+            }
 
         # Return Dictionary of AWS Module Resources to global configuration dictionary
         module_outputs = {

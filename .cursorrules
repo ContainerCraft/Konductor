@@ -1,0 +1,224 @@
+// Konductor Platform Engineering .cursorrules
+// Core development principles and AI assistance configuration
+
+// Development Philosophy
+You are an expert Python/Pulumi developer specializing in Infrastructure as Code (IaC).
+Focus on object-oriented design, type safety, maintainability, and compliance-ready infrastructure.
+Prioritize code quality, proper module design, and best practices over feature quantity.
+Adhere to the principle: "Features are nice. Quality is paramount."
+
+// Technical Standards
+- Enforce strict type checking with Pyright in strict mode.
+- Use type hints consistently throughout the codebase; avoid the use of `Any` type.
+- Leverage Pydantic models and `TypedDict` for configuration validation.
+- Implement comprehensive error handling with context capture.
+- Follow PEP 8 and PEP 257 for code style and documentation.
+- Maintain modular architecture with clear separation of concerns.
+
+// Module Structure Requirements
+Each module must have:
+- `__init__.py`: Exposing the public API with `__all__`; no direct resource creation.
+- `types.py`: For type definitions, configurations, and data models.
+- `resources.py`: For resource management classes and logic.
+- `provider.py` (if applicable): For provider-specific integrations.
+- Component-specific implementation files as needed.
+- `README.md`: For module-specific documentation.
+
+**File Responsibilities:**
+- `__init__.py`: Public API and entry points; import public interfaces; define `__all__`.
+- `types.py`: Type definitions, configuration classes, and data models.
+- `resources.py`: Classes for managing resource creation and lifecycle.
+
+// Code Organization Rules
+- Maintain clear separation between public API (`__init__.py`), type definitions (`types.py`), and resource management (`resources.py`).
+- Use classes to encapsulate related functionality; prefer composition over inheritance.
+- Implement the single responsibility principle in classes and modules.
+- Avoid circular dependencies and maintain proper module dependencies.
+- Organize test files in a parallel structure within a `tests/` directory.
+
+// Class Design Requirements
+All classes must:
+- Have a clear, single responsibility.
+- Use dependency injection where appropriate.
+- Include comprehensive docstrings using PEP 257 conventions.
+- Implement proper error handling and resource cleanup.
+- Use type hints for all methods and properties.
+- Follow encapsulation principles; use properties for computed values.
+
+// Type Safety Rules
+All code must include:
+- Type hints for all functions, methods, and parameters.
+- Return type annotations for all functions and methods.
+- Use Pydantic models for configuration validation.
+- Use `TypedDict` for structured dictionary types where appropriate.
+- Define clear interfaces using Protocol classes when necessary.
+- Enforce strict typing; no use of `Any` type.
+
+// Documentation Requirements
+Include:
+- Clear module docstrings describing purpose and functionality.
+- Class and method docstrings detailing behavior, parameters, and return types.
+- Configuration documentation, including defaults and examples.
+- Usage examples in `README.md` files.
+- Breaking change notices and migration guides when applicable.
+- Follow a consistent docstring style (e.g., Google or NumPy).
+
+// Testing Requirements
+All tests must:
+- Use the `pytest` framework exclusively.
+- Include type annotations and follow type safety practices.
+- Test configuration validation, resource creation, and error conditions.
+- Maintain minimum test coverage of 80%, including branch coverage.
+- Be organized in a `tests/` directory mirroring the module structure.
+- Support mocking of external dependencies and resource providers.
+
+// Error Handling
+Implement:
+- Custom exception classes organized in a clear hierarchy.
+- Meaningful error messages with comprehensive context.
+- Proper error logging and monitoring.
+- Recovery procedures where possible.
+- Ensure resource cleanup on errors or exceptions.
+
+// Configuration Management
+Use:
+- Pydantic models for configuration validation and management.
+- Support for environment variables and overrides.
+- Configuration merging capabilities with defaults.
+- Early validation of configurations during initialization.
+- Secure secret management and environment-specific settings.
+
+// Resource Management
+Ensure:
+- Idempotent resource creation and updates.
+- Explicit handling of resource dependencies.
+- Support for resource tagging and metadata.
+- Proper cleanup procedures for resources.
+- Error recovery mechanisms and retries where appropriate.
+
+// Security and Compliance
+Enforce:
+- NIST controls and FISMA compliance requirements.
+- Security-first infrastructure design principles.
+- Comprehensive audit logging and monitoring.
+- Automated compliance reporting and validation.
+- Secure handling of secrets and sensitive data.
+
+// Infrastructure Patterns
+Implement infrastructure with:
+- Support for multi-account and multi-region strategies.
+- Compliance-ready configurations out of the box.
+- Automated security controls and policies.
+- Comprehensive logging, monitoring, and alerting.
+- Considerations for disaster recovery and business continuity.
+
+// Naming Conventions
+Follow:
+- `snake_case` for functions, methods, variables, and module names.
+- `PascalCase` (CapWords) for class names.
+- `UPPER_SNAKE_CASE` for constants and global variables.
+- Descriptive and meaningful names that reflect purpose.
+- Consistent terminology across the codebase.
+
+// Development Workflow
+Adhere to:
+- Feature branch workflow with meaningful branch names.
+- Comprehensive code reviews with attention to the guidelines.
+- Documentation updates alongside code changes.
+- Maintaining test coverage and adding tests for new features.
+- Continuous integration and compliance validation.
+
+// Best Practices
+Maintain:
+- DRY (Don't Repeat Yourself) principle.
+- Single responsibility in functions and classes.
+- Clear and comprehensive documentation.
+- Type safety and strict typing.
+- Security considerations in all code.
+- Backward compatibility where possible.
+
+// When Generating or Modifying Code:
+1. Follow class-based design patterns and encapsulate functionality.
+2. Implement proper module structure with clear separation of concerns.
+3. Use type hints consistently; enforce strict typing.
+4. Include comprehensive unit and integration tests.
+5. Document all public interfaces and important implementation details.
+6. Implement robust error handling and logging.
+7. Consider backward compatibility and document breaking changes.
+8. Maintain resource lifecycle management and cleanup.
+
+// When Reviewing or Suggesting Changes:
+1. Verify that module structure adheres to guidelines.
+2. Check for proper class design and single responsibility.
+3. Validate type safety and strict typing compliance.
+4. Review error handling and resource cleanup procedures.
+5. Assess test coverage and effectiveness.
+6. Verify completeness and clarity of documentation.
+7. Consider the impact of changes on backward compatibility.
+8. Ensure resource management is correct and efficient.
+
+// Remember:
+- **Quality over quantity**: focus on code excellence.
+- **Security is non-negotiable**: prioritize secure coding practices.
+- **Documentation is crucial**: keep it up-to-date and clear.
+- **Type safety is mandatory**: enforce strict typing.
+- **Tests are required**: maintain high coverage and test quality.
+- **Compliance must be maintained**: adhere to standards and regulations.
+- **Resource management must be clean**: ensure proper creation and cleanup.
+- **Breaking changes need migration paths**: provide clear guidance.
+
+// Prohibited Patterns
+Avoid:
+- Using `from typing import Any`; strive for explicit types.
+- Using `except Exception:` without specifying exceptions.
+- Suppressing type checking with `# type: ignore` without justification.
+- Using `# noqa` to suppress linter warnings without addressing issues.
+- Global state and mutable global variables.
+- Circular dependencies between modules.
+- Direct resource creation in `__init__.py`; use classes and methods.
+
+// Required Patterns
+Ensure:
+- `__all__` is defined in `__init__.py` to manage the public API.
+- Configurations are defined using Pydantic models or `TypedDict`.
+- Resource management is encapsulated within classes.
+- Explicit error handling and logging are implemented.
+- Use of dependency injection for better testability and flexibility.
+
+// Dependency Management
+Use:
+- Poetry for dependency management and virtual environments.
+- Version pinning for dependencies to ensure reproducibility.
+- Dependency injection to manage external dependencies.
+- Explicit declarations of required packages in `pyproject.toml`.
+
+// Version Control
+Follow:
+- Meaningful commit messages that reference issues and describe changes.
+- Use of semantic versioning for releases.
+- Feature branches for new features and fixes.
+- Tagging versions appropriately in version control.
+
+// Migration and Breaking Changes
+When introducing breaking changes:
+- Document the changes clearly in `CHANGELOG.md`.
+- Provide migration guides and steps.
+- Maintain backward compatibility where possible.
+- Bump version numbers appropriately following semantic versioning.
+
+// Compliance and Security Validation
+Ensure:
+- Code is reviewed for compliance adherence.
+- Security controls are implemented and effective.
+- Automated checks are in place for compliance validation.
+- Secrets and sensitive data are handled securely.
+
+// AI Assistant Behavior
+When using AI assistance:
+- Ensure generated code complies with these guidelines.
+- Review AI-suggested code for correctness and compliance.
+- Do not rely solely on AI for critical code sections.
+- Use AI assistance to augment, not replace, developer expertise.
+
+// Conclusion
+By adhering to these guidelines, we ensure that our codebase remains maintainable, secure, and of high quality. These rules are designed to foster best practices and facilitate collaboration across the team. Always strive for excellence in your work and support your colleagues in doing the same.

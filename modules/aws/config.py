@@ -16,7 +16,7 @@ Functions:
 
 import os
 import json
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, TYPE_CHECKING
 import pulumi
 from pulumi import log, Config, ResourceTransformationResult, ResourceTransformationArgs
 from pulumi_aws import Provider
@@ -24,9 +24,10 @@ from core.metadata import (
     get_global_labels,
     generate_compliance_labels,
     generate_git_labels,
+    collect_git_info,
 )
 from core.types import ComplianceConfig
-from .types import AWSConfig, TenantAccountConfig
+from .types import AWSConfig, TenantAccountConfig, validate_config
 from .taggable import TAGGABLE_RESOURCES
 
 # Constants
@@ -91,9 +92,6 @@ def generate_global_transformations(global_tags: Dict[str, str]) -> None:
     pulumi.runtime.register_stack_transformation(global_transform)
 
 
-# pulumi/modules/aws/config.py
-
-
 def generate_tags(
     config: AWSConfig, compliance_config: ComplianceConfig, git_info: Dict[str, str]
 ) -> Dict[str, str]:
@@ -121,7 +119,7 @@ def generate_tags(
     }
 
     # Log generated tags for visibility
-    # pulumi.log.info(f"Generated AWS tags: {json.dumps(aws_module_tags, indent=2)}")
+    log.info(f"Generated AWS tags: {json.dumps(aws_module_tags, indent=2)}")
 
     # Register the global transformation
     generate_global_transformations(aws_module_tags)
@@ -177,3 +175,109 @@ def load_tenant_account_configs() -> Dict[str, TenantAccountConfig]:
             )
 
     return tenant_accounts
+
+def merge_configurations(
+    base_config: Dict[str, Any], override_config: Dict[str, Any]
+) -> Dict[str, Any]:
+    """
+    Merges two configuration dictionaries with override taking precedence.
+
+    Args:
+        base_config: Base configuration dictionary.
+        override_config: Override configuration dictionary.
+
+    Returns:
+        Dict[str, Any]: Merged configuration dictionary.
+    """
+    merged = base_config.copy()
+    for key, value in override_config.items():
+        if (
+            key in merged
+            and isinstance(merged[key], dict)
+            and isinstance(value, dict)
+        ):
+            merged[key] = merge_configurations(merged[key], value)
+        else:
+            merged[key] = value
+    return merged
+
+
+def get_default_config() -> Dict[str, Any]:
+    """
+    Returns default AWS configuration settings.
+
+    Returns:
+        Dict[str, Any]: Default configuration dictionary.
+    """
+    return {
+        "region": "us-west-2",
+        "profile": "default",
+        "control_tower": {
+            "enabled": False,
+            "organizational_unit_name": "LandingZone",
+        },
+        "global_tags": {
+            "managed-by": "konductor",
+            "environment": "production",
+        },
+    }
+
+
+def load_environment_overrides() -> Dict[str, Any]:
+    """
+    Loads configuration overrides from environment variables.
+
+    Returns:
+        Dict[str, Any]: Configuration overrides from environment.
+    """
+    overrides = {}
+
+    # Map environment variables to configuration keys
+    env_mapping = {
+        "AWS_REGION": "region",
+        "AWS_PROFILE": "profile",
+        "AWS_ACCOUNT_ID": "account_id",
+    }
+
+    for env_var, config_key in env_mapping.items():
+        if value := os.getenv(env_var):
+            overrides[config_key] = value
+
+    return overrides
+
+def setup_aws_configuration() -> AWSConfig:
+    """
+    Sets up the complete AWS configuration by combining defaults,
+    Pulumi config, and environment variables.
+
+    Returns:
+        AWSConfig: Complete AWS configuration object.
+
+    Raises:
+        ValueError: If required configuration is missing or invalid.
+    """
+    try:
+        # Load configurations in order of precedence
+        default_config = get_default_config()
+        pulumi_config = load_aws_config()
+        env_overrides = load_environment_overrides()
+
+        # Merge configurations
+        merged_config = merge_configurations(
+            default_config,
+            pulumi_config.dict()
+        )
+        final_config = merge_configurations(
+            merged_config,
+            env_overrides
+        )
+
+        # Create and validate config object
+        config = AWSConfig.merge(final_config)
+        validate_config(config)
+
+        return config
+
+    except Exception as e:
+        log.error(f"Failed to setup AWS configuration: {str(e)}")
+        raise
