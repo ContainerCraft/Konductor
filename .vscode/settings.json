@@ -280,5 +280,6 @@
         }
       ]
     }
-  ]
+  ],
+  "python.pythonPath": "/workspaces/konductor/.venv/bin/python"
 }
