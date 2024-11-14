@@ -101,15 +101,20 @@ This guide is organized to support different development activities:
 
 ```bash
 konductor/
-├── pulumi/
-│ ├── main.py # Main entry point
-│ ├── core/ # Core functionality
-│ │ ├── config.py
-│ │ ├── deployment.py
-│ │ └── utils.py
-│ └── modules/ # Individual modules
-│ ├── aws/
-│ └── cert_manager/
+├── __main__.py
+├── modules
+│ ├── aws
+│ │   ├── config.py
+│ │   ├── <other_module_files>
+│ │   └── types.py
+│ └── core
+│     ├── config.py
+│     ├── deployment.py
+│     ├── __init__.py
+│     ├── metadata.py
+│     ├── resource_helpers.py
+│     ├── types.py
+│     └── utils.py
 ├── docs/ # Documentation
 └── tests/ # Test suite
 ```

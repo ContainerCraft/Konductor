@@ -35,7 +35,7 @@ This documentation is intended for a wide audience, including junior, senior, an
 The core module is organized as follows:
 
 ```
-pulumi/core/
+core/
 ├── __init__.py           # Module initialization and exports
 ├── config.py             # Advanced configuration management system
 ├── deployment.py         # Deployment orchestration and lifecycle management

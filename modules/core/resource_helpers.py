@@ -1,4 +1,4 @@
-# pulumi/core/resource_helpers.py
+# ./modules/core/resource_helpers.py
 
 """
 Resource Helper Functions Module

@@ -185,15 +185,14 @@ poetry run pyright
 
 ```
 konductor/
-├── pulumi/
-│   ├── main.py
-│   ├── core/
-│   │   ├── config.py
-│   │   ├── deployment.py
-│   │   └── utils.py
-│   └── modules/
-│       ├── aws/
-│       └── cert_manager/
+├── __main__.py
+├── core/
+│   ├── __init__.py
+│   ├── config.py
+│   └── utils.py
+└── modules/
+│   ├── aws/
+│   └── kubernetes/
 ├── docs/
 └── tests/
 ```

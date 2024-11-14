@@ -70,7 +70,7 @@ class AWSOrganizationConfig(TypedDict):
 ### Directory Structure
 
 ```
-aws/
+./modules/aws/
 ├── __init__.py
 ├── types.py          # TypedDict definitions
 ├── deploy.py         # Deployment logic

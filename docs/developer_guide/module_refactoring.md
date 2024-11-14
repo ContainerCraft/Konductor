@@ -33,7 +33,7 @@ Modules should separate functionality into distinct files:
 ## Standard Module Structure
 
 ```bash
-module_name/
+module/<module_name>/
 ├── __init__.py
 ├── types.py
 ├── provider.py
@@ -193,10 +193,10 @@ When refactoring modules, maintain backward compatibility:
 
 ## Example Implementation
 See the AWS module implementation as a reference:
-- `pulumi/modules/aws/__init__.py`
-- `pulumi/modules/aws/types.py`
-- `pulumi/modules/aws/resources.py`
-- `pulumi/modules/aws/provider.py`
+- `modules/aws/__init__.py`
+- `modules/aws/types.py`
+- `modules/aws/resources.py`
+- `modules/aws/provider.py`
 
 ## Validation Checklist
 

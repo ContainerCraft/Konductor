@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+# ./__main__.py
 """
 Konductor Infrastructure as Code Platform
 
@@ -19,24 +19,24 @@ from typing import Dict, Any, List
 import pulumi
 from pulumi import log
 
-from core.config import (
+from modules.core.config import (
     get_enabled_modules,
     load_default_versions,
     initialize_config,
     validate_module_config
 )
-from core.deployment import (
+from modules.core.deployment import (
     initialize_pulumi,
     deploy_modules,
     DeploymentManager
 )
-from core.metadata import (
+from modules.core.metadata import (
     collect_git_info,
     set_global_labels,
     set_global_annotations,
     setup_global_metadata
 )
-from core.types import (
+from modules.core.types import (
     InitializationConfig,
     ComplianceConfig,
     ModuleDeploymentResult

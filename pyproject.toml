@@ -4,7 +4,10 @@ version = "0.1.0"
 description = "DevOps Platform IaC Template Repository"
 authors = ["Your Name <your.email@example.com>"]
 readme = "README.md"
-packages = [{include = "pulumi"}]
+packages = [
+    { include = "modules" },
+    { include = "__main__.py" }
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
@@ -30,7 +33,10 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pyright]
-include = ["pulumi"]
+include = [
+    "modules",
+    "__main__.py"
+]
 exclude = ["**/node_modules", "**/__pycache__"]
 typeCheckingMode = "basic"
 useLibraryCodeForTypes = true

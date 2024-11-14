@@ -1,4 +1,4 @@
-# pulumi/core/deployment.py
+# ./modules/core/deployment.py
 
 """
 Deployment Management Module
@@ -15,19 +15,26 @@ Key Functions:
 import os
 import inspect
 import importlib
-from typing import Dict, Any, List, Type, Callable, Optional, cast
-from pydantic import ValidationError
+from typing import Dict, Any, List, Type, Callable, Optional
 
 import pulumi
-import pulumi_kubernetes as k8s
 from pulumi import log
 from pulumi_kubernetes import Provider
 
+from .interfaces import (
+    DeploymentContext,
+    ModuleInterface,
+    ModuleDeploymentResult,
+    ResourceManagerInterface
+)
+from .types import (
+    ComplianceConfig,
+    InitializationConfig
+)
 from .config import (
     get_module_config,
     load_default_versions,
-    initialize_config,
-    validate_module_config
+    initialize_config
 )
 from .metadata import (
     collect_git_info,
@@ -39,12 +46,6 @@ from .metadata import (
     generate_compliance_annotations,
 )
 from .utils import generate_global_transformations
-from .types import (
-    ComplianceConfig,
-    InitializationConfig,
-    ModuleDeploymentResult
-)
-from .resource_helpers import create_namespace
 
 class DeploymentManager:
     """

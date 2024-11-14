@@ -25,7 +25,7 @@ from typing import Dict, List, Any, Optional
 
 # Version information
 __version__ = "0.1.0"
-__author__ = "Konductor Team"
+__author__ = "ContainerCraft Konductor Maintainers"
 
 # Type exports
 from .types import (

@@ -1,4 +1,4 @@
-# pulumi/core/types.py
+# ./modules/core/types.py
 
 """
 Types and Data Structures Module
@@ -7,11 +7,21 @@ This module defines all shared data classes and types used across all modules.
 It provides type-safe configuration structures using Pydantic models and TypedDict.
 """
 
-from typing import Dict, List, Optional, Any, TypedDict, Protocol
-from pydantic import BaseModel, Field, validator
+from typing import Dict, List, Optional, Any, TypedDict, Protocol, Type, Tuple, Iterable
+from pydantic import BaseModel, Field, validator, ValidationError
 from datetime import datetime
 import pulumi
 import pulumi_kubernetes as k8s
+from pulumi import ResourceOptions, Resource, Output, log
+
+from .interfaces import (
+    DeploymentContext,
+    ModuleInterface,
+    ModuleDeploymentResult,
+    ResourceMetadata
+)
+
+from .aws import AWSManagers
 
 
 class NamespaceConfig(BaseModel):
@@ -89,7 +99,6 @@ class NistConfig(BaseModel):
             return v.lower() == "true"
         return bool(v)
 
-
 class ScipConfig(BaseModel):
     """
     SCIP-specific configuration.
@@ -155,28 +164,7 @@ class ComplianceConfig(BaseModel):
         return base_dict
 
 
-class ResourceMetadata(BaseModel):
-    """
-    Common resource metadata.
-
-    Attributes:
-        created_at: Resource creation timestamp
-        updated_at: Last update timestamp
-        labels: Resource labels
-        annotations: Resource annotations
-    """
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
-    labels: Dict[str, str] = Field(default_factory=dict)
-    annotations: Dict[str, str] = Field(default_factory=dict)
-
-    @validator("updated_at", pre=True, always=True)
-    def update_timestamp(cls, v: Any, values: Dict[str, Any]) -> datetime:
-        """Ensure updated_at is always current."""
-        return datetime.utcnow()
-
-
-class ModuleBase(BaseModel):
+class ModuleBase(Protocol):
     """
     Base class for all module configurations.
 
@@ -195,6 +183,26 @@ class ModuleBase(BaseModel):
         json_encoders = {
             datetime: lambda v: v.isoformat()
         }
+
+    @staticmethod
+    def validate_config(config: Dict[str, Any]) -> List[str]:
+        """
+        Validate module configuration.
+
+        Args:
+            config: Module configuration dictionary
+
+        Returns:
+            List of validation error messages
+        """
+        try:
+            if hasattr(ModuleBase, 'Config'):
+                ModuleBase.Config(**config)
+            return []
+        except ValidationError as e:
+            return [str(error) for error in e.errors()]
+        except Exception as e:
+            return [str(e)]
 
 
 class ModuleDefaults(TypedDict):
@@ -375,21 +383,6 @@ class DependencyResolver:
         """
         # TODO: Implementation using topological sort
         pass
-
-class ModuleInterface(Protocol):
-    """Protocol defining required module interface."""
-
-    def validate_config(self, config: Dict[str, Any]) -> List[str]:
-        """Validate module configuration."""
-        ...
-
-    def deploy(self, ctx: DeploymentContext) -> ModuleDeploymentResult:
-        """Deploy module resources."""
-        ...
-
-    def get_dependencies(self) -> List[str]:
-        """Get module dependencies."""
-        ...
 
 class AWSDeployer:
     def deploy(

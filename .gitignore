@@ -10,7 +10,7 @@ local
 *.pyc
 venv/
 __pycache__/
-pulumi/.pulumi
+.pulumi
 
 *.pyc
 venv/
@@ -29,4 +29,4 @@ smce-cli
 **/config
 **/credentials
 **/.gitconfig
-pulumi/modules/aws.bak
+modules/aws.bak
