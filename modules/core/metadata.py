@@ -1,3 +1,25 @@
+# konductor/core/metadata.py
+from typing import Dict
+from core.types import InitializationConfig
+
+def setup_global_metadata(init_config: InitializationConfig) -> None:
+    """
+    Sets up global metadata such as labels and annotations based on the initialization configuration.
+
+    Args:
+        init_config: The initialization configuration object.
+    """
+    # Implement logic to set up global labels and annotations
+    # For example:
+    global_labels = {
+        "project": init_config.project_name,
+        "stack": init_config.stack_name,
+    }
+
+    # Set the global labels and annotations in the Pulumi context or in the initialization config
+    init_config.global_labels = global_labels
+
+
 # pulumi/core/metadata.py
 
 """

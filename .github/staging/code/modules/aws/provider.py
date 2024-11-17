@@ -4,16 +4,17 @@ import os
 import pulumi
 import pulumi_aws as aws
 from pulumi import ResourceOptions, log
+from pulumi_aws.cloudtrail import Trail
+from pulumi_aws import Provider
 
 from core.metadata import collect_git_info, generate_compliance_labels, generate_git_labels
-from .types import AWSConfig, AWSManagers, AWSDeployer
+from .types import AWSConfig, AWSManagers
 from .exceptions import ComplianceError, ResourceCreationError
 from .security import SecurityManager, setup_cloudtrail
 from .networking import NetworkManager
 from .organization import AWSOrganization
 from .resources import ResourceManager
 from .eks import EksManager
-from .deploy import AWSDeployer
 
 if TYPE_CHECKING:
     from pulumi import Resource
@@ -293,60 +294,4 @@ def deploy_security_controls(
 
     except Exception as e:
         pulumi.log.error(f"Error deploying security controls: {str(e)}")
-        raise
-
-
-def setup_cloudtrail(
-    config: AWSConfig,
-    provider: aws.Provider,
-    depends_on: Optional[List[pulumi.Resource]] = None
-) -> aws.cloudtrail.Trail:
-    """
-    Sets up AWS CloudTrail for audit logging.
-
-    Args:
-        config: AWS configuration
-        provider: AWS provider
-        depends_on: Optional resource dependencies
-
-    Returns:
-        aws.cloudtrail.Trail: Configured CloudTrail
-
-    TODO:
-    - Enhance log encryption
-    - Add log validation
-    - Implement log analysis
-    - Add automated alerting
-    - Enhance retention policies
-    """
-    try:
-        # Create S3 bucket for CloudTrail logs
-        trail_bucket = aws.s3.Bucket(
-            "cloudtrail-logs",
-            force_destroy=True,
-            opts=ResourceOptions(
-                provider=provider,
-                depends_on=depends_on,
-                protect=True
-            )
-        )
-
-        # Create CloudTrail
-        trail = aws.cloudtrail.Trail(
-            "audit-trail",
-            s3_bucket_name=trail_bucket.id,
-            include_global_service_events=True,
-            is_multi_region_trail=True,
-            enable_logging=True,
-            opts=ResourceOptions(
-                provider=provider,
-                depends_on=[trail_bucket],
-                protect=True
-            )
-        )
-
-        return trail
-
-    except Exception as e:
-        pulumi.log.error(f"Error setting up CloudTrail: {str(e)}")
         raise

@@ -1,4 +1,69 @@
-# ./modules/core/deployment.py
+# konductor/core/deployment.py
+import importlib
+import pulumi
+from pulumi import log
+from typing import List, Dict
+
+from core.types import InitializationConfig, ModuleDeploymentResult
+
+class DeploymentManager:
+    """
+    Manages the deployment of modules based on the configuration.
+    """
+
+    def __init__(self, init_config: InitializationConfig):
+        self.init_config = init_config
+        self.deployed_modules: Dict[str, ModuleDeploymentResult] = {}
+
+    def deploy_modules(self, modules_to_deploy: List[str]) -> None:
+        """
+        Deploys the enabled modules.
+
+        Args:
+            modules_to_deploy: A list of module names to deploy.
+        """
+        for module_name in modules_to_deploy:
+            try:
+                self.deploy_module(module_name)
+            except Exception as e:
+                log.error(f"Failed to deploy module {module_name}: {str(e)}")
+
+    def deploy_module(self, module_name: str) -> None:
+        """
+        Deploys a single module by dynamically importing and executing its deploy function.
+
+        Args:
+            module_name: The name of the module to deploy.
+        """
+        try:
+            # Dynamically import the module's deploy function
+            deploy_module = importlib.import_module(f"modules.{module_name}.deploy")
+            deploy_func = getattr(deploy_module, "deploy", None)
+
+            if not callable(deploy_func):
+                raise AttributeError(f"Module {module_name} does not have a deploy function.")
+
+            # Retrieve the module configuration
+            module_config = self.init_config.config.get_object(module_name) or {}
+
+            # Call the deploy function with the necessary arguments
+            result = deploy_func(
+                config=module_config,
+                init_config=self.init_config,
+            )
+
+            # Store the deployment result
+            self.deployed_modules[module_name] = result
+
+        except ImportError as e:
+            log.error(f"Module {module_name} could not be imported: {str(e)}")
+            raise
+        except Exception as e:
+            log.error(f"Error deploying module {module_name}: {str(e)}")
+            raise
+
+
+# ./core/deployment.py
 
 """
 Deployment Management Module
@@ -70,7 +135,7 @@ class DeploymentManager:
         """Sets up global metadata for all resources."""
         try:
             # Generate metadata
-            git_info = collect_git_info()
+            git_info = self.init_config.git_info
             git_labels = generate_git_labels(git_info)
             git_annotations = generate_git_annotations(git_info)
 
@@ -173,33 +238,24 @@ class DeploymentManager:
             ValueError: If module configuration is invalid
         """
         try:
-            # Get module configuration
-            module_config, module_enabled = get_module_config(
-                module_name,
-                self.init_config.config,
-                self.init_config.default_versions
-            )
-
-            if not module_enabled:
-                log.info(f"Module {module_name} is not enabled, skipping deployment")
-                return ModuleDeploymentResult(
-                    success=True,
-                    version="",
-                    resources=[],
-                    metadata={"enabled": False}
-                )
-
             # Import module dynamically
             module = importlib.import_module(f"modules.{module_name}")
             deploy_func = getattr(module, f"deploy_{module_name}_module")
 
             # Deploy with proper error handling
-            result = deploy_func(
-                module_config,
-                self.init_config.global_depends_on
+            version, resource, metadata = deploy_func(
+                self.init_config.config.get_object(module_name) or {},
+                self.init_config.global_depends_on,
+                self.init_config.k8s_provider
             )
 
-            # Track deployment
+            result = ModuleDeploymentResult(
+                success=True,
+                version=version,
+                resources=[resource.id] if resource else [],
+                metadata=metadata or {}
+            )
+
             self.deployed_modules[module_name] = result
             return result
 
@@ -209,7 +265,8 @@ class DeploymentManager:
                 success=False,
                 version="",
                 resources=[],
-                errors=[str(e)]
+                errors=[str(e)],
+                metadata={}
             )
 
 def initialize_pulumi() -> InitializationConfig:

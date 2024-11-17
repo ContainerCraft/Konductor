@@ -1,3 +1,31 @@
+# konductor/core/types.py
+from typing import Dict, Any, Optional
+from pydantic import BaseModel
+import pulumi
+
+class InitializationConfig(BaseModel):
+    """
+    Represents the initialization configuration for the deployment.
+    """
+    config: pulumi.Config
+    stack_name: str
+    project_name: str
+    default_versions: Dict[str, str]
+    git_info: Optional[Dict[str, Any]] = None
+    global_labels: Optional[Dict[str, str]] = None
+    # Add other fields as necessary
+
+class ModuleDeploymentResult(BaseModel):
+    """
+    Represents the result of deploying a module.
+    """
+    success: bool
+    version: Optional[str]
+    resources: Optional[Any]
+    errors: Optional[str]
+    metadata: Optional[Dict[str, Any]]
+
+
 # ./modules/core/types.py
 
 """
@@ -7,12 +35,13 @@ This module defines all shared data classes and types used across all modules.
 It provides type-safe configuration structures using Pydantic models and TypedDict.
 """
 
-from typing import Dict, List, Optional, Any, TypedDict, Protocol, Type, Tuple, Iterable
-from pydantic import BaseModel, Field, validator, ValidationError
+from typing import Dict, List, Optional, Any, TypedDict, Protocol, Type, Tuple, Iterable, TypeVar, Union
+from pydantic import BaseModel, Field, validator, ValidationError, PrivateAttr
 from datetime import datetime
 import pulumi
 import pulumi_kubernetes as k8s
 from pulumi import ResourceOptions, Resource, Output, log
+from pulumi_kubernetes.meta.v1 import ObjectMetaArgs
 
 from .interfaces import (
     DeploymentContext,
@@ -22,6 +51,8 @@ from .interfaces import (
 )
 
 from .aws import AWSManagers
+
+from dataclasses import dataclass, field
 
 
 class NamespaceConfig(BaseModel):
@@ -219,6 +250,10 @@ class ModuleDefaults(TypedDict):
     config: Dict[str, Any]
 
 
+T = TypeVar('T')
+MetadataType = Union[Dict[str, Any], ObjectMetaArgs, Output[Dict[str, Any]]]
+ResourceType = TypeVar('ResourceType', bound=Resource)
+
 class InitializationConfig(BaseModel):
     """
     Configuration for core module initialization.
@@ -227,43 +262,56 @@ class InitializationConfig(BaseModel):
     for initializing and managing the core module components.
 
     Attributes:
-        config: Pulumi configuration object
+        pulumi_config: Pulumi configuration object
         stack_name: Name of the current Pulumi stack
         project_name: Name of the Pulumi project
         default_versions: Default versions for all modules
         versions: Current versions of deployed modules
         configurations: Module-specific configurations
         global_depends_on: Global resource dependencies
-        k8s_provider: Kubernetes provider instance
+        kubernetes_provider: Kubernetes provider instance
         git_info: Git repository information
         compliance_config: Compliance configuration
         metadata: Resource metadata
     """
-    config: Any  # Pulumi.Config can't be type-hinted directly
+    pulumi_config: Any  # Pulumi.Config can't be type-hinted directly
     stack_name: str
     project_name: str
     default_versions: Dict[str, Any]
     versions: Dict[str, str] = Field(default_factory=dict)
     configurations: Dict[str, Dict[str, Any]] = Field(default_factory=dict)
-    global_depends_on: List[Any] = Field(default_factory=list)  # Pulumi.Resource list
-    k8s_provider: Optional[Any] = None  # k8s.Provider
+    global_depends_on: List[Resource] = Field(default_factory=list)
+    kubernetes_provider: Optional[k8s.Provider] = None  # k8s.Provider
     git_info: Dict[str, str] = Field(default_factory=dict)
     compliance_config: ComplianceConfig = Field(default_factory=ComplianceConfig)
     metadata: ResourceMetadata = Field(default_factory=ResourceMetadata)
 
-    @validator("config")
-    def validate_pulumi_config(cls, v: Any) -> Any:
-        """Validate that config is a Pulumi.Config instance."""
-        if not isinstance(v, pulumi.Config):
-            raise ValueError("config must be an instance of pulumi.Config")
-        return v
+    # Private attributes for non-serializable objects
+    _pulumi_config: pulumi.Config = PrivateAttr()
+    _k8s_provider: Optional[k8s.Provider] = PrivateAttr()
 
-    @validator("k8s_provider")
-    def validate_k8s_provider(cls, v: Any) -> Any:
-        """Validate that k8s_provider is a k8s.Provider instance if provided."""
-        if v is not None and not isinstance(v, k8s.Provider):
+    def __init__(self, **data):
+        super().__init__(**data)
+        self._pulumi_config = data.get('pulumi_config')
+        self._k8s_provider = data.get('k8s_provider')
+        self._validate_providers()
+
+    def _validate_providers(self) -> None:
+        """Validates provider configurations."""
+        if not isinstance(self._pulumi_config, pulumi.Config):
+            raise ValueError("pulumi_config must be an instance of pulumi.Config")
+        if self._k8s_provider is not None and not isinstance(self._k8s_provider, k8s.Provider):
             raise ValueError("k8s_provider must be an instance of k8s.Provider")
-        return v
+
+    @property
+    def config(self) -> pulumi.Config:
+        """Returns the Pulumi config instance."""
+        return self._pulumi_config
+
+    @property
+    def k8s_provider(self) -> Optional[k8s.Provider]:
+        """Returns the Kubernetes provider instance."""
+        return self._k8s_provider
 
     def update_versions(self, module_name: str, version: str) -> None:
         """Update version information for a module."""
@@ -298,33 +346,6 @@ DEFAULT_MODULE_CONFIG: Dict[str, ModuleDefaults] = {
     "containerized_data_importer": {"enabled": True, "version": None, "config": {}},
     "prometheus": {"enabled": True, "version": None, "config": {}}
 }
-
-
-class ModuleDeploymentResult(BaseModel):
-    """
-    Results from a module deployment operation.
-
-    Attributes:
-        success: Whether the deployment was successful
-        version: Deployed module version
-        resources: List of created resource IDs
-        errors: Any errors that occurred
-        metadata: Additional deployment metadata
-    """
-    success: bool
-    version: str
-    resources: List[str] = Field(default_factory=list)
-    errors: List[str] = Field(default_factory=list)
-    metadata: Dict[str, Any] = Field(default_factory=dict)
-
-    def add_error(self, error: str) -> None:
-        """Add an error message."""
-        self.errors.append(error)
-
-    def add_metadata(self, key: str, value: Any) -> None:
-        """Add metadata information."""
-        self.metadata[key] = value
-
 
 class ModuleRegistry(BaseModel):
     """Registry for available modules and their configurations."""
@@ -382,7 +403,7 @@ class DependencyResolver:
         Raises CircularDependencyError if circular dependency detected.
         """
         # TODO: Implementation using topological sort
-        pass
+        return modules  # Temporary return until proper implementation
 
 class AWSDeployer:
     def deploy(

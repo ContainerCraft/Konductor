@@ -12,6 +12,8 @@ import os
 import tempfile
 import json
 from typing import Optional, Dict, Any, List, Union, Callable, TypeVar, cast
+from pulumi import Output
+from pulumi.output import Output as OutputType
 import requests
 import yaml
 import logging
@@ -31,13 +33,13 @@ logging.basicConfig(
 
 # Type variables for generic functions
 T = TypeVar('T')
-MetadataType = Union[Dict[str, Any], ObjectMetaArgs]
+MetadataType = Union[Dict[str, Any], ObjectMetaArgs, Output[Dict[str, Any]]]
 
 def set_resource_metadata(
     metadata: MetadataType,
     global_labels: Dict[str, str],
     global_annotations: Dict[str, str]
-) -> None:
+) -> MetadataType:
     """
     Updates resource metadata with global labels and annotations.
     Handles both dict and ObjectMetaArgs metadata types.
@@ -51,16 +53,24 @@ def set_resource_metadata(
         TypeError: If metadata is of an unsupported type
     """
     try:
-        if isinstance(metadata, dict):
-            metadata.setdefault("labels", {}).update(global_labels)
-            metadata.setdefault("annotations", {}).update(global_annotations)
-        elif isinstance(metadata, ObjectMetaArgs):
-            if metadata.labels is None:
-                metadata.labels = {}
-            metadata.labels.update(global_labels)
-            if metadata.annotations is None:
-                metadata.annotations = {}
-            metadata.annotations.update(global_annotations)
+        if isinstance(metadata, (dict, ObjectMetaArgs)):
+            if isinstance(metadata, dict):
+                metadata.setdefault("labels", {}).update(global_labels)
+                metadata.setdefault("annotations", {}).update(global_annotations)
+            else:
+                if metadata.labels is None:
+                    metadata.labels = {}
+                metadata.labels.update(global_labels)
+                if metadata.annotations is None:
+                    metadata.annotations = {}
+                metadata.annotations.update(global_annotations)
+        elif isinstance(metadata, Output):
+            metadata_output = cast(Output[Dict[str, Any]], metadata)
+            return metadata_output.apply(lambda m: {
+                **m,
+                "labels": {**(m.get("labels", {})), **global_labels},
+                "annotations": {**(m.get("annotations", {})), **global_annotations}
+            })
         else:
             raise TypeError(f"Unsupported metadata type: {type(metadata)}")
     except Exception as e:
@@ -181,6 +191,8 @@ def get_latest_helm_chart_version(
                 raise
             logging.warning(f"Attempt {attempt + 1} failed, retrying: {str(e)}")
             time.sleep(2 ** attempt)
+
+    return "Failed to fetch chart version after all retries"
 
 
 def is_stable_version(version_str: str) -> bool:

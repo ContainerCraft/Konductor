@@ -13,7 +13,16 @@ class ResourceMetadata(BaseModel):
     annotations: Dict[str, str] = Field(default_factory=dict)
 
 class ModuleDeploymentResult(BaseModel):
-    """Results from a module deployment operation."""
+    """
+    Results from a module deployment operation.
+
+    Attributes:
+        success: Whether the deployment was successful
+        version: Version of the deployed module
+        resources: List of created resource names/IDs
+        errors: List of error messages if any occurred
+        metadata: Additional deployment metadata
+    """
     success: bool
     version: str
     resources: List[str] = Field(default_factory=list)

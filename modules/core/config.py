@@ -1,4 +1,50 @@
-# pulumi/core/config.py
+# ./core/config.py
+import pulumi
+from typing import List, Dict, Any
+
+def get_enabled_modules(config: pulumi.Config) -> List[str]:
+    """
+    Retrieves the list of enabled modules from the Pulumi configuration.
+
+    Args:
+        config: The Pulumi configuration object.
+
+    Returns:
+        List[str]: A list of module names that are enabled.
+    """
+    # Default modules configuration
+    default_modules = {
+        "aws": False,
+        "azure": False,
+        "kubernetes": False,
+        # Add other modules as needed
+    }
+
+    # Load user configuration for modules
+    modules_config = config.get_object("modules") or {}
+
+    # Merge default and user configurations
+    merged_modules = {**default_modules, **modules_config}
+
+    # Return the list of enabled modules
+    return [module for module, enabled in merged_modules.items() if enabled]
+
+def load_default_versions(config: pulumi.Config) -> Dict[str, str]:
+    """
+    Loads the default versions for modules.
+
+    Args:
+        config: The Pulumi configuration object.
+
+    Returns:
+        Dict[str, str]: A dictionary of module names to default versions.
+    """
+    # Implement logic to load default versions, possibly from a file or remote source
+    # For simplicity, return an empty dictionary here
+    return {}
+
+
+# ./modules/core/config.py
 
 """
 Configuration Management Module
@@ -66,7 +112,7 @@ def coerce_to_bool(value: Any) -> bool:
 def get_module_config(
     module_name: str,
     config: pulumi.Config,
-    default_versions: Dict[str, Any],
+    default_versions: Dict[str, str],
     namespace: Optional[str] = None
 ) -> Tuple[Dict[str, Any], bool]:
     """
@@ -87,22 +133,18 @@ def get_module_config(
         ValueError: If module configuration is invalid
     """
     try:
-        # Get module defaults
-        module_defaults = DEFAULT_MODULE_CONFIG.get(module_name, {
-            "enabled": False,
-            "version": None,
-            "config": {}
-        })
+        module_defaults = DEFAULT_MODULE_CONFIG.get(module_name, ModuleDefaults(
+            enabled=False,
+            version=None,
+            config={}
+        ))
 
-        # Get module configuration
-        module_config = config.get_object(module_name) or {}
+        module_config: Dict[str, Any] = config.get_object(module_name) or {}
 
-        # Determine if module is enabled with proper type coercion
         enabled = coerce_to_bool(
             module_config.get("enabled", module_defaults["enabled"])
         )
 
-        # Handle version resolution
         version = module_config.get(
             "version",
             default_versions.get(module_name)

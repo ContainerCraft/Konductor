@@ -48,7 +48,7 @@ class AWSOrganization:
         try:
             # Try to get existing organization
             org_data = aws.organizations.get_organization(
-                opts=pulumi.InvokeOptions(provider=self.provider.provider
+                opts=pulumi.InvokeOptions(provider=self.provider.provider)
             )
             log.info(f"Found existing Organization with ID: {org_data.id}")
 
@@ -92,30 +92,19 @@ class AWSOrganization:
 
             return organization, org_data
 
-    def get_root_id(self, org_data: aws.organizations.GetOrganizationResult) -> str:
+    def get_root_id(self, org_data: Dict[str, Any]) -> str:
         """
-        Gets the root ID from organization data.
+        Get the root ID from organization data.
 
         Args:
-            org_data: Organization data containing roots information
+            org_data: Organization data dictionary
 
         Returns:
-            str: The root ID
-
-        Raises:
-            Exception: If no roots found
+            str: Root ID of the organization
         """
-        try:
-            if org_data.roots:
-                root = org_data.roots[0]
-                root_id = root.id
-                log.info(f"Organization Root ID: {root_id}")
-                return root_id
-            else:
-                raise Exception("No roots found in the organization")
-        except Exception as e:
-            log.error(f"Error fetching organization roots: {str(e)}")
-            raise
+        if not org_data.get("roots"):
+            raise ValueError("Organization roots not found in org data")
+        return org_data["roots"][0]["id"]
 
     def create_units(
         self,

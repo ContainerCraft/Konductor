@@ -425,27 +425,22 @@ def create_aws_resource(
     resource_type: str,
     args: Dict[str, Any],
     opts: Optional[ResourceOptions] = None,
-    provider: Optional[Provider] = None
-) -> pulumi.Resource:
+    provider: Optional[Any] = None
+) -> Resource:
     """Create AWS resource with proper error handling."""
     try:
-        # Ensure required fields
         if not name or not resource_type:
             raise ValueError("Name and resource_type are required")
 
-        # Get resource class
         module = importlib.import_module("pulumi_aws")
         resource_class = getattr(module, resource_type)
 
-        # Create resource
-        return resource_class(
-            name,
-            **args,
-            opts=ResourceOptions.merge(
-                ResourceOptions(provider=provider),
-                opts or ResourceOptions()
-            )
+        merged_opts = ResourceOptions.merge(
+            ResourceOptions(provider=provider),
+            opts or ResourceOptions()
         )
+
+        return resource_class(name, **args, opts=merged_opts)
 
     except Exception as e:
         log.error(f"Failed to create AWS resource {name}: {str(e)}")
