@@ -184,7 +184,6 @@ Connect with the Konductor community to get help, share ideas, and collaborate:
 - **Discord**: Join our [Discord](https://discord.gg/VR9UhMrcFW) server.
 - **GitHub Issues**: Report issues or request features on our [GitHub Issues](https://github.com/ContainerCraft/Konductor/issues) page.
 - **GitHub Discussions**: Engage in conversations on our [GitHub Discussions](https://github.com/ContainerCraft/Konductor/discussions) page.
-- **Twitter**: Follow us on [Twitter](https://twitter.com/konductor) for updates.
 
 ---
 
