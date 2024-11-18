@@ -60,7 +60,7 @@ Pulumi allows developers to define and manage cloud infrastructure using familia
 ### Project Setup
 
 1. **Install Pulumi CLI**: [Download Pulumi](https://www.pulumi.com/docs/get-started/install/).
-2. **Install Python**: Ensure you have Python 3.8 or higher.
+2. **Install Python**: Ensure you have Python 3.10 or higher.
 3. **Install Poetry**: [Install Poetry](https://python-poetry.org/docs/#installation).
 4. **Initialize a New Pulumi Project**:
 
@@ -498,7 +498,7 @@ class BucketConfigModel(BaseModel):
     "include": ["**/*.py"],
     "exclude": ["**/__pycache__/**"],
     "reportMissingImports": true,
-    "pythonVersion": "3.8",
+    "pythonVersion": "3.10",
     "typeCheckingMode": "strict"
   }
   ```

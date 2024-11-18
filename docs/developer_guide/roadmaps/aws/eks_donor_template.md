@@ -76,7 +76,7 @@ class EksClusterConfig(TypedDict):
 
 ## Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - Pulumi CLI
 - AWS CLI configured
 - Required permissions:

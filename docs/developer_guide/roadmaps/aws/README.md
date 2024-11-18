@@ -21,7 +21,7 @@ The AWS module for Konductor provides a comprehensive framework for implementing
 
 ### Prerequisites
 
-- Python 3.8+
+- Python 3.10+
 - Poetry for dependency management
 - Pulumi CLI
 - AWS CLI configured with appropriate credentials
