@@ -1,6 +1,6 @@
 # Konductor Developer Guide: Building a Scalable and Maintainable Pulumi Python Project
 
-Welcome to the **Konductor Developer Guide**! This comprehensive documentation is designed to help you understand the architecture, design decisions, and best practices for contributing to the Konductor Infrastructure as Code (IaC) platform. Whether you're a junior developer new to IaC or a seasoned engineer, this guide provides the essential knowledge to develop scalable, maintainable, and efficient code in the Konductor project.
+Welcome to the **Konductor Developer Guide**! This documentation is here to assist you in understanding the architecture, design decisions, and best practices for contributing to the Konductor Infrastructure as Code (IaC) platform using Pulumi with Python. Whether you're new to IaC or a seasoned developer, this guide equips you with the knowledge to develop scalable, maintainable, and efficient code within the Konductor project.
 
 ---
 
@@ -11,7 +11,6 @@ Welcome to the **Konductor Developer Guide**! This comprehensive documentation i
 3. [Getting Started](#getting-started)
    - [Development Environment Setup](#development-environment-setup)
    - [Repository Structure](#repository-structure)
-   - [Core Technologies](#core-technologies)
 4. [Directory Structure](#directory-structure)
 5. [Code Organization and Modularization](#code-organization-and-modularization)
 6. [Module Development](#module-development)
@@ -20,11 +19,17 @@ Welcome to the **Konductor Developer Guide**! This comprehensive documentation i
    - [Module Testing](#module-testing)
    - [Module Documentation](#module-documentation)
 7. [Entry Point and Initialization](#entry-point-and-initialization)
+   - [Simplified Entry Point (`__main__.py`)](#simplified-entry-point-__main__py)
+   - [Module Initialization (`__init__.py`)](#module-initialization-__init__py)
 8. [Configuration Management](#configuration-management)
 9. [Dynamic Module Loading](#dynamic-module-loading)
 10. [Type Safety and Static Type Checking](#type-safety-and-static-type-checking)
 11. [Dependency Management with Poetry](#dependency-management-with-poetry)
 12. [Coding Standards and Best Practices](#coding-standards-and-best-practices)
+    - [Code Style](#code-style)
+    - [Consistent Naming Conventions](#consistent-naming-conventions)
+    - [Error Handling and Exceptions](#error-handling-and-exceptions)
+    - [Advanced Coding Techniques](#advanced-coding-techniques)
 13. [Testing and Continuous Integration](#testing-and-continuous-integration)
 14. [Collaboration and Workflow](#collaboration-and-workflow)
     - [Contribution Workflow](#contribution-workflow)
@@ -32,10 +37,10 @@ Welcome to the **Konductor Developer Guide**! This comprehensive documentation i
     - [Code Review Process](#code-review-process)
 15. [Scaling Considerations](#scaling-considerations)
 16. [Additional Considerations](#additional-considerations)
+    - [Security](#security)
+    - [Documentation Standards](#documentation-standards)
+    - [Logging and Monitoring](#logging-and-monitoring)
 17. [Available Modules](#available-modules)
-    - [AWS Module](#aws-module)
-    - [Cert Manager Module](#cert-manager-module)
-    - [Other Modules](#other-modules)
 18. [Conclusion](#conclusion)
 19. [Additional Resources](#additional-resources)
 
@@ -43,37 +48,46 @@ Welcome to the **Konductor Developer Guide**! This comprehensive documentation i
 
 ## Introduction
 
-The Konductor project is a pre-written boilerplate designed to streamline platform engineering and facilitate consistent Infrastructure as Code (IaC) practices across application teams. By leveraging Pulumi with Python, the project allows teams to define infrastructure in a familiar programming language while adhering to best practices in IaC.
+**Infrastructure as Code (IaC)** is the practice of managing and provisioning infrastructure through machine-readable definition files, rather than physical hardware configuration or interactive configuration tools. IaC enables you to automate infrastructure provisioning and manage it using the same version control systems and workflows as application code.
 
-Our development approach is guided by several key principles:
+**Python IaC** refers to using the Python programming language to define and manage infrastructure. Python's readability and extensive ecosystem make it a powerful choice for infrastructure automation.
 
-- **Type Safety**: Utilize Python's type system, Pydantic models, and `TypedDict` to catch errors early.
-- **Modularity**: Organize code into reusable, self-contained modules.
-- **Documentation**: Maintain comprehensive documentation as a first-class citizen.
-- **Testing**: Ensure reliability and maintainability through thorough testing.
-- **Accessibility**: Make code and documentation accessible to developers of all skill levels.
+**Pulumi** is an open-source infrastructure as code tool that allows you to define cloud resources using general-purpose programming languages like Python, TypeScript, Go, and more. Pulumi enables you to leverage familiar programming constructs, libraries, and tools to manage infrastructure across various cloud providers.
+
+The **Konductor** project is a pre-written boilerplate aimed at streamlining platform engineering and fostering consistent Infrastructure as Code practices across teams. Utilizing Pulumi with Python, the project enables configuration-driven infrastructure platform engineering and orchestration in a familiar programming language while ensuring adherence to best IaC practices and Pulumi's native conventions.
+
+Core principles guiding our development approach include:
+
+- **Type Safety**: Leverage Python's type system, Pydantic models, and `TypedDict` for early error detection.
+- **Modularity**: Structure code into reusable, self-contained modules.
+- **Documentation**: Prioritize comprehensive documentation as an integral aspect of development.
+- **Testing**: Guarantee reliability and maintainability via thorough testing.
+- **Accessibility**: Ensure code and documentation are accessible to developers of all levels.
 - **Configuration-Driven Deployment**: Enable or disable modules based on configuration for flexible deployments.
-- **Lazy Loading of Modules**: Load only necessary modules to optimize performance and resource usage.
+- **Lazy Loading of Modules**: Load only necessary modules to enhance performance and resource usage.
+- **Secure Secrets Management**: Utilize Pulumi's Environments, Secrets, and Configuration (ESC) for secure and centralized management of secrets and configurations.
 
-This guide provides a detailed roadmap to help you:
+This guide provides a roadmap to help you:
 
-- Understand the architectural decisions and design patterns used in Konductor.
-- Learn how to organize code effectively for scalability and maintainability.
+- Understand the architectural decisions and design patterns in Konductor.
+- Effectively organize code for scalability and maintainability.
 - Implement dynamic module loading based on configuration.
-- Ensure type safety and code reliability using Pydantic, `TypedDict`, and Pyright.
-- Collaborate efficiently with other developers in a large codebase.
+- Ensure type safety and reliability using Pydantic, `TypedDict`, and Pyright.
+- Manage secrets and configurations securely using Pulumi ESC.
+- Collaborate efficiently with a team in a large codebase.
 
 ---
 
 ## Project Overview
 
-Konductor aims to:
+Konductor boilerplate template IaC aims to:
 
-- **Provide a Shared IaC Style**: Facilitate consistent infrastructure definitions across teams.
-- **Enable Dynamic, Configuration-Driven Deployments**: Allow modules to be enabled or disabled based on configuration.
-- **Promote Modularity and Reusability**: Encourage code reuse and separation of concerns.
-- **Simplify the Entry Point**: Keep the `__main__.py` minimal, delegating complex logic to core modules.
-- **Support Lazy Loading of Modules**: Load only necessary modules to optimize performance and resource usage.
+- **Provide a Shared IaC Style**: Standardize infrastructure definitions across teams, promoting consistency and best practices.
+- **Enable Configuration-Driven Deployments**: Allow module enablement or disablement via configuration, providing flexibility for different environments and use cases.
+- **Promote Modularity and Reusability**: Encourage code reuse and separation of concerns, making the codebase easier to maintain and extend.
+- **Simplify the Entry Point**: Keep `__main__.py` minimal and delegate complex logic to core modules for better readability and organization.
+- **Support Lazy Loading of Modules**: Optimize performance by loading only necessary modules based on configuration.
+- **Centralize Secrets and Configurations**: Use Pulumi ESC for managing secrets and configurations securely across projects and environments.
 
 ---
 
@@ -81,56 +95,40 @@ Konductor aims to:
 
 ### Development Environment Setup
 
+To streamline your development setup, the Konductor project leverages a comprehensive devcontainer configuration, which includes all dependencies and development tools.
+
 #### Prerequisites
 
-- **Python 3.8+**
-- **Poetry** for dependency management
-- **Pulumi CLI**
-- **Git**
-- **Visual Studio Code (recommended)**
+- **Visual Studio Code (VSCode)**: [Download VSCode](https://code.visualstudio.com/)
+- **Remote Development Extension Pack**: Install via the [VSCode Marketplace](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack)
+- **Docker Desktop or Docker CLI**: [Install Docker](https://docs.docker.com/get-docker/)
 
 #### Initial Setup
 
-```bash
-# Clone the repository
-git clone https://github.com/containercraft/konductor.git
-cd konductor
+1. **Clone the Repository**:
 
-# Install dependencies
-poetry install
+   ```bash
+   git clone https://github.com/containercraft/konductor.git
+   cd konductor
+   ```
 
-# Activate virtual environment
-poetry shell
+2. **Open in VSCode**:
 
-# Initialize Pulumi
-pulumi login
-```
+   Open the `konductor` directory in VSCode and use the command palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on Mac) to select **"Remote-Containers: Reopen in Container"** to initiate the devcontainer.
 
-#### VS Code Configuration
+3. **Start Developing**:
 
-- **Install Recommended Extensions**:
-  - Python extension
-  - Pylance (for type checking)
-  - Pulumi extension
-- **Configure Pylance**:
-  - Set `"python.analysis.typeCheckingMode": "strict"` in your `settings.json`.
-- **Set Up Dev Container** (optional but recommended):
-  - Use the provided `.devcontainer` configuration for a consistent development environment.
+   All necessary tools, including Pulumi and Poetry, are pre-configured within the devcontainer, allowing for immediate development.
 
 ### Repository Structure
 
-The repository follows a structured layout to promote clarity and ease of navigation.
+The repository is organized to facilitate clarity and ease of navigation:
 
 ```plaintext
-konductor/
-├── pyproject.toml
-├── poetry.lock
-├── Pulumi.yaml
-├── Pulumi.<stack-name>.yaml
-├── README.md
-├── LICENSE
-├── .gitignore
+../konductor/
 ├── __main__.py
+├── README.md
+├── Pulumi.yaml
 ├── core/
 │   ├── __init__.py
 │   ├── initialization.py
@@ -143,22 +141,43 @@ konductor/
 │   ├── __init__.py
 │   ├── aws/
 │   │   ├── __init__.py
-│   │   ├── deploy.py
 │   │   ├── types.py
+│   │   ├── provider.py
+│   │   ├── config.py
+│   │   ├── deploy.py
 │   │   └── ...
 │   ├── azure/
 │   │   ├── __init__.py
-│   │   ├── deploy.py
 │   │   ├── types.py
+│   │   ├── provider.py
+│   │   ├── config.py
+│   │   ├── deploy.py
 │   │   └── ...
 │   ├── kubernetes/
 │       ├── __init__.py
-│       ├── deploy.py
 │       ├── types.py
+│       ├── deploy.py
+│       ├── provider.py
+│       ├── cert_manager/
+│       │   ├── __init__.py
+│       │   ├── types.py
+│       │   ├── config.py
+│       │   └── deploy.py
+│       ├── kubevirt/
+│       │   ├── __init__.py
+│       │   ├── types.py
+│       │   ├── config.py
+│       │   └── deploy.py
+│       ├── pulumi_operator/
+│       │   ├── __init__.py
+│       │   ├── types.py
+│       │   ├── config.py
+│       │   └── deploy.py
+│       ├── multus/
+│       ├── crossplane/
+│       ├── argocd/
+│       ├── flux/
 │       └── ...
-├── config/
-│   ├── __init__.py
-│   └── base.py
 ├── common/
 │   ├── __init__.py
 │   ├── utils.py
@@ -171,25 +190,36 @@ konductor/
 │   ├── modules/
 │   └── ...
 ├── docs/
+│   ├── developer_guide/
+│   │   ├── README.md
+│   │   └── devcontainer.md
+│   ├── user_guide/
+│   │   ├── README.md
+│   │   └── faq_and_troubleshooting.md
+│   ├── reference/
+│   │   └── PULUMI_PYTHON.md
 │   └── ...
+├── LICENSE
+├── .gitignore
+├── pyproject.toml
+├── poetry.lock
 ```
 
 ---
 
 ## Directory Structure
 
-A well-organized directory structure is crucial for collaboration and scalability. The Konductor project follows a modular layout that promotes separation of concerns.
+An organized directory structure is critical for collaboration and scalability, adhering to a modular layout that promotes separation of concerns.
 
-**Explanation:**
+**Outline:**
 
-- **`konductor/`**: The top-level directory containing all source code.
-- **`__main__.py`**: The simplified entry point of the Pulumi project.
-- **`core/`**: Contains core functionalities such as initialization, configuration management, metadata setup, and deployment management.
-- **`modules/`**: Contains individual modules for different providers (e.g., AWS, Azure, Kubernetes), each with its own deployment logic and types.
-- **`config/`**: Contains base configuration classes using Pydantic models.
-- **`common/`**: Holds shared utilities, custom exceptions, and common type definitions.
-- **`tests/`**: Organized in parallel with the `konductor/` structure for targeted testing.
-- **`docs/`**: Contains project documentation.
+- **`../konductor/`**: Top-level directory containing all source code.
+- **`__main__.py`**: Simplified project entry point.
+- **`core/`**: Core functionalities, such as initialization, metadata setup, and deployment management.
+- **`modules/`**: Provider-specific modules (e.g., AWS, Azure, Kubernetes) with deployment logic, default configuration, config validation, and types.
+- **`common/`**: Shared utilities, custom exceptions, and type definitions.
+- **`tests/`**: Organized structure for targeted testing.
+- **`docs/`**: Project documentation.
 
 ---
 
@@ -197,25 +227,29 @@ A well-organized directory structure is crucial for collaboration and scalabilit
 
 ### Module Structure
 
-- **Core Modules (`core/`)**: Centralize initialization, configuration, metadata, and deployment management.
-- **Modules (`modules/`)**: Each module represents a deployable unit (e.g., `aws`, `azure`, `kubernetes`) and contains its own deployment logic and types.
-- **Configurations (`config/`)**: Use Pydantic models for configuration management.
+- **Core Modules (`core/`)**: Centralize initialization, metadata, and deployment management.
+- **Modules (`modules/`)**: Each module represents a deployable unit (e.g., `aws`, `azure`, `kubernetes/cert_manager`, `kubernetes/kubevirt`, `kubernetes/pulumi_operator`), containing its own logic and types.
 - **Common Utilities (`common/`)**: Include shared utilities, exceptions, and type definitions.
+- **Strongly Typed**: Ensure type safety using Pydantic, `TypedDict`, and Pyright.
 
-#### Why Modularize?
+#### Benefits of Modularization
 
-- **Separation of Concerns**: Different functionalities are isolated to enhance maintainability.
-- **Lazy Loading**: Modules are loaded dynamically based on configuration, optimizing performance.
-- **Team Collaboration**: Different teams can work independently on separate modules.
+- **Separation of Concerns**: Enhance maintainability by isolating functionalities.
+- **Lazy Loading**: Optimize performance through dynamic module loading.
+- **Team Collaboration**: Facilitate independent module work by diverse teams.
+- **Per Module Enablement**: Enable or disable modules based on configuration with built-in sane defaults.
+- **Independent Module Configuration**: Each module maintains loosely coupled, independent configuration specs.
 
 ### File Layout Within Modules
 
-Each module in `modules/` should contain:
+Each module in `modules/` should include:
 
 - **`__init__.py`**: Initializes the module.
-- **`deploy.py`**: Contains the `deploy` function that handles the deployment logic for the module.
-- **`types.py`**: Defines data classes or Pydantic models for the module's configuration.
-- **Additional Files**: Any other module-specific implementation files.
+- **`types.py`**: Data classes or Pydantic models specifying the module's configuration.
+- **`provider.py`**: Contains the provider authentication and authorization resources if applicable.
+- **`config.py`**: Module-specific configuration parsing, validation, and default values, which support merging user-supplied overrides.
+- **`deploy.py`**: Defines the `deploy` function containing deployment logic.
+- **Additional Files**: Any other module-specific implementations.
 
 ---
 
@@ -223,15 +257,17 @@ Each module in `modules/` should contain:
 
 ### Module Architecture
 
-Modules follow a standard structure:
+Modules follow a standardized structure:
 
 ```plaintext
 modules/<module_name>/
 ├── __init__.py
+├── types.py         # Configuration data classes or Pydantic models
+├── provider.py      # Cloud provider authentication and authorization resources
+├── config.py        # Configuration parsing, validation, and default values
 ├── deploy.py        # Deployment logic
-├── types.py         # Data classes or Pydantic models for configurations
 ├── README.md        # Module documentation
-└── ...              # Additional module-specific files
+└── ...              # Additional files
 ```
 
 ### Creating New Modules
@@ -241,55 +277,112 @@ To create a new module:
 1. **Create Module Directory**:
 
    ```bash
-   mkdir modules/<module_name>
+   mkdir -p modules/<module_name>/
    touch modules/<module_name>/__init__.py
+   touch modules/<module_name>/types.py
+   touch modules/<module_name>/provider.py
+   touch modules/<module_name>/config.py
+   touch modules/<module_name>/deploy.py
    ```
 
-2. **Implement `deploy.py`**:
+2. **Implement `provider.py`**:
 
-   - Define a `deploy` function that accepts `config` and `init_config` as parameters.
+   Define the provider authentication and client setup.
+
+   ```python
+   # modules/<module_name>/provider.py
+   from pulumi import ResourceOptions
+   from pulumi_<provider> import Provider
+
+   def get_provider(config):
+       # Instantiate and return the provider
+       return Provider(
+           resource_name="<provider-name>",
+           # Pass in necessary provider configuration
+           opts=ResourceOptions()
+       )
+   ```
+
+3. **Implement `config.py`**:
+
+   Handle configuration parsing, validation, and default values.
+
+   ```python
+   # modules/<module_name>/config.py
+   from pydantic import BaseModel
+
+   class ModuleConfig(BaseModel):
+       enabled: bool = True
+       # Additional configuration fields with defaults and validation
+
+   def load_config(config_data) -> ModuleConfig:
+       return ModuleConfig(**config_data)
+   ```
+
+4. **Implement `deploy.py`**:
+
+   Define a `deploy` function which receives `config` and `init_config`.
 
    ```python
    # modules/<module_name>/deploy.py
-   from typing import Any, Dict
    from core.types import InitializationConfig, ModuleDeploymentResult
+   from .config import load_config
+   from .provider import get_provider
+   from pulumi import log
 
-   def deploy(config: Dict[str, Any], init_config: InitializationConfig) -> ModuleDeploymentResult:
-       # Deployment logic here
-       pass
+   def deploy(config_data: dict, init_config: InitializationConfig) -> ModuleDeploymentResult:
+       log.info(f"Deploying module <module_name>")
+
+       # Load and validate module configuration
+       module_config = load_config(config_data)
+
+       if not module_config.enabled:
+           log.info(f"Module <module_name> is disabled in configuration.")
+           return ModuleDeploymentResult(success=True, message="Module disabled")
+
+       # Get provider instance
+       provider = get_provider(module_config)
+
+       # Deployment logic here, using provider and module_config
+       # ...
+
+       return ModuleDeploymentResult(success=True, message="Deployment successful")
    ```
 
-3. **Define Module Configuration Types**:
+5. **Define Module Configuration Types**:
 
-   - Use Pydantic models or `TypedDict` in `types.py` for configuration.
+   Use Pydantic models in `types.py` for configuration specifications.
 
    ```python
    # modules/<module_name>/types.py
-   from typing import TypedDict
+   from pydantic import BaseModel
 
-   class ModuleConfig(TypedDict):
-       enabled: bool
-       version: str
+   class ModuleConfig(BaseModel):
+       enabled: bool = True
        # Additional configuration fields
    ```
 
-4. **Write Module Documentation**:
+6. **Write Documentation**:
 
-   - Include a `README.md` with usage instructions, configuration details, and examples.
+   Include a `README.md` outlining usage instructions and configuration details.
 
 ### Module Testing
 
-- **Unit Tests**: Write unit tests for your module's functionality in `tests/modules/<module_name>/`.
-- **Integration Tests**: Include integration tests to verify module interactions if applicable.
+- **Unit Tests**: Located in `tests/modules/<module_name>/`.
+- **Integration Tests**: If applicable, cover module interactions.
+- **Testing Best Practices**:
+  - Ensure tests are isolated and repeatable.
+  - Use mock objects where appropriate.
+  - Cover edge cases and error conditions.
 
 ### Module Documentation
 
-Each module must include:
+Each module must feature:
 
-- **README.md**: Usage instructions, configuration options, and examples.
-- **Configuration Documentation**: Detailed explanation of configuration parameters.
-- **Example Configurations**: Provide sample configurations for users.
-- **Troubleshooting Guide**: Common issues and solutions.
+- **README.md**: Details on usage, configuration, and examples.
+- **Configuration Documentation**: Explanation of parameters.
+- **Complete Explicit Example Configuration**: Provide samples for easy understanding.
+- **Troubleshooting Guide**: Address common issues and solutions.
 
 ---
 
@@ -297,7 +390,7 @@ Each module must include:
 
 ### Simplified Entry Point (`__main__.py`)
 
-The `__main__.py` serves as the minimal entry point, delegating complex logic to core modules.
+The `__main__.py` serves as a minimal entry point, delegating complex logic to core modules.
 
 #### Structure:
 
@@ -320,7 +413,7 @@ def main() -> None:
         # Set up global metadata
         setup_global_metadata(init_config)
 
-        # Get the list of enabled modules from the configuration
+        # Determine enabled modules from configuration
         modules_to_deploy = get_enabled_modules(init_config.config)
         log.info(f"Deploying modules: {', '.join(modules_to_deploy)}")
 
@@ -340,63 +433,106 @@ if __name__ == "__main__":
 
 #### Best Practices:
 
-- **Keep Entry Point Minimal**: Only include essential orchestration steps.
-- **Delegate Logic**: Move complex operations to core modules.
-- **Dynamic Module Loading**: Ensure only necessary modules are loaded based on configuration.
+- **Minimalistic Entry Point**: Focus on key orchestration tasks.
+- **Delegated Logic**: Shift complex logic to core modules.
+- **Dynamic Module Loading**: Load only the necessary modules.
 
 ### Module Initialization (`__init__.py`)
 
-- **Avoid Heavy Logic**: Keep initialization lightweight.
-- **Expose Public API**: Define accessible elements when the module is imported.
+- **Lightweight**: Avoid heavy logic in initialization files.
+- **Public API**: Define accessible elements upon importing.
 
 ---
 
 ## Configuration Management
 
-### Using Pydantic for Configuration
+### Using Pulumi ESC for Configuration and Secrets Management
 
-Pydantic models provide type safety and validation for configuration data.
+Pulumi Environments, Secrets, and Configuration (ESC) provides a centralized and secure way to manage configurations and secrets across your Pulumi projects. It allows you to compose collections of configuration and secrets called environments, which can be consumed by various infrastructure and application services.
 
-#### Example:
+#### Setting Up Pulumi ESC
 
-```python
-# config/base.py
-from pydantic import BaseSettings
-from typing import List
+1. **Install the ESC CLI**:
 
-class BaseConfig(BaseSettings):
-    environment: str = 'development'
-    debug: bool = False
-    modules: List[str] = []
+   ```bash
+   curl -fsSL https://get.pulumi.com/install.sh | sh
+   ```
 
-    class Config:
-        env_file = '.env'
-```
+2. **Log in to Pulumi Cloud**:
 
-#### Usage:
+   ```bash
+   pulumi login
+   ```
+
+3. **Create an ESC Environment**:
+
+   ```bash
+   esc env init konductor/dev
+   ```
+
+4. **Define Configuration Values**:
+
+   Create a `values.yaml` file with your configuration:
+
+   ```yaml
+   # values.yaml
+   values:
+     pulumiConfig:
+       aws:region: us-west-2
+       aws:profile: default
+     secrets:
+       db_password: your-database-password
+   ```
+
+   Import the values into your environment:
+
+   ```bash
+   esc env set-values konductor/dev -f values.yaml
+   ```
+
+5. **Import the Environment into Your Pulumi Project**:
+
+   Update your `Pulumi.<stack-name>.yaml`:
+
+   ```yaml
+   environment:
+     - konductor/dev
+   ```
+
+#### Accessing Configuration in Code
 
 ```python
 # core/initialization.py
 import pulumi
-from config.base import BaseConfig
 from core.types import InitializationConfig
+from pulumi import log
 
 def initialize_pulumi() -> InitializationConfig:
     # Load Pulumi configuration
     pulumi_config = pulumi.Config()
 
-    # Create BaseConfig instance
-    base_config = BaseConfig()
+    # Access configuration values
+    aws_region = pulumi_config.require("aws:region")
+    db_password = pulumi_config.require_secret("db_password")
 
+    log.info(f"Pulumi initialization complete. AWS Region: {aws_region}")
     # Return an InitializationConfig instance
-    return InitializationConfig(config=pulumi_config, base_config=base_config)
+    return InitializationConfig(config=pulumi_config)
 ```
+
+#### Pulumi ESC Benefits
+
+- **Centralized Management**: Manage secrets and configurations across multiple projects and environments.
+- **Security**: Secrets are encrypted in transit and at rest.
+- **Versioning**: ESC supports rich versioning features for auditability and controlled configuration change rollout.
+- **Projects and Environment Tags**: Organize environments using Projects and tag them for better management.
 
 #### Best Practices:
 
-- **Environment Variables**: Use environment variables for sensitive information.
-- **Validation**: Leverage Pydantic's validation to ensure configuration correctness.
-- **Default Values**: Provide sensible defaults for configuration parameters.
+- **Use ESC for Secrets Management**: Avoid storing secrets in code, local configuration files, or environment variables.
+- **Leverage Projects and Tags**: Organize environments logically using Projects and Environment Tags.
+- **Version Control**: Utilize ESC's versioning to manage changes to environments safely.
+- **Avoid Hardcoding Configuration**: Use configuration files and Pulumi ESC to manage values dynamically.
 
 ---
 
@@ -404,15 +540,17 @@ def initialize_pulumi() -> InitializationConfig:
 
 ### Configuration-Driven Deployment
 
-Modules are enabled or disabled based on configuration, and only enabled modules are loaded and deployed.
+Modules are loaded based on configuration, facilitating dynamic and efficient deployments.
 
 #### Example:
 
 ```python
 # core/config.py
 from typing import List
+from pulumi import log
+import pulumi
 
-def get_enabled_modules(config: dict) -> List[str]:
+def get_enabled_modules(config: pulumi.Config) -> List[str]:
     default_modules = {
         "aws": False,
         "azure": False,
@@ -420,13 +558,16 @@ def get_enabled_modules(config: dict) -> List[str]:
     }
 
     # Load user configuration for modules
-    modules_config = config.get("modules") or {}
+    modules_config = config.get_object("modules") or {}
 
     # Merge configurations
     merged_modules = {**default_modules, **modules_config}
 
+    enabled_modules = [module for module, enabled in merged_modules.items() if enabled]
+    log.info(f"Enabled modules: {enabled_modules}")
+
     # Return enabled modules
-    return [module for module, enabled in merged_modules.items() if enabled]
+    return enabled_modules
 ```
 
 ### Deployment Manager
@@ -468,10 +609,12 @@ class DeploymentManager:
             module_config = self.init_config.config.get_object(module_name) or {}
 
             # Call the deploy function
-            result = deploy_func(config=module_config, init_config=self.init_config)
+            result = deploy_func(config_data=module_config, init_config=self.init_config)
 
             # Store the deployment result
             self.deployed_modules[module_name] = result
+
+            log.info(f"Successfully deployed module {module_name}.")
 
         except ImportError as e:
             log.error(f"Module {module_name} could not be imported: {str(e)}")
@@ -485,25 +628,38 @@ class DeploymentManager:
 
 ## Type Safety and Static Type Checking
 
-### Using TypedDict for Configurations
+### Using TypedDict and Pydantic for Configurations
 
-`TypedDict` helps define type-safe dictionaries for configurations.
+`TypedDict` and Pydantic models allow for defined type-safe configurations, enabling type checking and flexibility.
 
-#### Example:
+#### Example with TypedDict:
 
 ```python
 # common/types.py
 from typing import TypedDict
 
-class ModuleConfig(TypedDict):
+class ModuleConfig(TypedDict, total=False):
     enabled: bool
     version: str
     config: dict
 ```
 
+#### Example with Pydantic:
+
+```python
+# modules/aws/types.py
+from pydantic import BaseModel
+
+class AWSModuleConfig(BaseModel):
+    enabled: bool = True
+    region: str
+    profile: str = "default"
+    # Additional configuration fields
+```
+
 ### Enforcing Type Checking with Pyright
 
-Pyright is used for static type checking to ensure code reliability.
+Integrate Pyright for static type checking, ensuring code reliability and early detection of type errors.
 
 #### Installation:
 
@@ -513,29 +669,30 @@ poetry add --dev pyright
 
 #### Configuration:
 
-Create a `pyrightconfig.json` in the project root:
+Create `pyrightconfig.json`:
 
 ```json
 {
   "include": ["konductor/**/*.py"],
   "exclude": ["**/__pycache__/**"],
   "reportMissingImports": true,
-  "pythonVersion": "3.8",
+  "pythonVersion": "3.10",
   "typeCheckingMode": "strict"
 }
 ```
 
 #### Best Practices:
 
-- **Mandatory Type Hints**: All functions and methods must have type hints.
-- **Consistent Usage**: Apply `TypedDict` and Pydantic models across the project.
-- **Editor Integration**: Configure your editor (e.g., VS Code) for real-time type checking.
+- **Mandatory Type Hints**: Ensure all functions and methods are type hinted.
+- **Consistent Usage**: Consistently apply `TypedDict` and Pydantic models.
+- **Editor Integration**: Ensure editor support for real-time type checking.
+- **Validate Configuration**: Use Pydantic for robust configuration validation.
 
 ---
 
 ## Dependency Management with Poetry
 
-Poetry manages dependencies and virtual environments.
+Poetry simplifies management of dependencies and virtual environments, ensuring compatibility with Pulumi's ecosystem.
 
 ### Initializing the Project
 
@@ -559,7 +716,7 @@ name: konductor
 runtime:
   name: python
   options:
-    virtualenv: null
+    virtualenv: poetry
 ```
 
 ### Scripts and Entry Points
@@ -577,21 +734,61 @@ konductor = 'konductor.__main__:main'
 
 ### Code Style
 
-- **PEP 8 Compliance**: Follow standard Python style guidelines.
-- **Type Hinting**: Use type annotations consistently.
-- **Docstrings**: Document modules, classes, and functions using docstrings.
+- **PEP 8 Compliance**: Adhere to Python style guidelines for consistency.
+- **Type Hinting**: Use type annotations consistently across the codebase.
+- **Docstrings**: Document modules, classes, and functions using informative docstrings.
 
 ### Consistent Naming Conventions
 
 - **Modules and Files**: Use `snake_case`.
-- **Classes**: Use `PascalCase`.
-- **Variables and Functions**: Use `snake_case`.
+- **Classes**: Utilize `PascalCase`.
+- **Variables and Functions**: Apply `snake_case`.
 
 ### Error Handling and Exceptions
 
-- **Custom Exceptions**: Define in `common/exceptions.py`.
-- **Consistent Error Handling**: Use `try-except` blocks appropriately.
-- **Logging**: Use Python's `logging` module with appropriate log levels.
+- **Custom Exceptions**: Define them in `common/exceptions.py`.
+- **Consistent Error Handling**: Apply `try-except` blocks appropriately, with Pulumi's `log` for error logging.
+- **Logging**: Ensure consistent logging using Pulumi's `pulumi.log` module imported as `from pulumi import log`.
+
+### Advanced Coding Techniques
+
+#### Clean and Readable Code Practices
+
+Adopt coding patterns that enhance code readability and maintainability.
+
+- **Using `*args` and `**kwargs`**: For flexible function arguments in resource definitions.
+- **List Comprehensions**: Simplify the creation of multiple similar resources.
+- **Utilizing `zip()`**: For parallel configuration of resources when appropriate and scalable.
+- **Merging Dictionaries**: Combine default and environment-specific configurations efficiently.
+- **Chaining Comparisons**: Use chained comparison operators in conditional statements for clarity.
+- **Ternary Operators**: Simplify conditional assignments.
+- **Favor Pulumi Stack Configuration**: Leverage stack configuration and Pulumi ESC environments to drive resource creation and reduce hardcoding.
+
+#### Example: Creating Multiple Resources with List Comprehensions
+
+```python
+import pulumi_aws as aws
+from pulumi import log
+import pulumi
+
+# Load bucket configurations from Pulumi configuration
+config = pulumi.Config()
+bucket_configs = config.require_object("buckets")
+
+buckets = []
+for config in bucket_configs:
+    try:
+        bucket = aws.s3.Bucket(
+            resource_name=f"{config['name']}-bucket",
+            bucket=f"mycompany-{config['name']}-bucket",
+            versioning={
+                "enabled": config.get("versioning", False)
+            },
+        )
+        buckets.append(bucket)
+    except Exception as e:
+        log.error(f"Failed to create bucket {config['name']}: {str(e)}")
+```
 
 ---
 
@@ -600,14 +797,19 @@ konductor = 'konductor.__main__:main'
 ### Testing
 
 - **Structure**: Mirror the application structure within `tests/`.
-- **Frameworks**: Use `pytest` for testing.
-- **Coverage**: Aim for meaningful tests with high coverage.
+- **Frameworks**: Utilize `pytest` for comprehensive testing.
+- **Coverage**: Target meaningful tests with high coverage.
+- **Testing Best Practices**:
+  - Write unit tests for individual components.
+  - Write integration tests for module interactions.
+  - Use mock providers to avoid real infrastructure changes during tests.
 
 ### Continuous Integration
 
-- **Automated Testing**: Integrate tests into CI/CD pipelines.
+- **Automated Testing**: Integrate testing into CI/CD workflows using tools like GitHub Actions, Jenkins, or CircleCI.
 - **Code Quality Checks**: Use `flake8`, `black`, and Pyright for linting and formatting.
-- **Static Type Checking**: Enforce with Pyright.
+- **Static Type Checking**: Enforce with Pyright for type safety.
+- **Security Scanning**: Implement tools for dependency vulnerability scanning.
 
 ---
 
@@ -616,10 +818,10 @@ konductor = 'konductor.__main__:main'
 ### Contribution Workflow
 
 1. **Fork the Repository**: Create a personal fork of the Konductor repository.
-2. **Create a Feature Branch**: Use a descriptive name for your branch.
+2. **Create a Feature Branch**:
 
    ```bash
-   git checkout -b feature/your-feature-name
+   git checkout -b feature/your-username/your-feature-name
    ```
 
 3. **Make Changes**: Develop your feature or fix.
@@ -630,30 +832,32 @@ konductor = 'konductor.__main__:main'
    pyright
    ```
 
-5. **Commit Changes**: Write clear and descriptive commit messages.
+5. **Commit Changes**: Craft clear and descriptive commit messages.
 6. **Push to Your Fork**:
 
    ```bash
-   git push origin feature/your-feature-name
+   git push origin feature/your-username/your-feature-name
    ```
 
 7. **Submit a Pull Request**: Open a PR against the `main` branch of the Konductor repository.
 
 ### Pull Request Guidelines
 
-- **Follow the PR Template**: Include necessary details as per the [Pull Request Template](../contribution_templates/pull_request_template.md).
+- **PR Template**: Follow the [Pull Request Template](../contribution_templates/pull_request_template.md).
 - **Link Issues**: Reference any related issues.
-- **Include Tests**: Ensure your changes are covered by tests.
-- **Pass All Checks**: Your PR should pass CI checks before review.
+- **Include Tests**: Ensure changes are adequately covered by tests.
+- **Pass All Checks**: CI checks must succeed before review.
+- **Descriptive Title and Description**: Provide clear context for reviewers.
 
 ### Code Review Process
 
-All contributions undergo review for:
+All contributions undergo reviews examining:
 
 - **Code Quality**: Adherence to coding standards and best practices.
-- **Documentation**: Completeness and clarity of documentation.
+- **Documentation**: Clarity and completeness of documentation.
 - **Test Coverage**: Adequate tests for new functionality.
-- **Type Safety**: Compliance with type checking.
+- **Type Safety**: Compliance with type checking standards.
+- **Security Considerations**: Ensure no security vulnerabilities are introduced.
 
 ---
 
@@ -661,13 +865,15 @@ All contributions undergo review for:
 
 ### Performance Optimization
 
-- **Lazy Loading**: Load modules dynamically to optimize resource usage.
+- **Lazy Loading**: Optimize performance with dynamic module loading.
 - **Caching**: Implement caching strategies if applicable.
+- **Resource Management**: Ensure efficient use of resources to prevent over-provisioning.
 
 ### Scalability
 
-- **Horizontal Scaling**: Design for concurrent deployments if necessary.
-- **Load Balancing**: Implement strategies to distribute workloads in the application layer.
+- **Horizontal Scaling**: Design for concurrent deployments and scaling out.
+- **Load Balancing**: Implement effective workload distribution strategies.
+- **Stateless Design**: Favor stateless components to enhance scalability.
 
 ---
 
@@ -675,18 +881,45 @@ All contributions undergo review for:
 
 ### Security
 
-- **Secure Coding Practices**: Follow best practices to prevent vulnerabilities.
-- **Dependency Management**: Regularly update dependencies to patch security issues.
+The Konductor project prioritizes security and compliance, ensuring that infrastructure is provisioned and managed according to industry standards.
+
+#### Secure Coding Practices
+
+- **Least Privilege**: Implement least privilege access in resource configurations.
+- **Access Control**: Utilize role-based access control (RBAC) and enforce strong authentication mechanisms.
+- **Data Protection**: Ensure encryption of data at rest and in transit using industry-standard algorithms.
+- **Secrets Management**: Manage sensitive information using Pulumi's Environments, Secrets, and Configuration (ESC) features.
+
+#### Compliance Frameworks
+
+Konductor supports compliance with various industry standards:
+
+- **NIST Framework**
+- **FISMA Compliance**
+- **ISO 27001, 27017, 27018**
+- **HIPAA Compliance** (if applicable)
+- **PCI DSS Compliance** (if applicable)
+
+For detailed guidelines on implementing compliance controls within your modules, refer to the [SecOps Compliance Standards and Implementation Guide](../docs/reference/SECOPS_COMPLIANCE.md).
+
+#### Auditing and Reporting
+
+- **Audit Logging**: Implement comprehensive logging for all operations.
+- **Monitoring**: Utilize monitoring tools to track security events and resource health.
+- **Incident Response**: Define procedures for responding to security incidents.
 
 ### Documentation Standards
 
-- **Structure**: Organize documentation logically.
-- **Accessibility**: Ensure documentation is accessible and user-friendly.
+- **Logical Structure**: Ensure well-organized documentation.
+- **Clarity**: Maintain clear and accessible documentation for users.
+- **Updates**: Keep documentation up to date with code changes.
+- **Usage Examples**: Provide practical examples to aid understanding.
 
 ### Logging and Monitoring
 
-- **Centralized Logging**: Implement for easier monitoring and debugging.
-- **Monitoring Tools**: Use tools to track application performance and health.
+- **Centralized Logging**: Implement centralized logging mechanisms for easier monitoring and debugging.
+- **Observability**: Integrate observability tools to gain insights into infrastructure performance and issues.
+- **Alerting**: Set up alerts for critical events and thresholds.
 
 ---
 
@@ -697,13 +930,61 @@ All contributions undergo review for:
 - **Developer Guide**: [modules/aws/README.md](./modules/aws/README.md)
 - **Implementation Roadmap**: [modules/aws/ROADMAP.md](./modules/aws/ROADMAP.md)
 
-### Cert Manager Module
+#### AWS Module Overview
 
-- **Developer Guide**: [modules/cert_manager/README.md](./modules/cert_manager/README.md)
+The AWS module provides resources and configurations for deploying infrastructure on Amazon Web Services. It includes functionalities such as:
+
+- VPC creation and management
+- EC2 instances
+- S3 buckets
+- IAM roles and policies
+- Elastic Load Balancers
+
+### Kubernetes Modules
+
+#### Cert Manager Module
+
+- **Documentation**: [modules/kubernetes/cert_manager/README.md](./modules/kubernetes/cert_manager/README.md)
+
+Provides automated TLS certificate management in Kubernetes clusters using cert-manager.
+
+#### KubeVirt Module
+
+- **Documentation**: [modules/kubernetes/kubevirt/README.md](./modules/kubernetes/kubevirt/README.md)
+
+Enables running virtual machine workloads natively on Kubernetes clusters.
+
+#### Crossplane Module
+
+- **Documentation**: [modules/kubernetes/crossplane/README.md](./modules/kubernetes/crossplane/README.md)
+
+Facilitates the deployment and management of cloud infrastructure using Kubernetes-native APIs.
+
+#### Pulumi Operator Module
+
+- **Documentation**: [modules/kubernetes/pulumi_operator/README.md](./modules/kubernetes/pulumi_operator/README.md)
+
+Integrates Pulumi deployments with Kubernetes, allowing infrastructure to be managed via Kubernetes resources.
+
+#### Additional Kubernetes Modules
+
+Explore other Kubernetes-related modules in the [modules/kubernetes/](./modules/kubernetes/) directory, including:
+
+- **Multus**: Enables multiple network interfaces in Kubernetes pods.
+- **ArgoCD**: Provides continuous delivery tools for Kubernetes.
+- **Flux**: Offers GitOps continuous delivery solutions.
 
 ### Other Modules
 
-See our [Modules Directory](./modules/README.md) for a complete list.
+Explore our [Modules Directory](./modules/README.md) for a complete list of available modules, including those for Azure, GCP, and other cloud providers.
+
+---
+
+## Conclusion
+
+The Konductor project provides a robust and flexible framework for managing infrastructure as code using Pulumi and Python. By adhering to the best practices and guidelines outlined in this developer guide, you contribute to a maintainable, scalable, and efficient codebase that empowers teams across the organization.
+
+We encourage you to explore the available modules, contribute new features, and collaborate with the community to continuously improve the Konductor platform.
 
 ---
 
@@ -712,26 +993,37 @@ See our [Modules Directory](./modules/README.md) for a complete list.
 ### Reference Documentation
 
 - **Pulumi Python Standards**: [../reference/PULUMI_PYTHON.md](../reference/PULUMI_PYTHON.md)
+- **Pulumi ESC Documentation**: [Pulumi ESC](https://www.pulumi.com/docs/intro/concepts/config/#pulumi-esc)
 - **TypedDict Guide**: [../reference/TypedDict.md](../reference/TypedDict.md)
 - **Style Guide**: [../reference/style_guide.md](../reference/style_guide.md)
+- **SecOps Compliance Standards**: [../reference/SECOPS_COMPLIANCE.md](../reference/SECOPS_COMPLIANCE.md)
 
 ### Community Resources
 
 - **Discord Community**: [https://discord.gg/Jb5jgDCksX](https://discord.gg/Jb5jgDCksX)
-- **GitHub Discussions**: [https://github.com/containercraft/konductor/discussions](https://github.com/containercraft/konductor/discussions)
+- **GitHub Discussions**: [GitHub Discussions](https://github.com/containercraft/konductor/discussions)
 
 ### Getting Help
 
-- **Join our Discord**: [https://discord.gg/Jb5jgDCksX](https://discord.gg/Jb5jgDCksX)
-- **Open an Issue**: [https://github.com/containercraft/konductor/issues](https://github.com/containercraft/konductor/issues)
-- **Check our FAQ**: [../user_guide/faq_and_troubleshooting.md](../user_guide/faq_and_troubleshooting.md)
+- **Join our Discord**: [Discord](https://discord.gg/Jb5jgDCksX)
+- **Open an Issue**: [GitHub Issues](https://github.com/containercraft/konductor/issues)
+- **Check our FAQ**: [FAQ](../user_guide/faq_and_troubleshooting.md)
 
 ### External Resources
 
-- **Pulumi Python Documentation**: [https://www.pulumi.com/docs/intro/languages/python/](https://www.pulumi.com/docs/intro/languages/python/)
-- **Pyright Documentation**: [https://github.com/microsoft/pyright](https://github.com/microsoft/pyright)
-- **Poetry Documentation**: [https://python-poetry.org/docs/](https://python-poetry.org/docs/)
-- **PEP 8 Style Guide**: [https://www.python.org/dev/peps/pep-0008/](https://www.python.org/dev/peps/pep-0008/)
-- **Python Logging Documentation**: [https://docs.python.org/3/library/logging.html](https://docs.python.org/3/library/logging.html)
-- **TypedDict Documentation**: [https://www.python.org/dev/peps/pep-0589/](https://www.python.org/dev/peps/pep-0589/)
-- **Pydantic Documentation**: [https://pydantic-docs.helpmanual.io/](https://pydantic-docs.helpmanual.io/)
+- **Pulumi ESC Documentation**: [Pulumi ESC](https://www.pulumi.com/docs/intro/concepts/config/#pulumi-esc)
+- **Pulumi CrossGuard Documentation**: [Pulumi CrossGuard](https://www.pulumi.com/docs/guides/crossguard/)
+- **Pulumi Kubernetes Operator**: [Pulumi Kubernetes Operator](https://www.pulumi.com/docs/guides/continuous-delivery/pulumi-kubernetes-operator/)
+- **Pulumi Kubernetes Provider**: [Pulumi Kubernetes Provider](https://www.pulumi.com/docs/intro/cloud-providers/kubernetes/)
+- **Pulumi Python Documentation**: [Pulumi Documentation](https://www.pulumi.com/docs/intro/languages/python/)
+- **Kubernetes Crossplane Documentation**: [Crossplane](https://crossplane.io/docs/)
+- **Pyright Documentation**: [Pyright](https://github.com/microsoft/pyright)
+- **Poetry Documentation**: [Poetry](https://python-poetry.org/docs/)
+- **PEP 8 Style Guide**: [PEP 8](https://www.python.org/dev/peps/pep-0008/)
+- **Python Logging Documentation**: [Logging](https://docs.python.org/3/library/logging.html)
+- **TypedDict Documentation**: [TypedDict](https://www.python.org/dev/peps/pep-0589/)
+- **Pydantic Documentation**: [Pydantic](https://pydantic-docs.helpmanual.io/)
+
+---
+
+**Note**: This guide is intended to be comprehensive and informative for developers and DevOps personnel of all experience levels, including those unfamiliar with Infrastructure as Code and Python-based IaC. If you have any questions or need further assistance, please reach out through our community channels.
