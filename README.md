@@ -21,7 +21,7 @@ Konductor leverages modern Infrastructure as Code (IaC) practices using Pulumi a
 
 ## Features
 
-- **Cloud-Agnostic Architecture**: Deploy infrastructure across AWS, Azure, and GCP using a unified codebase.
+- **Cloud-Agnostic Architecture**: Deploy infrastructure across AWS, Azure, GCP, and Bare Metal Kubernetes from a unified codebase.
 - **Compliance Automation**: Integrate compliance controls directly into your infrastructure code.
 - **Type-Safe Infrastructure as Code**: Leverage Python's type annotations and `TypedDict` for reliable and maintainable code.
 - **Modular Design**: Build reusable modules that can be developed and deployed independently.
