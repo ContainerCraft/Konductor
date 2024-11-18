@@ -46,7 +46,7 @@ Konductor provides a robust starting point for building cloud infrastructure. Fo
 
 1. **Fork the Konductor Repository**
 
-   Navigate to the [Konductor GitHub repository](https://github.com/konductor/konductor) and click the "Fork" button to create your own copy.
+   Navigate to the [Konductor GitHub repository](https://github.com/ContainerCraft/Konductor) and click the "Fork" button to create your own copy.
 
 2. **Clone Your Forked Repository**
 
@@ -169,9 +169,9 @@ We welcome contributions from the community! To get involved:
 2. **Join Our Community**: Engage with other contributors and maintainers.
 
    - **Discord**: Join our [Discord](https://discord.gg/VR9UhMrcFW) server.
-   - **GitHub Discussions**: Participate in discussions on our [GitHub Discussions](https://github.com/konductor/konductor/discussions) page.
+   - **GitHub Discussions**: Participate in discussions on our [GitHub Discussions](https://github.com/ContainerCraft/Konductor/discussions) page.
 
-3. **Report Issues**: If you find bugs or have feature requests, please [open an issue](https://github.com/konductor/konductor/issues).
+3. **Report Issues**: If you find bugs or have feature requests, please [open an issue](https://github.com/ContainerCraft/Konductor/issues).
 
 4. **Submit Pull Requests**: Follow our guidelines to submit high-quality pull requests.
 
@@ -182,8 +182,8 @@ We welcome contributions from the community! To get involved:
 Connect with the Konductor community to get help, share ideas, and collaborate:
 
 - **Discord**: Join our [Discord](https://discord.gg/VR9UhMrcFW) server.
-- **GitHub Issues**: Report issues or request features on our [GitHub Issues](https://github.com/konductor/konductor/issues) page.
-- **GitHub Discussions**: Engage in conversations on our [GitHub Discussions](https://github.com/konductor/konductor/discussions) page.
+- **GitHub Issues**: Report issues or request features on our [GitHub Issues](https://github.com/ContainerCraft/Konductor/issues) page.
+- **GitHub Discussions**: Engage in conversations on our [GitHub Discussions](https://github.com/ContainerCraft/Konductor/discussions) page.
 - **Twitter**: Follow us on [Twitter](https://twitter.com/konductor) for updates.
 
 ---
