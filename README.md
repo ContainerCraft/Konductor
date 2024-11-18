@@ -1,253 +1,106 @@
-# Konductor DevOps Template Repository
+# Konductor: Cloud-Agnostic Infrastructure Made Simple
 
 ## Overview
 
-This repository serves as a comprehensive template for starting new DevOps projects from scratch. It is designed to be cloned as a GitHub template repository, providing a fully-configured environment for deploying and managing cloud-native infrastructure using VSCode with Kubernetes and Pulumi boilerplate as a starting point.
+Welcome to **Konductor**, an open-source platform engineering framework designed to simplify and accelerate the deployment of cloud infrastructure across multiple providers. Konductor empowers teams to build, deploy, and manage cloud-native applications with confidence, ensuring compliance, security, and scalability from the ground up.
 
-Whether you're building for on-premises, cloud, or local environments, this template streamlines the setup and deployment processes, enabling you to focus on building and innovating.
+Konductor leverages modern Infrastructure as Code (IaC) practices using Pulumi and Python, providing a type-safe, modular, and maintainable codebase. It abstracts the complexities of cloud environments, enabling you to focus on innovation rather than infrastructure management.
 
-Join the community in the [ContainerCraft Community Discord](https://discord.gg/Jb5jgDCksX) to discuss, collaborate, and contribute!
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [Community and Support](#community-and-support)
+- [License](#license)
+
+---
 
 ## Features
 
-- **AWS LandingZone**: Automated Kubernetes cluster setup using Talos.
-- **Kubernetes Deployment**: Automated Kubernetes cluster setup using Talos.
-- **Pulumi IaC Integration**: Infrastructure as Code management with Pulumi, using Python and best practices.
-- **Runme Integration**: Execute documented tasks directly from the README.md.
-- **GitHub Actions Support**: CI/CD pipelines configured for automated testing and deployment.
-- **Dependency Management with Poetry**: Manage Python dependencies and environments using Poetry.
-- **Strict Type Checking with Pyright**: Enforce code quality through strict type checking.
+- **Cloud-Agnostic Architecture**: Deploy infrastructure across AWS, Azure, and GCP using a unified codebase.
+- **Compliance Automation**: Integrate compliance controls directly into your infrastructure code.
+- **Type-Safe Infrastructure as Code**: Leverage Python's type annotations and `TypedDict` for reliable and maintainable code.
+- **Modular Design**: Build reusable modules that can be developed and deployed independently.
+- **Developer-Friendly Tools**: Utilize modern development tools like Poetry, Pyright, and GitHub Actions.
+- **Scalability and Flexibility**: Easily scale your infrastructure and adapt to changing requirements.
+- **Enhanced Developer Experience**: Simplify workflows with self-service capabilities and clear documentation.
 
-## Using This Template to Start a New Project
+---
 
-This repository is designed as a template, allowing you to quickly bootstrap new DevOps projects with a fully-configured environment. Follow the steps below to create a new project from this template.
+## Getting Started
 
-### Step 1: Create a New Repository from the Template
+Konductor provides a robust starting point for building cloud infrastructure. Follow the steps below to set up your development environment and start deploying with Konductor.
 
-1. **Navigate to the Template Repository:**
+### Prerequisites
 
-   Visit the [Konductor DevOps Template Repository](https://github.com/ContainerCraft/Konductor) on GitHub.
+- **Git**: Version control system ([Download Git](https://git-scm.com/downloads))
+- **Docker**: Containerization platform ([Install Docker](https://docs.docker.com/get-docker/))
+- **Visual Studio Code (VSCode)**: Code editor ([Download VSCode](https://code.visualstudio.com/))
+  - **Remote Development Extension Pack**: [Install Extension Pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack)
 
-2. **Use the "Use this template" Button:**
+### Clone the Repository
 
-   - Click the green `Use this template` button located at the top-right of the repository page.
-   - In the form that appears, provide a name for your new repository and decide if it should be public or private.
-   - Click `Create repository from template` to generate your new repository.
+1. **Fork the Konductor Repository**
 
-### Step 2: Clone Your New Repository
+   Navigate to the [Konductor GitHub repository](https://github.com/konductor/konductor) and click the "Fork" button to create your own copy.
 
-1. **Clone the Repository to Your Local Machine:**
-
-   Once your new repository is created, clone it to your local machine using Git.
-
-   ```bash
-   git clone https://github.com/YourUsername/YourNewRepoName.git
-   cd YourNewRepoName
-   ```
-
-2. **Initialize the Development Environment:**
-
-   We use [Poetry](https://python-poetry.org/) for dependency management and packaging. Poetry ensures that our development environment is consistent, dependencies are properly managed, and collaboration is streamlined.
-
-   **Install Poetry:**
-
-   Ensure that `poetry` is added to your system's PATH. Refer to the [official installation guide](https://python-poetry.org/docs/#installation) for detailed instructions.
-
-   **Install Dependencies and Create Virtual Environment:**
+2. **Clone Your Forked Repository**
 
    ```bash
-   poetry install
+   git clone https://github.com/YourUsername/konductor.git
+   cd konductor
    ```
 
-   **Activate the Virtual Environment:**
+### Set Up the Development Environment
 
-   ```bash
-   poetry shell
-   ```
+Konductor uses a DevContainer configuration to provide a consistent development environment.
 
-   Alternatively, you can prefix commands with `poetry run`.
+1. **Open the Project in VSCode**
 
-3. **Configure Pulumi to Use Poetry:**
+   Launch VSCode and open the `konductor` directory.
 
-   Ensure that `Pulumi.yaml` specifies Poetry as the toolchain:
+2. **Reopen in Container**
+
+   - When prompted, click **"Reopen in Container"** to start the DevContainer.
+   - If not prompted, open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on Mac) and select **"Remote-Containers: Reopen in Container"**.
+
+3. **Wait for the Container to Build**
+
+   VSCode will build the DevContainer image and set up the environment. This may take a few minutes on the first run.
+
+
+### Configure Pulumi
+
+1. **Set Up Pulumi Configuration**
+
+   Ensure that `Pulumi.yaml` configuration is updated with your desired configuration:
 
    ```yaml
-   name: your-pulumi-project
+   name: konductor
    runtime:
      name: python
      options:
-       toolchain: poetry
+       virtualenv: poetry
    ```
+### Install Dependencies
 
-4. **Install Pulumi Dependencies:**
+1. **Install Pulumi Dependencies**
 
    ```bash
    pulumi install
    ```
 
-   This command ensures that Pulumi recognizes and utilizes the Poetry-managed environment.
-
-### Step 3: Customize the Configuration
-
-1. **Update Configuration Files:**
-
-   - Customize the `.env` file with your project-specific environment variables.
-   - Adjust the Pulumi configuration files under `.pulumi` to match your cloud and infrastructure setup.
-
-2. **Set Up Your Pulumi Stack:**
-
-   Configure your Pulumi stack settings to match your project environment by running:
-
-   ```bash
-   pulumi stack init dev
-   ```
-
-   Replace `dev` with your desired stack name.
-
-3. **Install Pyright for Type Checking:**
-
-   We enforce strict type checking using [Pyright](https://github.com/microsoft/pyright).
-
-   **Add Pyright to the Development Dependencies:**
-
-   ```bash
-   poetry add --dev pyright
-   ```
-
-   **Configure Pyright:**
-
-   Create a `pyrightconfig.json` in the project root to define Pyright settings:
-
-   ```json
-   {
-     "include": ["**/*.py"],
-     "exclude": ["**/__pycache__/**"],
-     "reportMissingImports": true,
-     "pythonVersion": "3.8",
-     "typeCheckingMode": "strict"
-   }
-   ```
-
-   **Verify Type Checking:**
-
-   ```bash
-   poetry run pyright
-   ```
-
-4. **Editor Integration (Optional):**
-
-   For real-time type checking and enhanced development experience, integrate Pyright with your editor. If you use Visual Studio Code, install the [Pylance extension](https://marketplace.visualstudio.com/items?itemName=ms-python.vscode-pylance) and set `"python.analysis.typeCheckingMode": "strict"` in your settings.
-
-### Step 4: Start Developing
-
-1. **Deploy the Infrastructure:**
-
-   Before deploying, ensure that your code passes type checking to maintain code quality.
-
-   **Run Type Checking:**
-
-   ```bash
-   poetry run pyright
-   ```
-
-   **Deploy with Pulumi:**
-
-   ```bash
-   pulumi up
-   ```
-
-   If type errors are detected, the deployment will halt, and errors will be displayed.
-
-2. **Implement Best Practices:**
-
-   - Use `TypedDict` to define resource inputs with type hints, enhancing code readability and type safety.
-   - Follow the code standards and guidelines outlined in [PULUMI_PYTHON.md](docs/PULUMI_PYTHON.md), including naming conventions, type annotations, and error handling.
-   - Organize your code into logical modules and packages for better maintainability.
-
-### Step 5: Push Your Changes
-
-1. **Commit and Push:**
-
-   After making changes, commit them to your repository.
-
-   ```bash
-   git add .
-   git commit -m "Initial setup and configuration"
-   git push origin main
-   ```
-
-2. **Collaborate and Contribute:**
-
-   Share your repository with your team, collaborate on features, and contribute back to the original template if you make improvements that could benefit others.
-
-### Tips for Success
-
-- **Keep Your Dependencies Up to Date:** Regularly update the tools and libraries used in your project.
-- **Enforce Type Checking:** Use Pyright to catch type errors early in the development process.
-- **Document Your Changes:** Update the README and other documentation as your project evolves.
-- **Engage with the Community:** Join the [ContainerCraft Community Discord](https://discord.gg/Jb5jgDCksX) to get support and share your experiences.
-
-## How-To (Boilerplate Instructions)
-
-This repository is designed to be used as a template for new DevOps projects. Follow the steps below to clone and configure your environment.
-
-### Prerequisites
-
-Ensure you have the following tools and accounts:
-
-1. [GitHub](https://github.com)
-2. [Pulumi Cloud](https://app.pulumi.com/signup)
-3. [Microsoft Edge](https://www.microsoft.com/en-us/edge) or [Google Chrome](https://www.google.com/chrome)
-4. [Poetry](https://python-poetry.org/docs/#installation)
-
-### Quickstart
-
-Follow these steps to get your environment up and running:
-
-1. **Clone the Repository:**
-
-   Clone this repository to your GitHub account using the "Use this template" button.
-
-2. **Launch in GitHub Codespaces or Local Development Environment:**
-
-   - **GitHub Codespaces:** Start a new Codespace with the following options:
-
-     - **Branch:** `main`
-     - **Dev Container Configuration:** `konductor`
-     - **Region:** Your choice
-     - **Machine Type:** 4 cores, 16 GB RAM, or better
-
-   - **Local Development:** Set up your local environment using Docker or your preferred method.
-
-3. **Open the Integrated Terminal:**
-
-   Use `Ctrl + `` to open the VSCode integrated terminal.
-
-4. **Initialize the Development Environment:**
-
-   **Install Dependencies:**
-
-   ```bash
-   poetry install
-   ```
-
-   **Activate the Virtual Environment:**
-
-   ```bash
-   poetry shell
-   ```
-
-5. **Authenticate Credentials:**
-
-   Login to Pulumi Cloud and other required services.
+2. **Log In to Pulumi**
 
    ```bash
    pulumi login
    ```
 
-6. **Configure the Pulumi Stack:**
-
-   Set up Pulumi stack parameters.
+3. **Create a New Stack**
 
    ```bash
    pulumi stack init dev
@@ -255,45 +108,94 @@ Follow these steps to get your environment up and running:
 
    Replace `dev` with your desired stack name.
 
-7. **Run Type Checking:**
+### Verify Type Checking
 
-   Ensure your code passes type checking before deployment.
+Konductor enforces strict type checking using Pyright.
+
+1. **Install Pyright**
+
+   ```bash
+   poetry add --dev pyright
+   ```
+
+2. **Run Type Checking**
 
    ```bash
    poetry run pyright
    ```
 
-8. **Deploy the Infrastructure:**
+### Deploy Your Infrastructure
 
-   **Deploy with Pulumi:**
+1. **Preview the Deployment**
+
+   ```bash
+   pulumi preview
+   ```
+
+2. **Deploy with Pulumi**
 
    ```bash
    pulumi up
    ```
 
-9. **Cleanup:**
+3. **Destroy Resources**
 
-   Clean up all Kubernetes and Pulumi resources when you're done.
+   When you're done, you can clean up resources:
 
    ```bash
    pulumi destroy
    ```
 
+---
+
+## Documentation
+
+Explore our comprehensive documentation to get the most out of Konductor:
+
+- **[Developer Guide](./docs/developer_guide/README.md)**: Learn about development practices, code standards, and how to contribute.
+- **[Pulumi Python Development Guide](./docs/developer_guide/pulumi-python.md)**: Advanced techniques and best practices for Pulumi with Python.
+- **[Core Module Documentation](./modules/core/README.md)**: Understand the core components and architecture of Konductor.
+- **[Documentation Style Guide](./docs/developer_guide/documentation.md)**: Guidelines for writing clear and consistent documentation.
+- **[Roadmap](./ROADMAP.md)**: Learn about our vision, goals, and future plans for Konductor.
+
+---
+
 ## Contributing
 
-Contributions are welcome! This template is intended to evolve with the needs of the community. Learn how to contribute by reading our [CONTRIBUTING.md](https://github.com/ContainerCraft/Konductor/issues/22).
+We welcome contributions from the community! To get involved:
 
-### Developing and Testing
+1. **Read the [Contributor Guide](./CONTRIBUTING.md)**: Familiarize yourself with our contribution process, coding standards, and community guidelines.
 
-Use the `act` tool to test GitHub Actions locally before pushing your changes.
+2. **Join Our Community**: Engage with other contributors and maintainers.
 
-```bash
-act
-```
+   - **Discord**: Join our [Discord](https://discord.gg/VR9UhMrcFW) server.
+   - **GitHub Discussions**: Participate in discussions on our [GitHub Discussions](https://github.com/konductor/konductor/discussions) page.
+
+3. **Report Issues**: If you find bugs or have feature requests, please [open an issue](https://github.com/konductor/konductor/issues).
+
+4. **Submit Pull Requests**: Follow our guidelines to submit high-quality pull requests.
+
+---
 
 ## Community and Support
 
-Join our community to discuss, learn, and contribute:
+Connect with the Konductor community to get help, share ideas, and collaborate:
 
-- **[ContainerCraft Community Discord](https://discord.gg/Jb5jgDCksX)**
-- **[Konductor Project FAQ](FAQ.md)**
+- **Discord**: Join our [Discord](https://discord.gg/VR9UhMrcFW) server.
+- **GitHub Issues**: Report issues or request features on our [GitHub Issues](https://github.com/konductor/konductor/issues) page.
+- **GitHub Discussions**: Engage in conversations on our [GitHub Discussions](https://github.com/konductor/konductor/discussions) page.
+- **Twitter**: Follow us on [Twitter](https://twitter.com/konductor) for updates.
+
+---
+
+## License
+
+Konductor is licensed under the [Adaptive Public License 1.0](./LICENSE).
+
+---
+
+Thank you for adopting Konductor! We look forward to your contributions and hope that Konductor accelerates your infrastructure development.
+
+---
+
+*Note: This README is a starting point. For detailed information, please refer to the documentation linked above.*

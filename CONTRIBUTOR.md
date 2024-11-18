@@ -181,13 +181,13 @@ We appreciate your contributions via pull requests (PRs):
 - **Format**: Use the [Conventional Commits](https://www.conventionalcommits.org/) specification.
 - **Structure**:
 
-  \```
+  ```
   type(scope): subject
 
   body (optional)
 
   footer (optional)
-  \```
+  ```
 
 - **Types**:
   - `feat`: New feature
@@ -200,13 +200,13 @@ We appreciate your contributions via pull requests (PRs):
 
 - **Example**:
 
-  \```
+  ```
   feat(storage): add S3 bucket encryption
 
   Enable default encryption for all S3 buckets created in the storage module.
 
   Closes #123
-  \```
+  ```
 
 ### Documentation Standards
 
