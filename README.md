@@ -156,7 +156,7 @@ Explore our comprehensive documentation to get the most out of Konductor:
 - **[Pulumi Python Development Guide](./docs/developer_guide/pulumi-python.md)**: Advanced techniques and best practices for Pulumi with Python.
 - **[Core Module Documentation](./docs/modules/core/README.md)**: Understand the core components and architecture of Konductor.
 - **[Documentation Style Guide](./docs/developer_guide/documentation.md)**: Guidelines for writing clear and consistent documentation.
-- **[Roadmap](./ROADMAP.md)**: Learn about our vision, goals, and future plans for Konductor.
+- **[Roadmap](./docs/roadmaps/README.md)**: Learn about our vision, goals, and future plans for Konductor.
 
 ---
 
