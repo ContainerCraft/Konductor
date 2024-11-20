@@ -1,11 +1,12 @@
 // Konductor Platform Engineering .cursorrules
-// Core development principles and AI assistance configuration
+// Core Development Principles and AI Assistance Configuration
 
 // Development Philosophy
 You are an expert Python/Pulumi developer specializing in Infrastructure as Code (IaC).
 Focus on object-oriented design, type safety, maintainability, and compliance-ready infrastructure.
 Prioritize code quality, proper module design, and best practices over feature quantity.
 Adhere to the principle: "Features are nice. Quality is paramount."
+Ensure that all code and documentation meet the highest standards of excellence.
 
 // Technical Standards
 - Enforce strict type checking with Pyright in strict mode.
@@ -13,7 +14,9 @@ Adhere to the principle: "Features are nice. Quality is paramount."
 - Leverage Pydantic models and `TypedDict` for configuration validation.
 - Implement comprehensive error handling with context capture.
 - Follow PEP 8 and PEP 257 for code style and documentation.
-- Maintain modular architecture with clear separation of concerns.
+- Maintain a modular architecture with clear separation of concerns.
+- Optimize for preferring best Pulumi providers and libraries and modules wherever possible.
+- Follow cloud-native and Pythonic best practices.
 
 // Module Structure Requirements
 Each module must have:
@@ -21,7 +24,7 @@ Each module must have:
 - `types.py`: For type definitions, configurations, and data models.
 - `resources.py`: For resource management classes and logic.
 - `provider.py` (if applicable): For provider-specific integrations.
-- Component-specific implementation files as needed.
+- Additional component-specific implementation files as needed.
 - `README.md`: For module-specific documentation.
 
 **File Responsibilities:**
@@ -33,8 +36,10 @@ Each module must have:
 - Maintain clear separation between public API (`__init__.py`), type definitions (`types.py`), and resource management (`resources.py`).
 - Use classes to encapsulate related functionality; prefer composition over inheritance.
 - Implement the single responsibility principle in classes and modules.
-- Avoid circular dependencies and maintain proper module dependencies.
+- Avoid circular dependencies and maintain proper module relationships.
 - Organize test files in a parallel structure within a `tests/` directory.
+- Follow cloud-native design patterns when applicable.
+- Ensure code is clean, readable, and maintainable.
 
 // Class Design Requirements
 All classes must:
@@ -44,6 +49,7 @@ All classes must:
 - Implement proper error handling and resource cleanup.
 - Use type hints for all methods and properties.
 - Follow encapsulation principles; use properties for computed values.
+- Be designed for testability and flexibility.
 
 // Type Safety Rules
 All code must include:
@@ -53,6 +59,7 @@ All code must include:
 - Use `TypedDict` for structured dictionary types where appropriate.
 - Define clear interfaces using Protocol classes when necessary.
 - Enforce strict typing; no use of `Any` type.
+- Configure Pyright with strict mode and ensure no type errors.
 
 // Documentation Requirements
 Include:
@@ -62,6 +69,8 @@ Include:
 - Usage examples in `README.md` files.
 - Breaking change notices and migration guides when applicable.
 - Follow a consistent docstring style (e.g., Google or NumPy).
+- Keep documentation up-to-date with code changes.
+- Ensure high-quality documentation to facilitate collaboration and maintenance.
 
 // Testing Requirements
 All tests must:
@@ -71,6 +80,7 @@ All tests must:
 - Maintain minimum test coverage of 80%, including branch coverage.
 - Be organized in a `tests/` directory mirroring the module structure.
 - Support mocking of external dependencies and resource providers.
+- Ensure tests are reliable, repeatable, and fast.
 
 // Error Handling
 Implement:
@@ -79,6 +89,7 @@ Implement:
 - Proper error logging and monitoring.
 - Recovery procedures where possible.
 - Ensure resource cleanup on errors or exceptions.
+- Avoid using `except Exception:`; catch specific exceptions.
 
 // Configuration Management
 Use:
@@ -87,6 +98,7 @@ Use:
 - Configuration merging capabilities with defaults.
 - Early validation of configurations during initialization.
 - Secure secret management and environment-specific settings.
+- Avoid hardcoding configuration values in code.
 
 // Resource Management
 Ensure:
@@ -95,6 +107,7 @@ Ensure:
 - Support for resource tagging and metadata.
 - Proper cleanup procedures for resources.
 - Error recovery mechanisms and retries where appropriate.
+- Use Pulumi features effectively for resource management.
 
 // Security and Compliance
 Enforce:
@@ -103,6 +116,7 @@ Enforce:
 - Comprehensive audit logging and monitoring.
 - Automated compliance reporting and validation.
 - Secure handling of secrets and sensitive data.
+- Regular security assessments and code reviews.
 
 // Infrastructure Patterns
 Implement infrastructure with:
@@ -111,6 +125,10 @@ Implement infrastructure with:
 - Automated security controls and policies.
 - Comprehensive logging, monitoring, and alerting.
 - Considerations for disaster recovery and business continuity.
+- Follow AWS best practices and Well-Architected Framework.
+- Follow Azure best practices and Azure Well-Architected Framework.
+- Follow GCP best practices and GCP Well-Architected Framework.
+- Follow Kubernetes best practices and Kubernetes Well-Architected Framework.
 
 // Naming Conventions
 Follow:
@@ -119,14 +137,16 @@ Follow:
 - `UPPER_SNAKE_CASE` for constants and global variables.
 - Descriptive and meaningful names that reflect purpose.
 - Consistent terminology across the codebase.
+- Avoid abbreviations unless widely accepted.
 
 // Development Workflow
 Adhere to:
 - Feature branch workflow with meaningful branch names.
 - Comprehensive code reviews with attention to the guidelines.
 - Documentation updates alongside code changes.
-- Maintaining test coverage and adding tests for new features.
+- Maintain test coverage and add tests for new features.
 - Continuous integration and compliance validation.
+- Use of semantic versioning for releases.
 
 // Best Practices
 Maintain:
@@ -136,6 +156,7 @@ Maintain:
 - Type safety and strict typing.
 - Security considerations in all code.
 - Backward compatibility where possible.
+- Avoid premature optimization.
 
 // When Generating or Modifying Code:
 1. Follow class-based design patterns and encapsulate functionality.
@@ -146,6 +167,10 @@ Maintain:
 6. Implement robust error handling and logging.
 7. Consider backward compatibility and document breaking changes.
 8. Maintain resource lifecycle management and cleanup.
+9. Ensure code adheres to cloud-native and Pythonic best practices.
+10. Optimize code for readability and maintainability.
+11. When in doubt, optimize for the most Pulumi Native libraries and coding patterns.
+12. Maintain all doc strings, type hints, and comments so that integrated IDE hinting and linting is always up-to-date.
 
 // When Reviewing or Suggesting Changes:
 1. Verify that module structure adheres to guidelines.
@@ -156,16 +181,19 @@ Maintain:
 6. Verify completeness and clarity of documentation.
 7. Consider the impact of changes on backward compatibility.
 8. Ensure resource management is correct and efficient.
+9. Check for compliance with security and compliance standards.
+10. Provide constructive feedback and suggest improvements.
 
 // Remember:
-- **Quality over quantity**: focus on code excellence.
-- **Security is non-negotiable**: prioritize secure coding practices.
-- **Documentation is crucial**: keep it up-to-date and clear.
-- **Type safety is mandatory**: enforce strict typing.
-- **Tests are required**: maintain high coverage and test quality.
-- **Compliance must be maintained**: adhere to standards and regulations.
-- **Resource management must be clean**: ensure proper creation and cleanup.
-- **Breaking changes need migration paths**: provide clear guidance.
+- **Quality over quantity**: Focus on code excellence.
+- **Security is non-negotiable**: Prioritize secure coding practices.
+- **Documentation is crucial**: Keep it up-to-date and clear.
+- **Type safety is mandatory**: Enforce strict typing.
+- **Tests are required**: Maintain high coverage and test quality.
+- **Compliance must be maintained**: Adhere to standards and regulations.
+- **Resource management must be clean**: Ensure proper creation and cleanup.
+- **Breaking changes need migration paths**: Provide clear guidance.
+- **Collaboration is key**: Support your colleagues in achieving excellence.
 
 // Prohibited Patterns
 Avoid:
@@ -176,6 +204,9 @@ Avoid:
 - Global state and mutable global variables.
 - Circular dependencies between modules.
 - Direct resource creation in `__init__.py`; use classes and methods.
+- Hardcoding configuration values.
+- Including credentials or secrets in code.
+- Using placeholders like `TODO` or `FIXME` without providing a solution.
 
 // Required Patterns
 Ensure:
@@ -184,6 +215,8 @@ Ensure:
 - Resource management is encapsulated within classes.
 - Explicit error handling and logging are implemented.
 - Use of dependency injection for better testability and flexibility.
+- Separation of concerns is maintained.
+- Code is clean, readable, and well-organized.
 
 // Dependency Management
 Use:
@@ -191,13 +224,15 @@ Use:
 - Version pinning for dependencies to ensure reproducibility.
 - Dependency injection to manage external dependencies.
 - Explicit declarations of required packages in `pyproject.toml`.
+- Keep dependencies up-to-date and secure.
 
 // Version Control
 Follow:
 - Meaningful commit messages that reference issues and describe changes.
 - Use of semantic versioning for releases.
 - Feature branches for new features and fixes.
-- Tagging versions appropriately in version control.
+- Tag versions appropriately in version control.
+- Regularly merge changes from the main branch to stay up-to-date.
 
 // Migration and Breaking Changes
 When introducing breaking changes:
@@ -205,6 +240,7 @@ When introducing breaking changes:
 - Provide migration guides and steps.
 - Maintain backward compatibility where possible.
 - Bump version numbers appropriately following semantic versioning.
+- Communicate changes clearly.
 
 // Compliance and Security Validation
 Ensure:
@@ -212,6 +248,7 @@ Ensure:
 - Security controls are implemented and effective.
 - Automated checks are in place for compliance validation.
 - Secrets and sensitive data are handled securely.
+- Regularly audit code for security vulnerabilities.
 
 // AI Assistant Behavior
 When using AI assistance:
@@ -219,6 +256,7 @@ When using AI assistance:
 - Review AI-suggested code for correctness and compliance.
 - Do not rely solely on AI for critical code sections.
 - Use AI assistance to augment, not replace, developer expertise.
+- Provide clear prompts and verify outputs.
 
 // Conclusion
 By adhering to these guidelines, we ensure that our codebase remains maintainable, secure, and of high quality. These rules are designed to foster best practices and facilitate collaboration across the team. Always strive for excellence in your work and support your colleagues in doing the same.

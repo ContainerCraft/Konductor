@@ -1,382 +1,282 @@
-# Amazon EKS Cluster Template Guide
+# Amazon EKS cluster template guide
 
 ## Table of Contents
 
 1. [Introduction](#introduction)
-2. [Architecture Overview](#architecture-overview)
+   - [Purpose](#purpose)
+   - [Scope](#scope)
+2. [Architecture overview](#architecture-overview)
+   - [Core components](#core-components)
 3. [Prerequisites](#prerequisites)
-4. [Implementation Guide](#implementation-guide)
-5. [Configuration Management](#configuration-management)
-6. [Security Controls](#security-controls)
-7. [Observability Integration](#observability-integration)
-8. [Deployment Workflow](#deployment-workflow)
-9. [Testing and Validation](#testing-and-validation)
-10. [Best Practices](#best-practices)
-11. [Future Enhancements](#future-enhancements)
+4. [Implementation guide](#implementation-guide)
+   - [Project setup](#project-setup)
+   - [Configuration setup](#configuration-setup)
+   - [Deployment steps](#deployment-steps)
+5. [Configuration management](#configuration-management)
+6. [Security controls](#security-controls)
+   - [IAM roles and policies](#iam-roles-and-policies)
+   - [Network security](#network-security)
+7. [Observability integration](#observability-integration)
+   - [ADOT integration](#adot-integration)
+   - [Fluent Bit logging](#fluent-bit-logging)
+8. [Deployment workflow](#deployment-workflow)
+9. [Testing and validation](#testing-and-validation)
+   - [Unit tests](#unit-tests)
+   - [Integration tests](#integration-tests)
+10. [Best practices](#best-practices)
+11. [Future enhancements](#future-enhancements)
 12. [Troubleshooting](#troubleshooting)
-13. [References](#references)
+    - [Common issues](#common-issues)
+    - [Logging and debugging](#logging-and-debugging)
+13. [Conclusion](#conclusion)
+14. [References](#references)
+
+---
 
 ## Introduction
 
-This guide provides a comprehensive template for deploying production-ready Amazon EKS clusters using Pulumi and Python. It implements AWS best practices, security controls, and observability patterns while maintaining compliance with organizational standards.
+This guide provides a comprehensive template for deploying production-ready Amazon Elastic Kubernetes Service (EKS) clusters using Pulumi and Python. It implements AWS best practices, security controls, and observability patterns while maintaining compliance with organizational standards.
 
 ### Purpose
 
-- Provide a standardized EKS deployment template
-- Implement security best practices
-- Enable comprehensive observability
-- Ensure compliance with standards
-- Support multi-tenant workloads
+- Provide a standardized EKS deployment template.
+- Implement security best practices.
+- Enable comprehensive observability.
+- Ensure compliance with standards.
+- Support multi-tenant workloads.
 
 ### Scope
 
-- EKS cluster deployment
-- VPC and networking setup
-- IAM and security configuration
-- Logging and monitoring
-- Add-on integration (ADOT, Fluent Bit)
+- EKS cluster deployment.
+- VPC and networking setup.
+- IAM and security configuration.
+- Logging and monitoring.
+- Add-on integration (ADOT, Fluent Bit).
 
-## Architecture Overview
+---
 
-### Core Components
+## Architecture overview
+
+### Core components
 
 ```python
-from typing import TypedDict, Optional, List
+from typing import TypedDict, List, Optional, Dict
+
+class NodeGroupConfig(TypedDict):
+    """Node group configuration structure.
+
+    Attributes:
+        name: The name of the node group.
+        instance_type: The EC2 instance type.
+        desired_capacity: The desired number of nodes.
+        min_size: The minimum number of nodes.
+        max_size: The maximum number of nodes.
+        ssh_key_name: The name of the SSH key pair.
+        tags: Optional tags for the node group resources.
+    """
 
 class EksClusterConfig(TypedDict):
     """EKS cluster configuration structure.
 
     Attributes:
-        name: Cluster name
-        version: Kubernetes version
-        vpc_config: VPC configuration
-        node_groups: Node group configurations
-        addons: Cluster add-ons
+        name: The name of the EKS cluster.
+        version: The Kubernetes version.
+        region: The AWS region.
+        node_groups: A list of node group configurations.
+        tags: Optional tags for the cluster resources.
     """
-    name: str
-    version: str
-    vpc_config: Dict[str, Any]
-    node_groups: List[Dict[str, Any]]
-    addons: Optional[Dict[str, Any]]
 ```
 
-### Network Architecture
-
-- VPC with public and private subnets
-- NAT Gateways for outbound traffic
-- VPC Flow Logs for network monitoring
-- Security group configuration
-
-### Security Architecture
-
-- Private API endpoint
-- KMS encryption for secrets
-- IAM roles and policies
-- Network policies
+---
 
 ## Prerequisites
 
-- Python 3.10+
-- Pulumi CLI
-- AWS CLI configured
-- Required permissions:
-  - EKS cluster creation
-  - VPC management
-  - IAM role creation
-  - KMS key management
+> **Note**: All prerequisites are automatically supplied via the [Konductor Devcontainer](../../developer_guide/devcontainer.md).
 
-## Implementation Guide
+Before proceeding, ensure you have the following:
 
-### VPC Setup
+- **Python 3.10+**: The codebase requires Python version 3.10 or higher.
+- **Pulumi CLI**: Install the Pulumi CLI and authenticate with your cloud provider.
+- **AWS CLI**: Configure the AWS CLI with appropriate credentials.
+- **Poetry**: Use Poetry for dependency management.
+- **SSH key pair**: An existing SSH key pair in AWS for EC2 instances.
+- **IAM permissions**: Ensure your AWS user has sufficient permissions to create and manage the required resources.
 
-```python
-def create_vpc(
-    stack_name: str,
-    cidr_block: str,
-    azs: List[str]
-) -> aws_native.ec2.VPC:
-    """Create VPC with required components."""
-    vpc = aws_native.ec2.VPC(
-        f"vpc-{stack_name}",
-        cidr_block=cidr_block,
-        enable_dns_support=True,
-        enable_dns_hostnames=True,
-        tags=[aws_native.ec2.TagArgs(
-            key="Name",
-            value=f"vpc-{stack_name}"
-        )]
-    )
-    return vpc
+---
+
+## Implementation guide
+
+### Configuration setup
+
+Configure the Pulumi stack with the required variables:
+
+```bash
+pulumi stack init dev
+pulumi config set aws:region us-west-2
+pulumi config set ssh_key_name your-ssh-key
 ```
 
-### Security Group Configuration
+### Deployment steps
+
+1. **Preview changes**:
+
+   ```bash
+   pulumi preview
+   ```
+
+2. **Deploy resources**:
+
+   ```bash
+   pulumi up
+   ```
+
+3. **Access the cluster**:
+
+   Update your kubeconfig file to access the cluster:
+
+   ```bash
+   pulumi stack output kubeconfig > kubeconfig.yaml
+   export KUBECONFIG=$PWD/kubeconfig.yaml
+   kubectl get nodes
+   ```
+
+---
+
+## Configuration management
+
+The EKS module uses `TypedDict` for configuration validation and management. Configurations are defined in the `types.py` file and consumed by the deployment logic. Configuration is merged from multiple sources, including Pulumi configuration files and environment variables, and is validated upon initialization.
+
+---
+
+## Security controls
+
+### IAM roles and policies
+
+For security and compliance, the module creates and configures the necessary IAM roles and policies with least privilege principles.
+
+- **Cluster role**: Attached with policies for EKS cluster operations.
+- **Node group role**: Attached with policies for worker node operations.
+
+### Network security
+
+- **VPC and subnets**: The VPC and subnets are created with appropriate CIDR blocks and tags.
+- **Security groups**: Security groups are configured to allow only necessary traffic.
+- **Endpoint access**: The EKS cluster endpoint access is restricted as per compliance requirements.
+
+---
+
+## Observability integration
+
+### ADOT integration
+
+Configure AWS Distro for OpenTelemetry (ADOT) collectors to export metrics and traces to AWS CloudWatch and X-Ray.
 
 ```python
-def create_security_groups(
-    stack_name: str,
-    vpc_id: pulumi.Output[str]
-) -> Dict[str, aws_native.ec2.SecurityGroup]:
-    """Create required security groups."""
-    cluster_sg = aws_native.ec2.SecurityGroup(
-        f"cluster-sg-{stack_name}",
-        vpc_id=vpc_id,
-        description="EKS cluster security group",
-        tags=[aws_native.ec2.TagArgs(
-            key="Name",
-            value=f"cluster-sg-{stack_name}"
-        )]
-    )
-    return {"cluster": cluster_sg}
+def deploy_adot_integration(cluster: EksCluster) -> None:
+    """Deploy ADOT OpenTelemetry collectors to the EKS cluster.
+
+    Args:
+        cluster: The EKS cluster object.
+    """
+    # Implementation of ADOT deployment
 ```
 
-### EKS Cluster Deployment
+### Fluent Bit logging
+
+Set up Fluent Bit as a DaemonSet to collect and forward logs to AWS CloudWatch Logs.
+
+---
+
+## Deployment workflow
+
+The deployment workflow follows best practices for infrastructure provisioning:
+
+1. **Initialize Pulumi stack**.
+2. **Set configuration values**.
+3. **Preview changes** before applying.
+4. **Deploy resources** using `pulumi up`.
+5. **Validate** the deployment and access the cluster.
+
+---
+
+## Testing and validation
+
+### Unit tests
+
+Implement unit tests using `pytest` to ensure configuration validation and resource creation.
 
 ```python
-def create_eks_cluster(
-    config: EksClusterConfig,
-    vpc_id: pulumi.Output[str],
-    subnet_ids: List[pulumi.Output[str]],
-    security_groups: Dict[str, aws_native.ec2.SecurityGroup]
-) -> aws_native.eks.Cluster:
-    """Create EKS cluster with configuration."""
-    cluster = aws_native.eks.Cluster(
-        config["name"],
-        role_arn=config["role_arn"],
-        version=config["version"],
-        vpc_config=aws_native.eks.ClusterVpcConfigArgs(
-            subnet_ids=subnet_ids,
-            security_group_ids=[security_groups["cluster"].id],
-            endpoint_private_access=True,
-            endpoint_public_access=False
-        ),
-        encryption_config=[
-            aws_native.eks.ClusterEncryptionConfigArgs(
-                provider=aws_native.eks.ProviderArgs(
-                    key_arn=config["kms_key_arn"]
-                ),
-                resources=["secrets"]
-            )
-        ]
-    )
-    return cluster
+def test_eks_cluster_creation() -> None:
+    """Test EKS cluster creation."""
+    # Test implementation
 ```
 
-## Configuration Management
+### Integration tests
 
-### TypedDict Configurations
+Use Pulumi's testing framework for integration tests to validate resource provisioning and configurations.
 
-```python
-class NodeGroupConfig(TypedDict):
-    name: str
-    instance_types: List[str]
-    desired_size: int
-    min_size: int
-    max_size: int
-    disk_size: int
-    labels: Dict[str, str]
-    taints: Optional[List[Dict[str, str]]]
+---
 
-class VpcConfig(TypedDict):
-    cidr_block: str
-    public_subnet_cidrs: List[str]
-    private_subnet_cidrs: List[str]
-    availability_zones: List[str]
-```
+## Best practices
 
-### Default Values
+- **Type safety**: Use type hints and enforce strict typing throughout the codebase.
+- **Modular design**: Separate configurations, types, and resource definitions into distinct modules.
+- **Security**: Follow AWS security best practices, including least privilege IAM policies.
+- **Compliance**: Ensure all resources adhere to compliance standards such as NIST and FISMA.
+- **Observability**: Implement comprehensive logging and monitoring from the start.
 
-```python
-eks_defaults: EksClusterConfig = {
-    "version": "1.26",
-    "vpc_config": {
-        "cidr_block": "10.0.0.0/16",
-        "public_subnet_cidrs": [
-            "10.0.0.0/24",
-            "10.0.1.0/24"
-        ],
-        "private_subnet_cidrs": [
-            "10.0.2.0/24",
-            "10.0.3.0/24"
-        ]
-    },
-    "node_groups": [{
-        "name": "default",
-        "instance_types": ["t3.medium"],
-        "desired_size": 2,
-        "min_size": 1,
-        "max_size": 4
-    }]
-}
-```
+---
 
-## Security Controls
+## Future enhancements
 
-### IAM Configuration
+- **Automated scaling**: Implement Cluster Autoscaler and Horizontal Pod Autoscaler.
+- **Advanced networking**: Integrate with AWS Transit Gateway and implement network policies.
+- **Enhanced security**: Add OPA Gatekeeper and enable encryption at rest for etcd.
+- **Multi-cluster management**: Explore Kubernetes federation and multi-cluster management tools.
 
-```python
-def create_cluster_role(
-    stack_name: str
-) -> aws_native.iam.Role:
-    """Create IAM role for EKS cluster."""
-    return aws_native.iam.Role(
-        f"eks-cluster-role-{stack_name}",
-        assume_role_policy_document=json.dumps({
-            "Version": "2012-10-17",
-            "Statement": [{
-                "Effect": "Allow",
-                "Principal": {
-                    "Service": "eks.amazonaws.com"
-                },
-                "Action": "sts:AssumeRole"
-            }]
-        })
-    )
-```
-
-### KMS Configuration
-
-```python
-def create_kms_key(
-    stack_name: str
-) -> aws_native.kms.Key:
-    """Create KMS key for EKS secrets encryption."""
-    return aws_native.kms.Key(
-        f"eks-kms-key-{stack_name}",
-        description="KMS key for EKS secrets encryption",
-        enable_key_rotation=True
-    )
-```
-
-## Observability Integration
-
-### Fluent Bit Setup
-
-```python
-def deploy_fluent_bit(
-    provider: k8s.Provider,
-    namespace: str = "logging"
-) -> None:
-    """Deploy Fluent Bit for log collection."""
-    # Implementation details in the full code example
-```
-
-### ADOT Integration
-
-```python
-def deploy_adot(
-    provider: k8s.Provider,
-    namespace: str = "adot-system"
-) -> None:
-    """Deploy AWS Distro for OpenTelemetry."""
-    # Implementation details in the full code example
-```
-
-## Deployment Workflow
-
-1. Create VPC and networking components
-2. Set up security groups and IAM roles
-3. Deploy EKS cluster
-4. Configure node groups
-5. Install cluster add-ons
-6. Deploy observability components
-
-## Testing and Validation
-
-### Health Checks
-
-```python
-def validate_cluster_health(
-    cluster_name: str
-) -> bool:
-    """Validate EKS cluster health."""
-    try:
-        cluster = aws.eks.get_cluster(name=cluster_name)
-        return cluster.status == "ACTIVE"
-    except Exception as e:
-        log.error(f"Cluster validation failed: {str(e)}")
-        return False
-```
-
-### Integration Tests
-
-```python
-def test_cluster_deployment(
-    stack: auto.Stack
-) -> None:
-    """Test full cluster deployment."""
-    # Implementation details
-```
-
-## Best Practices
-
-1. **Security**
-   - Enable private endpoints
-   - Implement least privilege
-   - Use KMS encryption
-   - Enable audit logging
-
-2. **Networking**
-   - Use private subnets for nodes
-   - Implement proper CIDR planning
-   - Enable VPC Flow Logs
-
-3. **Observability**
-   - Deploy ADOT collector
-   - Configure Fluent Bit
-   - Enable CloudWatch Container Insights
-
-## Future Enhancements
-
-### Short-term
-
-1. **Advanced Networking**
-   - VPC CNI customization
-   - Network policy implementation
-   - Service mesh integration
-
-2. **Security Enhancements**
-   - Pod security policies
-   - Runtime security
-   - Image scanning
-
-### Long-term
-
-1. **Multi-cluster Management**
-   - Cluster federation
-   - Cross-cluster networking
-   - Centralized operations
-
-2. **Advanced Observability**
-   - Custom metrics pipeline
-   - Automated alerting
-   - Performance optimization
+---
 
 ## Troubleshooting
 
-### Common Issues
+### Common issues
 
-1. **Cluster Creation Failures**
-   - Check IAM permissions
-   - Verify VPC configuration
-   - Review security group rules
+1. **Cluster creation failures**:
 
-2. **Node Group Issues**
-   - Validate instance types
-   - Check capacity constraints
-   - Review launch template
+   - Verify IAM permissions.
+   - Check VPC and subnet configurations.
+   - Ensure that the SSH key pair exists.
 
-### Logging and Debugging
+2. **Node group scaling issues**:
+
+   - Check instance type availability.
+   - Validate Auto Scaling Group settings.
+
+### Logging and debugging
+
+Enable debug logging in Pulumi and AWS SDKs to gather more information:
 
 ```python
-def configure_debug_logging(
-    level: str = "DEBUG"
-) -> None:
-    """Configure debug logging for troubleshooting."""
+import logging
+
+def configure_debug_logging(level: str = "DEBUG") -> None:
+    """Configure debug logging for troubleshooting.
+
+    Args:
+        level: The logging level to set.
+    """
     logging.basicConfig(
         level=level,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 ```
+
+---
+
+## Conclusion
+
+By following this guide, you can deploy a production-ready Amazon EKS cluster that adheres to best practices and compliance requirements. The template provides a solid foundation for building scalable, secure, and observable Kubernetes workloads on AWS.
+
+---
 
 ## References
 
@@ -385,7 +285,11 @@ def configure_debug_logging(
 - [Pulumi AWS Native Provider](https://www.pulumi.com/registry/packages/aws-native/)
 - [ADOT Documentation](https://aws-otel.github.io/)
 - [Fluent Bit Documentation](https://docs.fluentbit.io/)
+- [Konductor Developer Guide](../../developer_guide/README.md)
+- [Pulumi Python Development Guide](../../developer_guide/pulumi-python.md)
+- [Documentation Style Guide](../../developer_guide/documentation.md)
+- [Contribution Guidelines](../../contribution_guidelines.md)
 
 ---
 
-**Note**: This template is actively maintained and updated. For the latest changes, refer to the [changelog](./changelog.md).
+*Note*: This template is actively maintained and updated. Refer to the [changelog](./changelog.md) for the latest changes.
