@@ -1,9 +1,4 @@
 # Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
-.env
-.envrc
-.tmpenv
-**/.tmpenv
-
 local
 .kube
 .talos
@@ -11,23 +6,15 @@ local
 *.pyc
 venv/
 __pycache__/
-pulumi/.pulumi
 
 *.pyc
 venv/
 __pycache__/
-.talos/manifest
-.pulumi/plugins
-.pulumi/*
-Pulumi.*.yaml
-.env
-.devcontainer/docker
+**/Pulumi.*.yaml
 tmp.*
 tmp
 .ssh
-tmp
 smce-cli
 **/config
 **/credentials
 **/.gitconfig
-pulumi/modules/aws.bak

@@ -1,51 +1,4 @@
-# ./core/config.py
-import pulumi
-from typing import List, Dict, Any
-
-def get_enabled_modules(config: pulumi.Config) -> List[str]:
-    """
-    Retrieves the list of enabled modules from the Pulumi configuration.
-
-    Args:
-        config: The Pulumi configuration object.
-
-    Returns:
-        List[str]: A list of module names that are enabled.
-    """
-    # Default modules configuration
-    default_modules = {
-        "aws": False,
-        "azure": False,
-        "kubernetes": False,
-        # Add other modules as needed
-    }
-
-    # Load user configuration for modules
-    modules_config = config.get_object("modules") or {}
-
-    # Merge default and user configurations
-    merged_modules = {**default_modules, **modules_config}
-
-    # Return the list of enabled modules
-    return [module for module, enabled in merged_modules.items() if enabled]
-
-def load_default_versions(config: pulumi.Config) -> Dict[str, str]:
-    """
-    Loads the default versions for modules.
-
-    Args:
-        config: The Pulumi configuration object.
-
-    Returns:
-        Dict[str, str]: A dictionary of module names to default versions.
-    """
-    # Implement logic to load default versions, possibly from a file or remote source
-    # For simplicity, return an empty dictionary here
-    return {}
-
-
-# ./modules/core/config.py
-
+# ../konductor/modules/core/config.py
 """
 Configuration Management Module
 
@@ -61,8 +14,11 @@ Key Functions:
 Includes proper data type handling to ensure configurations are correctly parsed.
 """
 
+
 import json
-import os
+import pulumi
+from typing import List, Dict, Any
+from pulumi import log
 from pathlib import Path
 from typing import Any, Dict, Tuple, Optional, cast, Union, Literal, List
 import requests
@@ -75,19 +31,30 @@ from pulumi import log
 from .types import (
     ComplianceConfig,
     ModuleDefaults,
-    DEFAULT_MODULE_CONFIG,
     ModuleBase,
     InitializationConfig,
-    ModuleRegistry
+    ModuleRegistry,
+    StackOutputs
 )
 
 # Configuration Constants
 DEFAULT_VERSIONS_URL_TEMPLATE = (
-    "https://raw.githubusercontent.com/ContainerCraft/Kargo/rerefactor/pulumi/"
+    "https://raw.githubusercontent.com/ContainerCraft/Kargo/newfactor/pulumi/"
 )
 
 CACHE_DIR = Path("/tmp/konductor")
 VERSION_CACHE_FILE = CACHE_DIR / "default_versions.json"
+
+# Default module configuration
+DEFAULT_MODULE_CONFIG: Dict[str, ModuleDefaults] = {
+    "aws": {"enabled": False, "version": None, "config": {}},
+    "cert_manager": {"enabled": False, "version": None, "config": {}},
+    "kubevirt": {"enabled": False, "version": None, "config": {}},
+    "multus": {"enabled": False, "version": None, "config": {}},
+    "hostpath_provisioner": {"enabled": False, "version": None, "config": {}},
+    "containerized_data_importer": {"enabled": False, "version": None, "config": {}},
+    "prometheus": {"enabled": False, "version": None, "config": {}}
+}
 
 def ensure_cache_dir() -> None:
     """Ensures the cache directory exists."""
@@ -458,22 +425,92 @@ def initialize_config(stack_config: Dict[str, Any]) -> InitializationConfig:
 
 def get_enabled_modules(config: pulumi.Config) -> List[str]:
     """
-    Get list of enabled modules from configuration.
+    Returns a list of module names that are enabled in the configuration.
 
     Args:
-        config: Pulumi configuration object
+        config: The Pulumi configuration object.
 
     Returns:
-        List[str]: List of enabled module names
+        A list of enabled module names.
     """
-    # Default modules - only AWS enabled by default for MVP
-    default_modules = ["aws"]
+    enabled_modules = []
+    for module_name, module_defaults in DEFAULT_MODULE_CONFIG.items():
+        # Get the configuration value with proper error handling
+        config_key = f"konductor:{module_name}:enabled"
+        is_enabled = config.get_bool(config_key)
 
-    # Get modules from config
-    modules_config = config.get_object("modules") or {}
+        # Use default if no config value found
+        if is_enabled is None:
+            is_enabled = module_defaults["enabled"]
 
-    # Return enabled modules
-    return [
-        module_name for module_name in default_modules
-        if modules_config.get(module_name, {}).get("enabled", True)
-    ]
+        log.info(f"Module {module_name} enabled status: {is_enabled}")
+        if is_enabled:
+            enabled_modules.append(module_name)
+
+    return enabled_modules
+
+def load_default_versions(config: pulumi.Config) -> Dict[str, str]:
+    """
+    Loads the default versions for modules.
+
+    Args:
+        config: The Pulumi configuration object.
+
+    Returns:
+        Dict[str, str]: A dictionary of module names to default versions.
+    """
+    # Implement logic to load default versions, possibly from a file or remote source
+    # For simplicity, return an empty dictionary here
+    return {}
+
+def get_stack_outputs(init_config: InitializationConfig) -> StackOutputs:
+    """
+    Generate standardized stack outputs.
+
+    Args:
+        init_config: The initialization configuration object
+
+    Returns:
+        StackOutputs: Dictionary containing all stack outputs
+    """
+    try:
+        # Get compliance data
+        compliance_data = init_config.compliance_config or {}
+
+        # Get configuration subset
+        config_data = {
+            "stack_name": init_config.stack_name,
+            "project_name": init_config.project_name,
+            "versions": init_config.versions,
+            "configurations": init_config.configurations
+        }
+
+        # Get Kubernetes component versions
+        k8s_versions = {
+            name: config.get("version", "unknown")
+            for name, config in init_config.configurations.items()
+            if name in [
+                "cert_manager",
+                "kubevirt",
+                "multus",
+                "pulumi_operator",
+                "crossplane"
+            ]
+        }
+
+        # Construct the StackOutputs TypedDict
+        stack_outputs: StackOutputs = {
+            "compliance": compliance_data,
+            "config": config_data,
+            "k8s_app_versions": k8s_versions
+        }
+
+        return stack_outputs
+
+    except Exception as e:
+        log.error(f"Failed to generate stack outputs: {str(e)}")
+        raise
+
+    except Exception as e:
+        log.error(f"Failed to generate stack outputs: {str(e)}")
+        raise

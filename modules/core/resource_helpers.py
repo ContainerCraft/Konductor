@@ -7,24 +7,20 @@ This module provides helper functions for creating and managing Pulumi resources
 with proper type safety, resource option handling, and error management.
 """
 
-import os
-import tempfile
+import importlib
+import logging as log
 import pulumi
 import pulumi_kubernetes as k8s
-from typing import Optional, Dict, Any, List, Union, Callable, cast
+from typing import Optional, Dict, Any, List
 from pulumi import ResourceOptions, Resource, Output
 from pulumi_kubernetes.core.v1 import Namespace, Secret
 from pulumi_kubernetes.meta.v1 import ObjectMetaArgs
-from pulumi_kubernetes.helm.v3 import Release, ReleaseArgs, Chart
+from pulumi_kubernetes.helm.v3 import Release, ReleaseArgs
 from pulumi_kubernetes.apiextensions import CustomResource
 from pulumi_kubernetes.yaml import ConfigFile
 
-from .metadata import get_global_labels, get_global_annotations
+from .metadata import MetadataSingleton
 from .utils import set_resource_metadata
-
-import importlib
-import logging as log
-from pulumi_kubernetes import Provider
 
 
 def create_namespace(
@@ -70,42 +66,32 @@ def create_namespace(
         depends_on = depends_on or []
 
         # Merge global metadata
-        global_labels = get_global_labels()
-        global_annotations = get_global_annotations()
-        labels.update(global_labels)
-        annotations.update(global_annotations)
+        metadata = MetadataSingleton()
+        labels.update(metadata.global_labels)
+        annotations.update(metadata.global_annotations)
 
         # Create metadata
-        metadata = ObjectMetaArgs(
+        metadata_args = ObjectMetaArgs(
             name=name,
             labels=labels,
             annotations=annotations,
-            finalizers=finalizers,
+            finalizers=finalizers
         )
 
-        # Merge resource options
-        resource_opts = ResourceOptions.merge(
-            ResourceOptions(
-                provider=k8s_provider,
-                depends_on=depends_on,
-                parent=parent,
-                custom_timeouts=pulumi.CustomTimeouts(
-                    create=custom_timeouts.get("create", "5m"),
-                    update=custom_timeouts.get("update", "10m"),
-                    delete=custom_timeouts.get("delete", "10m"),
-                ),
-            ),
-            opts or ResourceOptions()
-        )
-
-        # Create namespace
+        # Create the namespace
         return Namespace(
             name,
-            metadata=metadata,
-            opts=resource_opts,
+            metadata=metadata_args,
+            opts=ResourceOptions(
+                provider=k8s_provider,
+                parent=parent,
+                depends_on=depends_on,
+                custom_timeouts=custom_timeouts,
+                merge=opts
+            )
         )
-
     except Exception as e:
+        log.error(f"Failed to create namespace '{name}': {str(e)}")
         raise pulumi.RunError(f"Failed to create namespace '{name}': {str(e)}") from e
 
 
@@ -117,190 +103,137 @@ def create_custom_resource(
     spec: Dict[str, Any],
     opts: Optional[ResourceOptions] = None,
     k8s_provider: Optional[k8s.Provider] = None,
-    depends_on: Optional[List[Resource]] = None,
     parent: Optional[Resource] = None,
+    depends_on: Optional[List[Resource]] = None,
 ) -> CustomResource:
     """
-    Creates a Kubernetes CustomResource with global labels and annotations.
+    Creates a Kubernetes Custom Resource with global labels and annotations.
 
     Args:
         name: The name of the custom resource
-        api_version: The API version of the custom resource
-        kind: The kind of the custom resource
-        metadata: The metadata for the custom resource
-        spec: The spec for the custom resource
+        api_version: API version of the custom resource
+        kind: Kind of the custom resource
+        metadata: Metadata for the custom resource
+        spec: Specification for the custom resource
         opts: Pulumi resource options
         k8s_provider: Kubernetes provider
-        depends_on: Resources this custom resource depends on
         parent: Parent resource
+        depends_on: Resources this resource depends on
 
     Returns:
-        CustomResource: The created CustomResource
+        CustomResource: The created Custom Resource
 
     Raises:
         pulumi.RunError: If custom resource creation fails
     """
     try:
-        # Initialize defaults
-        opts = opts or ResourceOptions()
+        # Initialize default values
+        metadata = metadata or {}
         depends_on = depends_on or []
 
-        # Get global metadata
-        global_labels = get_global_labels()
-        global_annotations = get_global_annotations()
+        # Merge global metadata
+        metadata_singleton = MetadataSingleton()
+        metadata.setdefault("labels", {}).update(metadata_singleton.global_labels)
+        metadata.setdefault("annotations", {}).update(metadata_singleton.global_annotations)
 
-        def custom_resource_transform(args: pulumi.ResourceTransformationArgs) -> pulumi.ResourceTransformationResult:
-            """Transform resource to include global metadata."""
-            props = args.props
-            if "metadata" in props:
-                set_resource_metadata(
-                    props["metadata"],
-                    global_labels,
-                    global_annotations
-                )
-            return pulumi.ResourceTransformationResult(props, args.opts)
-
-        # Merge resource options
-        resource_opts = ResourceOptions.merge(
-            ResourceOptions(
-                provider=k8s_provider,
-                depends_on=depends_on,
-                parent=parent,
-                transformations=[custom_resource_transform],
-            ),
-            opts
-        )
-
-        # Create custom resource
+        # Create the custom resource
         return CustomResource(
-            resource_name=name,
+            name,
             api_version=api_version,
             kind=kind,
             metadata=metadata,
             spec=spec,
-            opts=resource_opts,
+            opts=ResourceOptions(
+                provider=k8s_provider,
+                parent=parent,
+                depends_on=depends_on,
+                merge=opts
+            )
         )
-
     except Exception as e:
+        log.error(f"Failed to create custom resource '{name}': {str(e)}")
         raise pulumi.RunError(f"Failed to create custom resource '{name}': {str(e)}") from e
 
 
 def create_helm_release(
     name: str,
-    chart: Union[str, Chart],
+    chart: str,
+    namespace: str,
     values: Optional[Dict[str, Any]] = None,
-    version: Optional[str] = None,
-    namespace: Optional[str] = None,
-    repository: Optional[str] = None,
-    repository_opts: Optional[Dict[str, Any]] = None,
-    transformations: Optional[List[Callable[[pulumi.ResourceTransformationArgs], Optional[pulumi.ResourceTransformationResult]]]] = None,
     opts: Optional[ResourceOptions] = None,
     k8s_provider: Optional[k8s.Provider] = None,
-    depends_on: Optional[List[Resource]] = None,
     parent: Optional[Resource] = None,
+    depends_on: Optional[List[Resource]] = None,
 ) -> Release:
     """
     Creates a Helm Release with global labels and annotations.
 
     Args:
-        name: The release name
-        chart: The chart name or Chart object
-        values: The values for the chart
-        version: The version of the chart
-        namespace: The namespace to install the release into
-        repository: The repository URL
-        repository_opts: Additional repository options
-        transformations: Additional transformations
+        name: The name of the Helm release
+        chart: The chart to deploy
+        namespace: The namespace to deploy the chart in
+        values: Values to override in the chart
         opts: Pulumi resource options
         k8s_provider: Kubernetes provider
-        depends_on: Resources this release depends on
         parent: Parent resource
+        depends_on: Resources this resource depends on
 
     Returns:
-        Release: The created Helm release
+        Release: The created Helm Release
 
     Raises:
-        pulumi.RunError: If helm release creation fails
+        pulumi.RunError: If Helm release creation fails
     """
     try:
-        # Initialize defaults
-        opts = opts or ResourceOptions()
-        transformations = transformations or []
-        depends_on = depends_on or []
+        # Initialize default values
         values = values or {}
-        repository_opts = repository_opts or {}
+        depends_on = depends_on or []
 
-        # Get global metadata
-        global_labels = get_global_labels()
-        global_annotations = get_global_annotations()
+        # Merge global metadata
+        metadata_singleton = MetadataSingleton()
+        values.setdefault("metadata", {}).setdefault("labels", {}).update(metadata_singleton.global_labels)
+        values.setdefault("metadata", {}).setdefault("annotations", {}).update(metadata_singleton.global_annotations)
 
-        def helm_resource_transform(args: pulumi.ResourceTransformationArgs) -> pulumi.ResourceTransformationResult:
-            """Transform helm resources to include global metadata."""
-            props = args.props
-            if "metadata" in props:
-                set_resource_metadata(
-                    props["metadata"],
-                    global_labels,
-                    global_annotations
-                )
-            elif "spec" in props and isinstance(props["spec"], dict):
-                if "metadata" in props["spec"]:
-                    set_resource_metadata(
-                        props["spec"]["metadata"],
-                        global_labels,
-                        global_annotations
-                    )
-            return pulumi.ResourceTransformationResult(props, args.opts)
-
-        transformations.append(helm_resource_transform)
-
-        # Merge resource options
-        resource_opts = ResourceOptions.merge(
-            ResourceOptions(
-                provider=k8s_provider,
-                depends_on=depends_on,
-                parent=parent,
-                transformations=transformations,
+        # Create the Helm release
+        return Release(
+            name,
+            ReleaseArgs(
+                chart=chart,
+                namespace=namespace,
+                values=values
             ),
-            opts
+            opts=ResourceOptions(
+                provider=k8s_provider,
+                parent=parent,
+                depends_on=depends_on,
+                merge=opts
+            )
         )
-
-        # Create release args
-        release_args = ReleaseArgs(
-            chart=chart,
-            version=version,
-            namespace=namespace,
-            repository=repository,
-            repository_opts=repository_opts,
-            values=values,
-        )
-
-        return Release(name, release_args, opts=resource_opts)
-
     except Exception as e:
-        raise pulumi.RunError(f"Failed to create helm release '{name}': {str(e)}") from e
+        log.error(f"Failed to create Helm release '{name}': {str(e)}")
+        raise pulumi.RunError(f"Failed to create Helm release '{name}': {str(e)}") from e
 
 
 def create_secret(
     name: str,
+    data: Dict[str, str],
     namespace: str,
-    string_data: Dict[str, str],
     opts: Optional[ResourceOptions] = None,
     k8s_provider: Optional[k8s.Provider] = None,
-    depends_on: Optional[List[Resource]] = None,
     parent: Optional[Resource] = None,
+    depends_on: Optional[List[Resource]] = None,
 ) -> Secret:
     """
     Creates a Kubernetes Secret with global labels and annotations.
 
     Args:
         name: The name of the secret
-        namespace: The namespace for the secret
-        string_data: The secret data as strings
+        data: The data to store in the secret
+        namespace: The namespace to create the secret in
         opts: Pulumi resource options
         k8s_provider: Kubernetes provider
-        depends_on: Resources this secret depends on
         parent: Parent resource
+        depends_on: Resources this resource depends on
 
     Returns:
         Secret: The created Secret
@@ -309,40 +242,32 @@ def create_secret(
         pulumi.RunError: If secret creation fails
     """
     try:
-        # Initialize defaults
-        opts = opts or ResourceOptions()
+        # Initialize default values
         depends_on = depends_on or []
 
-        # Get global metadata
-        global_labels = get_global_labels()
-        global_annotations = get_global_annotations()
-
-        # Create metadata
+        # Merge global metadata
+        metadata_singleton = MetadataSingleton()
         metadata = ObjectMetaArgs(
             name=name,
             namespace=namespace,
-            labels=global_labels,
-            annotations=global_annotations,
+            labels=metadata_singleton.global_labels,
+            annotations=metadata_singleton.global_annotations
         )
 
-        # Merge resource options
-        resource_opts = ResourceOptions.merge(
-            ResourceOptions(
-                provider=k8s_provider,
-                depends_on=depends_on,
-                parent=parent,
-            ),
-            opts
-        )
-
+        # Create the secret
         return Secret(
             name,
             metadata=metadata,
-            string_data=string_data,
-            opts=resource_opts,
+            data=data,
+            opts=ResourceOptions(
+                provider=k8s_provider,
+                parent=parent,
+                depends_on=depends_on,
+                merge=opts
+            )
         )
-
     except Exception as e:
+        log.error(f"Failed to create secret '{name}': {str(e)}")
         raise pulumi.RunError(f"Failed to create secret '{name}': {str(e)}") from e
 
 
@@ -350,22 +275,20 @@ def create_config_file(
     name: str,
     file_path: str,
     opts: Optional[ResourceOptions] = None,
-    transformations: Optional[List[Callable[[pulumi.ResourceTransformationArgs], Optional[pulumi.ResourceTransformationResult]]]] = None,
     k8s_provider: Optional[k8s.Provider] = None,
-    depends_on: Optional[List[Resource]] = None,
     parent: Optional[Resource] = None,
+    depends_on: Optional[List[Resource]] = None,
 ) -> ConfigFile:
     """
-    Creates Kubernetes resources from a YAML config file with global labels and annotations.
+    Creates resources from a Kubernetes YAML configuration file with global labels and annotations.
 
     Args:
-        name: The resource name
-        file_path: The path to the YAML file
+        name: The name of the config file resource
+        file_path: The path to the YAML configuration file
         opts: Pulumi resource options
-        transformations: Additional transformations
         k8s_provider: Kubernetes provider
-        depends_on: Resources these resources depend on
         parent: Parent resource
+        depends_on: Resources this resource depends on
 
     Returns:
         ConfigFile: The created resources
@@ -376,12 +299,12 @@ def create_config_file(
     try:
         # Initialize defaults
         opts = opts or ResourceOptions()
-        transformations = transformations or []
         depends_on = depends_on or []
 
         # Get global metadata
-        global_labels = get_global_labels()
-        global_annotations = get_global_annotations()
+        metadata_singleton = MetadataSingleton()
+        global_labels = metadata_singleton.global_labels
+        global_annotations = metadata_singleton.global_annotations
 
         def config_file_transform(args: pulumi.ResourceTransformationArgs) -> pulumi.ResourceTransformationResult:
             """Transform config file resources to include global metadata."""
@@ -401,15 +324,13 @@ def create_config_file(
                     )
             return pulumi.ResourceTransformationResult(props, args.opts)
 
-        transformations.append(config_file_transform)
-
         # Merge resource options
         resource_opts = ResourceOptions.merge(
             ResourceOptions(
                 provider=k8s_provider,
-                depends_on=depends_on,
                 parent=parent,
-                transformations=transformations,
+                depends_on=depends_on,
+                transformations=[config_file_transform],
             ),
             opts
         )
@@ -417,31 +338,5 @@ def create_config_file(
         return ConfigFile(name, file_path, opts=resource_opts)
 
     except Exception as e:
+        log.error(f"Failed to create config file '{name}': {str(e)}")
         raise pulumi.RunError(f"Failed to create config file '{name}': {str(e)}") from e
-
-
-def create_aws_resource(
-    name: str,
-    resource_type: str,
-    args: Dict[str, Any],
-    opts: Optional[ResourceOptions] = None,
-    provider: Optional[Any] = None
-) -> Resource:
-    """Create AWS resource with proper error handling."""
-    try:
-        if not name or not resource_type:
-            raise ValueError("Name and resource_type are required")
-
-        module = importlib.import_module("pulumi_aws")
-        resource_class = getattr(module, resource_type)
-
-        merged_opts = ResourceOptions.merge(
-            ResourceOptions(provider=provider),
-            opts or ResourceOptions()
-        )
-
-        return resource_class(name, **args, opts=merged_opts)
-
-    except Exception as e:
-        log.error(f"Failed to create AWS resource {name}: {str(e)}")
-        raise

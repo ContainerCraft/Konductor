@@ -1,4 +1,4 @@
-# ./modules/core/__init__.py
+# ../konductor/modules/core/__init__.py
 """
 Konductor Core Module
 
@@ -22,10 +22,10 @@ Usage:
     )
 """
 
-from typing import Dict, List, Any, Optional
+from typing import Dict, Any
 
 # Version information
-__version__ = "0.1.0"
+__version__ = "0.0.1"
 __author__ = "ContainerCraft Konductor Maintainers"
 
 # Type exports
@@ -34,12 +34,18 @@ from .types import (
     InitializationConfig,
     ModuleBase,
     ModuleDefaults,
-    ModuleDeploymentResult,
-    ResourceMetadata,
-    NamespaceConfig,
     FismaConfig,
     NistConfig,
     ScipConfig,
+    StackOutputs,
+)
+
+# Interfaces
+from .interfaces import (
+    DeploymentContext,
+    ModuleInterface,
+    ModuleDeploymentResult,
+    ResourceMetadata,
 )
 
 # Configuration management
@@ -50,55 +56,34 @@ from .config import (
     validate_module_config,
     initialize_config,
     merge_configurations,
-)
-
-# Deployment management
-from .deployment import (
-    initialize_pulumi,
-    deploy_modules,
-    DeploymentManager,
-)
-
-# Resource helpers
-from .resource_helpers import (
-    create_namespace,
-    create_custom_resource,
-    create_helm_release,
-    create_secret,
-    create_config_file,
+    DEFAULT_MODULE_CONFIG,
+    get_stack_outputs,
 )
 
 # Metadata management
 from .metadata import (
-    collect_git_info,
-    generate_git_labels,
-    generate_git_annotations,
-    generate_compliance_labels,
-    generate_compliance_annotations,
+    setup_global_metadata,
     set_global_labels,
     set_global_annotations,
-    get_global_labels,
-    get_global_annotations,
+)
+
+# Git utilities
+from .git import (
+    collect_git_info,
+    get_latest_semver_tag,
+    get_remote_url,
+    sanitize_git_info,
+    extract_repo_name,
 )
 
 # Utility functions
 from .utils import (
     set_resource_metadata,
     generate_global_transformations,
-    get_latest_helm_chart_version,
-    wait_for_crds,
 )
 
-# Default module configuration
-DEFAULT_MODULE_CONFIG: Dict[str, ModuleDefaults] = {
-    "aws": {"enabled": False, "version": None, "config": {}},
-    "cert_manager": {"enabled": True, "version": None, "config": {}},
-    "kubevirt": {"enabled": True, "version": None, "config": {}},
-    "multus": {"enabled": True, "version": None, "config": {}},
-    "hostpath_provisioner": {"enabled": True, "version": None, "config": {}},
-    "containerized_data_importer": {"enabled": True, "version": None, "config": {}},
-    "prometheus": {"enabled": True, "version": None, "config": {}}
-}
+# Initialization
+from .initialization import initialize_pulumi
 
 # Public API
 __all__ = [
@@ -107,12 +92,16 @@ __all__ = [
     "InitializationConfig",
     "ModuleBase",
     "ModuleDefaults",
-    "ModuleDeploymentResult",
-    "ResourceMetadata",
-    "NamespaceConfig",
     "FismaConfig",
     "NistConfig",
     "ScipConfig",
+    "StackOutputs",
+
+    # Interfaces
+    "DeploymentContext",
+    "ModuleInterface",
+    "ModuleDeploymentResult",
+    "ResourceMetadata",
 
     # Configuration
     "get_module_config",
@@ -122,35 +111,26 @@ __all__ = [
     "initialize_config",
     "merge_configurations",
     "DEFAULT_MODULE_CONFIG",
+    "get_stack_outputs",
 
     # Deployment
     "initialize_pulumi",
-    "deploy_modules",
-    "DeploymentManager",
-
-    # Resources
-    "create_namespace",
-    "create_custom_resource",
-    "create_helm_release",
-    "create_secret",
-    "create_config_file",
 
     # Metadata
-    "collect_git_info",
-    "generate_git_labels",
-    "generate_git_annotations",
-    "generate_compliance_labels",
-    "generate_compliance_annotations",
+    "setup_global_metadata",
     "set_global_labels",
     "set_global_annotations",
-    "get_global_labels",
-    "get_global_annotations",
+
+    # Git Utilities
+    "collect_git_info",
+    "get_latest_semver_tag",
+    "get_remote_url",
+    "sanitize_git_info",
+    "extract_repo_name",
 
     # Utilities
     "set_resource_metadata",
     "generate_global_transformations",
-    "get_latest_helm_chart_version",
-    "wait_for_crds",
 ]
 
 def get_version() -> str:

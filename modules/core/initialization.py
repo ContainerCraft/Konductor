@@ -1,46 +1,42 @@
-# konductor/core/initialization.py
+# ../konductor/modules/core/initialization.py
 import pulumi
-from pulumi import log
-from pydantic import BaseSettings
-from typing import Any, Dict
+from pulumi import Config, get_stack, get_project, log
 
-from core.types import InitializationConfig
-from core.config import load_default_versions
-from core.metadata import collect_git_info
+from modules.core.types import InitializationConfig, GitInfo
+from modules.core.git import collect_git_info
 
 def initialize_pulumi() -> InitializationConfig:
     """
     Initializes Pulumi and loads the configuration.
 
     Returns:
-        InitializationConfig: The initialized configuration object.
+        InitializationConfig: The initialization configuration object.
     """
     try:
         # Load Pulumi configuration
-        config = pulumi.Config()
+        pulumi_config = Config()
+        stack_name = get_stack()
+        project_name = get_project()
 
-        # Retrieve stack and project names
-        stack_name = pulumi.get_stack()
-        project_name = pulumi.get_project()
-
-        # Load default module versions
-        default_versions = load_default_versions(config)
-
-        # Collect Git information
+        # Collect Git metadata
         git_info = collect_git_info()
+        log.info(f"Git Info: commit_hash='{git_info.commit_hash}' branch_name='{git_info.branch_name}' remote_url='{git_info.remote_url}'")
 
-        # Create the InitializationConfig object
+        # Load default versions (provide actual default versions as needed)
+        default_versions = {}
+
+        # Create the initialization config
         init_config = InitializationConfig(
-            config=config,
+            pulumi_config=pulumi_config,
             stack_name=stack_name,
             project_name=project_name,
             default_versions=default_versions,
             git_info=git_info,
-            # Other initialization parameters can be added here
+            metadata={}
         )
 
         return init_config
 
     except Exception as e:
-        log.error(f"Initialization failed: {str(e)}")
+        log.error(f"Failed to initialize Pulumi: {str(e)}")
         raise
