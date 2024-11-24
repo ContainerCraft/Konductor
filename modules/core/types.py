@@ -8,7 +8,7 @@ It provides type-safe configuration structures using Pydantic models and TypedDi
 """
 
 from typing import Dict, List, Optional, TypeVar, Union, TypedDict, Any, Protocol
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, Field, ValidationError, ConfigDict
 from dataclasses import dataclass, field
 import pulumi
 import pulumi_kubernetes as k8s
@@ -45,7 +45,7 @@ class InitializationConfig(BaseModel):
         compliance_config: Compliance configuration
         metadata: Resource metadata
     """
-    pulumi_config: pulumi.Config
+    pulumi_config: Union[pulumi.Config, Any]
     stack_name: str
     project_name: str
     default_versions: Dict[str, Any]
@@ -67,8 +67,7 @@ class InitializationConfig(BaseModel):
         """
         return self.pulumi_config
 
-    class Config:
-        arbitrary_types_allowed = True
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
 class ModuleDefaults(TypedDict):
     """
