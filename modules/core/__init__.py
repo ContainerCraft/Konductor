@@ -85,6 +85,9 @@ from .utils import (
 # Initialization
 from .initialization import initialize_pulumi
 
+# Deployment
+from .deployment import DeploymentManager
+
 # Public API
 __all__ = [
     # Types
@@ -131,6 +134,9 @@ __all__ = [
     # Utilities
     "set_resource_metadata",
     "generate_global_transformations",
+
+    # Deployment
+    "DeploymentManager",
 ]
 
 def get_version() -> str:

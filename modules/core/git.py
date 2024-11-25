@@ -31,14 +31,32 @@ def get_latest_semver_tag(repo: Repo) -> Optional[str]:
         Optional[str]: Latest semantic version tag or None if no valid tags found.
     """
     try:
-        tags = sorted(
-            (tag for tag in repo.tags if semver.VersionInfo.isvalid(tag.name)),
-            key=lambda t: semver.VersionInfo.parse(t.name),
+        # Filter and sort tags that are valid semver
+        valid_tags = []
+        for tag in repo.tags:
+            if hasattr(tag, 'name'):
+                # Remove 'v' prefix if present for semver parsing
+                version_str = tag.name.lstrip('v')
+                if semver.Version.is_valid(version_str):
+                    valid_tags.append(tag)
+
+        if not valid_tags:
+            return None
+
+        # Sort tags by version and return the latest
+        sorted_tags = sorted(
+            valid_tags,
+            key=lambda t: semver.Version.parse(t.name.lstrip('v')),
             reverse=True
         )
-        return tags[0].name if tags else None
+
+        return sorted_tags[0].name if sorted_tags else None
+
     except GitCommandError as e:
         log.warn(f"Failed to retrieve tags: {str(e)}")
+        return None
+    except Exception as e:
+        log.warn(f"Error processing tags: {str(e)}")
         return None
 
 def get_remote_url(repo: Repo) -> str:
@@ -127,21 +145,18 @@ def collect_git_info() -> GitInfo:
     git_info = GitInfo()
 
     try:
-        # Get the latest commit hash
         git_info.commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
     except Exception as e:
-        log.warning(f"Failed to get commit hash: {str(e)}")
+        log.warn(f"Failed to get commit hash: {str(e)}")
 
     try:
-        # Get the current branch name
         git_info.branch_name = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).decode().strip()
     except Exception as e:
-        log.warning(f"Failed to get branch name: {str(e)}")
+        log.warn(f"Failed to get branch name: {str(e)}")
 
     try:
-        # Get the remote URL
         git_info.remote_url = subprocess.check_output(['git', 'config', '--get', 'remote.origin.url']).decode().strip()
     except Exception as e:
-        log.warning(f"Failed to get remote URL: {str(e)}")
+        log.warn(f"Failed to get remote URL: {str(e)}")
 
     return git_info

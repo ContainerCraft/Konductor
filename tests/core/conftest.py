@@ -1,9 +1,10 @@
 # ../konductor/tests/core/conftest.py
+"""TODO: Double check if this code is required and if it is complete."""
 import pytest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 import pulumi
 from modules.core.types import InitializationConfig, GitInfo
-from typing import Any
+from modules.core.interfaces import ModuleDeploymentResult
 
 class KonductorMocks(pulumi.runtime.Mocks):
     """Mock Pulumi runtime for testing."""
@@ -22,27 +23,18 @@ def setup_pulumi_mocks():
 def mock_pulumi_config(monkeypatch):
     """Mock Pulumi configuration for testing."""
     class MockConfig:
-        def get(self, key: str, default: Any = None) -> str:
-            return "testproject"
-
         def get_bool(self, key: str, default: bool = False) -> bool:
-            return False
+            if "enabled" in key:
+                return True
+            return default
 
-        def get_object(self, key: str, default: Any = None) -> dict:
-            return {}
+        def get_object(self, key: str, default: dict = None) -> dict:
+            return default or {}
 
-    mock_config = MockConfig()
+        def get(self, key: str, default: str = None) -> str:
+            return default or ""
 
-    # Mock Pulumi functions with explicit module paths
-    monkeypatch.setattr("pulumi.get_project", lambda: "testproject")
-    monkeypatch.setattr("pulumi.get_stack", lambda: "test-stack")
-    monkeypatch.setattr("pulumi.Config", lambda *args: mock_config)
-
-    # Also mock at the module level where it's imported
-    monkeypatch.setattr("modules.core.initialization.get_project", lambda: "testproject")
-    monkeypatch.setattr("modules.core.initialization.get_stack", lambda: "test-stack")
-
-    return mock_config
+    return MockConfig()
 
 @pytest.fixture(autouse=True)
 def mock_git_info(monkeypatch):
@@ -73,8 +65,62 @@ def mock_init_config(mock_pulumi_config, mock_git_info):
     return InitializationConfig(
         pulumi_config=mock_pulumi_config,
         stack_name="test-stack",
-        project_name="testproject",
+        project_name="test-project",
         default_versions={},
         git_info=mock_git_info,
         metadata={"labels": {}, "annotations": {}}
     )
+
+@pytest.fixture
+def mock_module():
+    """Create a mock module for testing."""
+    mock = MagicMock()
+    mock.deploy.return_value = ModuleDeploymentResult(
+        success=True,
+        version="1.0.0",
+        resources=["test-resource"]
+    )
+    return mock
+
+@pytest.fixture
+def mock_import_module(monkeypatch, mock_module):
+    """Mock importlib.import_module for testing."""
+    def mock_import(name: str):
+        if "error-module" in name:
+            raise ImportError("Module not found")
+        mock_mod = MagicMock()
+        mock_mod.deploy = mock_module.deploy
+        return mock_mod
+
+    monkeypatch.setattr('importlib.import_module', mock_import)
+    return mock_import
+
+@pytest.fixture
+def mock_repo():
+    """Create a mock Git repository."""
+    mock = MagicMock()
+
+    # Create mock tags with version attributes
+    tag1 = MagicMock()
+    tag1.name = "v1.0.0"
+
+    tag2 = MagicMock()
+    tag2.name = "v1.1.0"
+
+    tag3 = MagicMock()
+    tag3.name = "v2.0.0"
+
+    # Add tags to the mock repo
+    mock.tags = [tag1, tag2, tag3]
+
+    return mock
+
+@pytest.fixture(autouse=True)
+def cleanup_mock_modules():
+    """Clean up mock modules after tests."""
+    yield
+    # Clean up mock modules after test
+    import sys
+    for module in list(sys.modules.keys()):
+        if module.startswith('modules.test-module'):
+            del sys.modules[module]

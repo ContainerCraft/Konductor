@@ -30,3 +30,4 @@ smce-cli
 **/credentials
 **/.gitconfig
 modules/aws.bak
+.coverage

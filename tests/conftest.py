@@ -70,24 +70,15 @@ def mock_environment(mock_pulumi_base, mock_git_info):
 def mock_pulumi_config(monkeypatch):
     """Mock Pulumi configuration for testing."""
     class MockConfig:
-        def get(self, key: str, default: Any = None) -> str:
-            return "testproject"
-
         def get_bool(self, key: str, default: bool = False) -> bool:
-            return False
+            if "enabled" in key:
+                return True
+            return default
 
-        def get_object(self, key: str, default: Any = None) -> dict:
-            return {}
+        def get_object(self, key: str, default: dict = None) -> dict:
+            return default or {}
 
-    mock_config = MockConfig()
+        def get(self, key: str, default: str = None) -> str:
+            return default or ""
 
-    # Mock Pulumi functions with explicit module paths
-    monkeypatch.setattr("pulumi.get_project", lambda: "testproject")
-    monkeypatch.setattr("pulumi.get_stack", lambda: "test-stack")
-    monkeypatch.setattr("pulumi.Config", lambda *args: mock_config)
-
-    # Also mock at the module level where it's imported
-    monkeypatch.setattr("modules.core.initialization.get_project", lambda: "testproject")
-    monkeypatch.setattr("modules.core.initialization.get_stack", lambda: "test-stack")
-
-    return mock_config
+    return MockConfig()

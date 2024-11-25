@@ -1,4 +1,5 @@
 # ../konductor/tests/core/test_initialization.py
+"""TODO: Complete coverage for core module initialization functions."""
 import pytest
 from modules.core import initialize_pulumi, InitializationConfig
 from modules.core.types import GitInfo
@@ -6,6 +7,7 @@ from modules.core.types import GitInfo
 def test_initialization_basic(monkeypatch, mock_pulumi_config):
     """Test basic initialization without any configuration."""
     monkeypatch.setattr("modules.core.initialization.get_project", lambda: "testproject")
+    monkeypatch.setattr("modules.core.initialization.get_stack", lambda: "test-stack")
 
     init_config = initialize_pulumi()
 
