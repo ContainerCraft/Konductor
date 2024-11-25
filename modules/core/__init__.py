@@ -7,11 +7,11 @@ It handles configuration management, deployment orchestration, resource manageme
 and compliance controls.
 
 Key Components:
-- Configuration Management
-- Deployment Orchestration
-- Resource Helpers
-- Metadata Management
-- Type Definitions
+- Configuration Management: Handles configuration loading, validation, and merging
+- Deployment Orchestration: Manages module deployment and dependencies
+- Resource Management: Provides resource creation and transformation utilities
+- Metadata Management: Handles global metadata and tagging
+- Type Definitions: Defines core data structures and types
 
 Usage:
     from pulumi.core import (
@@ -140,11 +140,25 @@ __all__ = [
 ]
 
 def get_version() -> str:
-    """Returns the core module version."""
+    """
+    Returns the core module version.
+
+    Returns:
+        str: The current version of the core module.
+    """
     return __version__
 
 def get_module_metadata() -> Dict[str, Any]:
-    """Returns metadata about the core module."""
+    """
+    Returns metadata about the core module.
+
+    Returns:
+        Dict[str, Any]: A dictionary containing module metadata including:
+            - version: Current module version
+            - author: Module maintainers
+            - modules: List of available modules
+            - features: List of core features
+    """
     return {
         "version": __version__,
         "author": __author__,

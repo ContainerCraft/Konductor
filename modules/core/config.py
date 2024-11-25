@@ -1,4 +1,4 @@
-# ../konductor/modules/core/config.py
+# ./modules/core/config.py
 """
 Configuration Management Module
 
@@ -47,7 +47,7 @@ VERSION_CACHE_FILE = CACHE_DIR / "default_versions.json"
 
 # Default module configuration
 DEFAULT_MODULE_CONFIG: Dict[str, ModuleDefaults] = {
-    "aws": {"enabled": False, "version": None, "config": {}},
+    "aws": {"enabled": True, "version": None, "config": {}},
     "cert_manager": {"enabled": False, "version": None, "config": {}},
     "kubevirt": {"enabled": False, "version": None, "config": {}},
     "multus": {"enabled": False, "version": None, "config": {}},
@@ -86,13 +86,13 @@ def get_module_config(
     Retrieves and prepares the configuration for a module.
 
     Args:
-        module_name: The name of the module to configure.
-        config: The Pulumi configuration object.
-        default_versions: A dictionary of default versions for modules.
-        namespace: Optional namespace for module configuration.
+        module_name: The name of the module to configure
+        config: The Pulumi configuration object
+        default_versions: A dictionary of default versions for modules
+        namespace: Optional namespace for module configuration
 
     Returns:
-        Tuple containing:
+        A tuple containing:
             - Module's configuration dictionary
             - Boolean indicating if the module is enabled
 
@@ -106,12 +106,15 @@ def get_module_config(
             config={}
         ))
 
+        # Get module configuration from Pulumi config
         module_config: Dict[str, Any] = config.get_object(module_name) or {}
 
+        # Determine if module is enabled
         enabled = coerce_to_bool(
             module_config.get("enabled", module_defaults["enabled"])
         )
 
+        # Get module version
         version = module_config.get(
             "version",
             default_versions.get(module_name)
@@ -506,10 +509,6 @@ def get_stack_outputs(init_config: InitializationConfig) -> StackOutputs:
         }
 
         return stack_outputs
-
-    except Exception as e:
-        log.error(f"Failed to generate stack outputs: {str(e)}")
-        raise
 
     except Exception as e:
         log.error(f"Failed to generate stack outputs: {str(e)}")

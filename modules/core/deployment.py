@@ -1,57 +1,51 @@
-# ../konductor/modules/core/deployment.py
+# ./modules/core/deployment.py
 import importlib
 from pulumi import log
 from typing import List, Dict, Optional
 
 from modules.core.types import InitializationConfig
-from modules.core.interfaces import ModuleDeploymentResult
+from modules.core.interfaces import ModuleDeploymentResult, ModuleInterface
 
 class DeploymentManager:
-    """
-    Manages the deployment of modules based on the configuration.
-    """
+    """Manages module deployment orchestration."""
 
     def __init__(self, init_config: InitializationConfig):
         self.init_config = init_config
-        self.deployed_modules: Dict[str, ModuleDeploymentResult] = {}
+        self.modules = {
+            "aws": "modules.aws.deploy.AWSModule"
+        }
+        self.results: Dict[str, ModuleDeploymentResult] = {}
 
     def deploy_module(self, module_name: str) -> Optional[ModuleDeploymentResult]:
-        """
-        Deploys a single module by dynamically importing and executing its deploy function.
-
-        Args:
-            module_name: The name of the module to deploy.
-
-        Returns:
-            ModuleDeploymentResult: The result of the deployment
-        """
         try:
-            # Dynamically import the module's deploy function
-            deploy_module = importlib.import_module(f"modules.{module_name}.deploy")
-            deploy_func = getattr(deploy_module, "deploy", None)
+            # Load module
+            module = self._load_module(module_name)
 
-            if not callable(deploy_func):
-                raise AttributeError(f"Module {module_name} does not have a deploy function.")
+            # Get module configuration
+            module_config = self.init_config.config.get_object(module_name)
 
-            # Retrieve the module configuration
-            module_config = self.init_config.config.get_object(module_name) or {}
+            # Let module validate its own config
+            validation_errors = module.validate_config(module_config)
+            if validation_errors:
+                raise ValueError(f"Configuration validation failed: {validation_errors}")
 
-            # Call the deploy function with the necessary arguments
-            result = deploy_func(
-                config=module_config,
-                init_config=self.init_config
-            )
+            # Let module perform pre-deployment checks
+            pre_deploy_errors = module.pre_deploy_check()
+            if pre_deploy_errors:
+                raise ValueError(f"Pre-deployment checks failed: {pre_deploy_errors}")
 
-            # Store the deployment result
-            self.deployed_modules[module_name] = result
+            # Deploy
+            result = module.deploy(module_config, self.init_config)
+
+            # Let module validate deployment result
+            post_deploy_errors = module.post_deploy_validation(result)
+            if post_deploy_errors:
+                raise ValueError(f"Post-deployment validation failed: {post_deploy_errors}")
 
             return result
 
-        except ImportError as e:
-            log.error(f"Module {module_name} could not be imported: {str(e)}")
-            raise
         except Exception as e:
-            log.error(f"Error deploying module {module_name}: {str(e)}")
+            log.error(f"Module deployment failed: {str(e)}")
             raise
 
     def deploy_modules(self, modules_to_deploy: List[str]) -> None:
@@ -61,12 +55,14 @@ class DeploymentManager:
         Args:
             modules_to_deploy: A list of module names to deploy.
         """
+        log.info(f"Deploying modules: {', '.join(modules_to_deploy)}")
+
         # Build dependency graph
         dependency_graph = {}
         for module_name in modules_to_deploy:
             try:
-                module = importlib.import_module(f"modules.{module_name}.deploy")
-                dependencies = getattr(module, "get_dependencies", lambda: [])()
+                module = self._load_module(module_name)
+                dependencies = module.get_dependencies()
                 dependency_graph[module_name] = dependencies
             except ImportError:
                 log.warn(f"Could not load dependencies for module {module_name}")
@@ -80,7 +76,7 @@ class DeploymentManager:
             if module in deployed:
                 return
             for dep in dependency_graph.get(module, []):
-                if dep in modules_to_deploy:  # Only deploy dependencies that are in our list
+                if dep in modules_to_deploy:
                     deploy_with_deps(dep)
             deployment_order.append(module)
             deployed.add(module)
@@ -92,6 +88,23 @@ class DeploymentManager:
         # Actually deploy the modules
         for module_name in deployment_order:
             try:
-                self.deploy_module(module_name)
+                result = self.deploy_module(module_name)
+                if result:
+                    self.results[module_name] = result
             except Exception as e:
                 log.error(f"Failed to deploy module {module_name}: {str(e)}")
+                raise
+
+    def _load_module(self, module_name: str) -> ModuleInterface:
+        if module_name not in self.modules:
+            raise ValueError(f"Unknown module: {module_name}")
+
+        module_path = self.modules[module_name]
+        module_parts = module_path.split(".")
+
+        try:
+            module = importlib.import_module(".".join(module_parts[:-1]))
+            return getattr(module, module_parts[-1])()
+        except (ImportError, AttributeError) as e:
+            log.error(f"Failed to load module {module_name}: {str(e)}")
+            raise

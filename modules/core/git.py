@@ -29,6 +29,9 @@ def get_latest_semver_tag(repo: Repo) -> Optional[str]:
 
     Returns:
         Optional[str]: Latest semantic version tag or None if no valid tags found.
+
+    Raises:
+        GitCommandError: If there's an error accessing Git tags
     """
     try:
         # Filter and sort tags that are valid semver
@@ -140,23 +143,47 @@ def collect_git_info() -> GitInfo:
     Collects Git repository information.
 
     Returns:
-        GitInfo: An instance containing Git metadata.
+        GitInfo: An instance containing Git metadata including:
+            - commit_hash: Current commit hash
+            - branch_name: Current branch name
+            - remote_url: Repository remote URL
+
+    Raises:
+        subprocess.CalledProcessError: If Git commands fail
     """
-    git_info = GitInfo()
-
     try:
-        git_info.commit_hash = subprocess.check_output(['git', 'rev-parse', 'HEAD']).decode().strip()
-    except Exception as e:
-        log.warn(f"Failed to get commit hash: {str(e)}")
+        git_info = GitInfo()
 
-    try:
-        git_info.branch_name = subprocess.check_output(['git', 'rev-parse', '--abbrev-ref', 'HEAD']).decode().strip()
-    except Exception as e:
-        log.warn(f"Failed to get branch name: {str(e)}")
+        try:
+            git_info.commit_hash = subprocess.check_output(
+                ['git', 'rev-parse', 'HEAD']
+            ).decode().strip()
+        except Exception as e:
+            log.warn(f"Failed to get commit hash: {str(e)}")
+            git_info.commit_hash = "unknown"
 
-    try:
-        git_info.remote_url = subprocess.check_output(['git', 'config', '--get', 'remote.origin.url']).decode().strip()
-    except Exception as e:
-        log.warn(f"Failed to get remote URL: {str(e)}")
+        try:
+            git_info.branch_name = subprocess.check_output(
+                ['git', 'rev-parse', '--abbrev-ref', 'HEAD']
+            ).decode().strip()
+        except Exception as e:
+            log.warn(f"Failed to get branch name: {str(e)}")
+            git_info.branch_name = "unknown"
 
-    return git_info
+        try:
+            git_info.remote_url = subprocess.check_output(
+                ['git', 'config', '--get', 'remote.origin.url']
+            ).decode().strip()
+        except Exception as e:
+            log.warn(f"Failed to get remote URL: {str(e)}")
+            git_info.remote_url = "unknown"
+
+        return git_info
+
+    except Exception as e:
+        log.error(f"Failed to collect Git information: {str(e)}")
+        return GitInfo(
+            commit_hash="unknown",
+            branch_name="unknown",
+            remote_url="unknown"
+        )

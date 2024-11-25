@@ -1,4 +1,4 @@
-# pulumi/modules/aws/config.py
+# ./modules/aws/config.py
 
 """
 AWS Module Configuration
@@ -26,7 +26,7 @@ from core.metadata import (
     generate_git_labels,
     collect_git_info,
 )
-from core.types import ComplianceConfig
+from ..core.types import ComplianceConfig
 from .types import AWSConfig, TenantAccountConfig, validate_config
 from .taggable import TAGGABLE_RESOURCES
 

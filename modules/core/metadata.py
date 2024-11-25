@@ -4,7 +4,8 @@
 Metadata Management Module
 
 This module manages global metadata, labels, and annotations.
-It includes functions to generate compliance and Git-related metadata.
+It provides a thread-safe singleton for consistent metadata management
+across all resources in a Pulumi program.
 """
 
 import threading
@@ -18,13 +19,27 @@ from .types import InitializationConfig
 class MetadataSingleton:
     """
     Thread-safe singleton class to manage global metadata.
-    Ensures consistent labels and annotations across all resources.
+
+    This class ensures consistent labels and annotations across all resources.
+    It uses threading.Lock for thread safety and provides atomic operations
+    for metadata updates.
+
+    Attributes:
+        _instance: The singleton instance
+        _lock: Thread lock for synchronization
+        _global_labels: Dictionary of global labels
+        _global_annotations: Dictionary of global annotations
     """
-    _instance: ClassVar[Optional['MetadataSingleton']] = None
-    _lock: ClassVar[threading.Lock] = threading.Lock()
+    _instance: Optional['MetadataSingleton'] = None
+    _lock: ClassVar[Lock] = Lock()
 
     def __new__(cls) -> 'MetadataSingleton':
-        """Ensure only one instance is created."""
+        """
+        Ensure only one instance is created.
+
+        Returns:
+            MetadataSingleton: The singleton instance
+        """
         if cls._instance is None:
             with cls._lock:
                 if cls._instance is None:
@@ -42,23 +57,43 @@ class MetadataSingleton:
 
     @property
     def global_labels(self) -> Dict[str, str]:
-        """Get global labels."""
+        """
+        Get global labels.
+
+        Returns:
+            Dict[str, str]: Copy of global labels dictionary
+        """
         with self._lock:
             return self._global_labels.copy()
 
     @property
     def global_annotations(self) -> Dict[str, str]:
-        """Get global annotations."""
+        """
+        Get global annotations.
+
+        Returns:
+            Dict[str, str]: Copy of global annotations dictionary
+        """
         with self._lock:
             return self._global_annotations.copy()
 
     def set_labels(self, labels: Dict[str, str]) -> None:
-        """Set global labels."""
+        """
+        Set global labels.
+
+        Args:
+            labels: Dictionary of labels to set
+        """
         with self._lock:
             self._global_labels.update(labels)
 
     def set_annotations(self, annotations: Dict[str, str]) -> None:
-        """Set global annotations."""
+        """
+        Set global annotations.
+
+        Args:
+            annotations: Dictionary of annotations to set
+        """
         with self._lock:
             self._global_annotations.update(annotations)
 

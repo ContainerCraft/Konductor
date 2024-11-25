@@ -24,12 +24,14 @@ def set_resource_metadata(
 ) -> MetadataType:
     """
     Updates resource metadata with global labels and annotations.
-    Handles both dict and ObjectMetaArgs metadata types.
 
     Args:
         metadata: Resource metadata to update
         global_labels: Global labels to apply
         global_annotations: Global annotations to apply
+
+    Returns:
+        MetadataType: Updated metadata
 
     Raises:
         TypeError: If metadata is of an unsupported type
@@ -58,6 +60,8 @@ def set_resource_metadata(
     except Exception as e:
         log.error(f"Failed to update resource metadata: {str(e)}")
         raise
+
+    return metadata
 
 
 def generate_global_transformations(
