@@ -7,15 +7,14 @@ This is the main entry point for the Konductor platform.
 
 import sys
 from pulumi import log, export
-import pulumi
-from typing import NoReturn
 
 from modules.core.initialization import initialize_pulumi
 from modules.core.config import get_enabled_modules, get_stack_outputs
 from modules.core.metadata import setup_global_metadata
 from modules.core.deployment import DeploymentManager
 
-def main() -> NoReturn:
+
+def main() -> None:
     """
     Main entry point for Konductor's Pulumi Python Infrastructure as Code (IaC).
 
@@ -44,6 +43,7 @@ def main() -> NoReturn:
     except Exception as e:
         log.error(f"Deployment failed: {str(e)}")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

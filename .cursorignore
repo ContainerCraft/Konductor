@@ -18,3 +18,5 @@ smce-cli
 **/config
 **/credentials
 **/.gitconfig
+.github/staging
+.mypy_cache

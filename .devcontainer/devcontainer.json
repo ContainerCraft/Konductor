@@ -41,6 +41,7 @@
                 "redhat.vscode-yaml",
                 "esbenp.prettier-vscode",
                 "oderwat.indent-rainbow",
+                "ms-python.black-formatter",
                 "okteto.kubernetes-context",
                 "pulumi.pulumi-vscode-tools",
                 "ms-vsliveshare.vsliveshare",

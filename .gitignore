@@ -31,3 +31,4 @@ smce-cli
 **/.gitconfig
 modules/aws.bak
 .coverage
+.mypy_cache

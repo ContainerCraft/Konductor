@@ -5,7 +5,7 @@ set -euo pipefail
 # Usage: ~$ cloc [-s] [-h]
 #   -s: silent mode, only outputs the number
 #   -h, --help: show this help message
-# Description: Analyzes Python code in the ./pulumi directory, excluding:
+# Description: Analyzes Python code in the ./ directory, excluding:
 #   - Comments (lines starting with #)
 #   - Empty lines and whitespace
 #   - Docstrings (multi-line strings between """ or ''')
@@ -21,7 +21,7 @@ print_help() {
     echo "  -h        Show this help message"
     echo ""
     echo "Description:"
-    echo "  Analyzes Python code in the ./pulumi directory, excluding:"
+    echo "  Analyzes Python code in the ./ directory, excluding:"
     echo "    - Comments (lines starting with #)"
     echo "    - Empty lines and whitespace"
     echo "    - Docstrings (multi-line strings between \"\"\" or ''')"
@@ -58,9 +58,9 @@ done
 # Ensure we're in the root directory
 cd "$(dirname "$0")/../.." || exit 1
 
-# Verify pulumi directory exists
-if [[ ! -d "./pulumi" ]]; then
-    [[ "$SILENT" = false ]] && echo "Error: ./pulumi directory not found!" >&2
+# Verify directory exists
+if [[ ! -d "./" ]]; then
+    [[ "$SILENT" = false ]] && echo "Error: ./ directory not found!" >&2
     exit 1
 fi
 
@@ -68,7 +68,7 @@ fi
 [[ "$SILENT" = false ]] && echo "Excluding comments, docstrings, and blank lines..."
 
 # Count lines across all Python files
-total_lines=$(find ./pulumi -name "*.py" -type f -exec awk '
+total_lines=$(find ./ -name "*.py" -type f -exec awk '
     BEGIN {
         in_docstring = 0
         count = 0
