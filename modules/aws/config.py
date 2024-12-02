@@ -16,23 +16,34 @@ Functions:
 
 import os
 import json
-from typing import Dict, Any, Optional, TYPE_CHECKING
+from typing import Dict, Any, Optional
 import pulumi
 from pulumi import log, Config, ResourceTransformationResult, ResourceTransformationArgs
 from pulumi_aws import Provider
-from core.metadata import (
-    get_global_labels,
-    generate_compliance_labels,
-    generate_git_labels,
-    collect_git_info,
-)
+from .types import AWSConfig, TenantAccountConfig, AWSModuleConfig
 from ..core.types import ComplianceConfig
-from .types import AWSConfig, TenantAccountConfig, validate_config
-from .taggable import TAGGABLE_RESOURCES
+from pydantic import BaseModel, Field, ValidationError
 
 # Constants
 MODULE_NAME = "aws"
 MODULE_VERSION = "0.0.1"
+
+TAGGABLE_RESOURCES = [
+    "aws:s3/bucket:Bucket",
+    "aws:ec2/vpc:Vpc",
+    "aws:ec2/subnet:Subnet",
+    "aws:ec2/instance:Instance",
+    "aws:iam/role:Role",
+    "aws:rds/instance:Instance",
+    # Add other AWS resource types that support tagging
+]
+
+
+def validate_config(raw_config: dict) -> AWSModuleConfig:
+    try:
+        return AWSModuleConfig(**raw_config)
+    except ValidationError as e:
+        raise ValueError(f"AWS module configuration error: {e}")
 
 
 def initialize_aws_provider(config: AWSConfig) -> Provider:
@@ -176,6 +187,7 @@ def load_tenant_account_configs() -> Dict[str, TenantAccountConfig]:
 
     return tenant_accounts
 
+
 def merge_configurations(
     base_config: Dict[str, Any], override_config: Dict[str, Any]
 ) -> Dict[str, Any]:
@@ -191,11 +203,7 @@ def merge_configurations(
     """
     merged = base_config.copy()
     for key, value in override_config.items():
-        if (
-            key in merged
-            and isinstance(merged[key], dict)
-            and isinstance(value, dict)
-        ):
+        if key in merged and isinstance(merged[key], dict) and isinstance(value, dict):
             merged[key] = merge_configurations(merged[key], value)
         else:
             merged[key] = value
@@ -245,6 +253,7 @@ def load_environment_overrides() -> Dict[str, Any]:
 
     return overrides
 
+
 def setup_aws_configuration() -> AWSConfig:
     """
     Sets up the complete AWS configuration by combining defaults,
@@ -263,14 +272,8 @@ def setup_aws_configuration() -> AWSConfig:
         env_overrides = load_environment_overrides()
 
         # Merge configurations
-        merged_config = merge_configurations(
-            default_config,
-            pulumi_config.dict()
-        )
-        final_config = merge_configurations(
-            merged_config,
-            env_overrides
-        )
+        merged_config = merge_configurations(default_config, pulumi_config.dict())
+        final_config = merge_configurations(merged_config, env_overrides)
 
         # Create and validate config object
         config = AWSConfig.merge(final_config)
@@ -281,3 +284,54 @@ def setup_aws_configuration() -> AWSConfig:
     except Exception as e:
         log.error(f"Failed to setup AWS configuration: {str(e)}")
         raise
+
+
+def generate_compliance_labels(compliance_config: ComplianceConfig) -> Dict[str, str]:
+    """
+    Generates compliance-related resource labels.
+
+    Args:
+        compliance_config: Compliance configuration object
+
+    Returns:
+        Dict[str, str]: Compliance labels
+    """
+    labels = {}
+
+    if compliance_config.fisma.enabled:
+        labels["compliance.fisma.enabled"] = "true"
+        if compliance_config.fisma.level:
+            labels["compliance.fisma.level"] = compliance_config.fisma.level
+
+    if compliance_config.nist.enabled:
+        labels["compliance.nist.enabled"] = "true"
+        if compliance_config.nist.controls:
+            labels["compliance.nist.controls"] = ",".join(
+                compliance_config.nist.controls
+            )
+
+    return labels
+
+
+def generate_git_labels(git_info: Dict[str, str]) -> Dict[str, str]:
+    """
+    Generates Git-related resource labels.
+
+    Args:
+        git_info: Git repository information
+
+    Returns:
+        Dict[str, str]: Git labels
+    """
+    return {
+        "git.commit": git_info.get("commit_hash", "unknown"),
+        "git.branch": git_info.get("branch_name", "unknown"),
+        "git.repository": git_info.get("remote_url", "unknown"),
+    }
+
+
+class AWSModuleConfig(BaseModel):
+    region: str = Field(..., description="AWS region to deploy resources")
+    access_key_id: str = Field(None, description="AWS access key ID")
+    secret_access_key: str = Field(None, description="AWS secret access key")
+    bucket_name: str = Field(..., description="Name of the S3 bucket to create")

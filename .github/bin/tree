@@ -1,0 +1,14 @@
+#!/bin/bash -e
+
+# Determine the tree binary to use
+if [ -x /usr/bin/tree ]; then
+  TREE_BIN="/usr/bin/tree"
+elif [ -x /opt/homebrew/bin/tree ]; then
+  TREE_BIN="/opt/homebrew/bin/tree"
+else
+  echo "tree binary not found"
+  exit 1
+fi
+
+set -x
+$TREE_BIN -a -I .git -I .mypy_cache -I .github -I demos -I .pytest_cache -I .pixi -I .actrc -I .cursorrules -I .cursorignore -I __pycache__

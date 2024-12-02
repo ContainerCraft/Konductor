@@ -6,21 +6,26 @@ This module provides generic, reusable utility functions for Pulumi resource man
 Includes resource transformations, Helm interactions, and infrastructure utilities.
 """
 
-import re
 from typing import Any, Dict, TypeVar, Union, cast
 
-from pulumi import Output, ResourceTransformationArgs, ResourceTransformationResult, log, runtime
+from pulumi import (
+    Output,
+    ResourceTransformationArgs,
+    ResourceTransformationResult,
+    log,
+    runtime,
+)
 from pulumi_kubernetes.meta.v1 import ObjectMetaArgs
 
 # Type variables for generic functions
-T = TypeVar('T')
+T = TypeVar("T")
 MetadataType = Union[Dict[str, Any], ObjectMetaArgs, Output[Dict[str, Any]]]
 
 
 def set_resource_metadata(
     metadata: MetadataType,
     global_labels: Dict[str, str],
-    global_annotations: Dict[str, str]
+    global_annotations: Dict[str, str],
 ) -> MetadataType:
     """
     Updates resource metadata with global labels and annotations.
@@ -50,11 +55,13 @@ def set_resource_metadata(
                 metadata.annotations.update(global_annotations)
         elif isinstance(metadata, Output):
             metadata_output = cast(Output[Dict[str, Any]], metadata)
-            return metadata_output.apply(lambda m: {
-                **m,
-                "labels": {**(m.get("labels", {})), **global_labels},
-                "annotations": {**(m.get("annotations", {})), **global_annotations}
-            })
+            return metadata_output.apply(
+                lambda m: {
+                    **m,
+                    "labels": {**(m.get("labels", {})), **global_labels},
+                    "annotations": {**(m.get("annotations", {})), **global_annotations},
+                }
+            )
         else:
             raise TypeError(f"Unsupported metadata type: {type(metadata)}")
     except Exception as e:
@@ -65,8 +72,7 @@ def set_resource_metadata(
 
 
 def generate_global_transformations(
-    global_labels: Dict[str, str],
-    global_annotations: Dict[str, str]
+    global_labels: Dict[str, str], global_annotations: Dict[str, str]
 ) -> None:
     """
     Registers global transformations for all Pulumi resources.
@@ -76,6 +82,7 @@ def generate_global_transformations(
         global_labels: Global labels to apply
         global_annotations: Global annotations to apply
     """
+
     def global_transform(
         args: ResourceTransformationArgs,
     ) -> ResourceTransformationResult:
@@ -93,13 +100,13 @@ def generate_global_transformations(
 
         try:
             if "metadata" in props:
-                set_resource_metadata(props["metadata"], global_labels, global_annotations)
+                set_resource_metadata(
+                    props["metadata"], global_labels, global_annotations
+                )
             elif "spec" in props and isinstance(props["spec"], dict):
                 if "metadata" in props["spec"]:
                     set_resource_metadata(
-                        props["spec"]["metadata"],
-                        global_labels,
-                        global_annotations
+                        props["spec"]["metadata"], global_labels, global_annotations
                     )
 
             return ResourceTransformationResult(props, args.opts)
@@ -108,3 +115,8 @@ def generate_global_transformations(
             return ResourceTransformationResult(props, args.opts)
 
     runtime.register_stack_transformation(global_transform)
+
+
+def apply_tags(resource, tags: dict):
+    if hasattr(resource, "tags"):
+        resource.tags.update(tags)

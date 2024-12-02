@@ -1,4 +1,4 @@
-# ../konductor/modules/core/__init__.py
+# ./modules/core/__init__.py
 """
 Konductor Core Module
 
@@ -6,23 +6,30 @@ This module provides the core functionality for the Konductor Infrastructure as 
 It handles configuration management, deployment orchestration, resource management,
 and compliance controls.
 
-Key Components:
-- Configuration Management: Handles configuration loading, validation, and merging
-- Deployment Orchestration: Manages module deployment and dependencies
-- Resource Management: Provides resource creation and transformation utilities
-- Metadata Management: Handles global metadata and tagging
-- Type Definitions: Defines core data structures and types
+**Key Components**:
 
-Usage:
-    from pulumi.core import (
-        initialize_pulumi,
-        deploy_modules,
-        ComplianceConfig,
-        InitializationConfig
-    )
+- **Configuration Management**: Handles configuration loading, validation, and merging.
+- **Deployment Orchestration**: Manages module deployment and dependencies.
+- **Resource Management**: Provides resource creation and transformation utilities.
+- **Metadata Management**: Handles global metadata and tagging.
+- **Git Utilities**: Provides utilities for Git repository interactions.
+- **Type Definitions**: Defines core data structures and types.
+- **Utilities**: Provides generic utility functions.
+- **Stack Outputs**: Manages standardized stack outputs.
+- **Exception Handling**: Defines custom exceptions for error handling.
+
+**Usage**:
+
+from modules.core import (
+    initialize_pulumi,
+    DeploymentManager,
+    ConfigManager,
+    ComplianceConfig,
+    InitializationConfig,
+    get_version,
+    get_module_metadata,
+)
 """
-
-from typing import Dict, Any
 
 # Version information
 __version__ = "0.0.1"
@@ -30,35 +37,60 @@ __author__ = "ContainerCraft Konductor Maintainers"
 
 # Type exports
 from .types import (
-    ComplianceConfig,
+    GitInfo,
     InitializationConfig,
-    ModuleBase,
     ModuleDefaults,
+    ModuleRegistry,
+    ConfigurationValidator,
     FismaConfig,
     NistConfig,
     ScipConfig,
+    ComplianceConfig,
+    ModuleBase,
     StackOutputs,
+    GlobalMetadata,
 )
 
 # Interfaces
 from .interfaces import (
+    ResourceMetadata,
+    ModuleDeploymentResult,
     DeploymentContext,
     ModuleInterface,
-    ModuleDeploymentResult,
-    ResourceMetadata,
+    ResourceManagerInterface,
 )
 
 # Configuration management
 from .config import (
+    ensure_cache_dir,
+    coerce_to_bool,
     get_module_config,
+    validate_version_format,
+    load_versions_from_file,
+    load_versions_from_url,
     load_default_versions,
     export_results,
+    validate_url,
     validate_module_config,
-    initialize_config,
     merge_configurations,
+    initialize_config,
+    get_enabled_modules,
     DEFAULT_MODULE_CONFIG,
-    get_stack_outputs,
+    ConfigManager,
 )
+
+# Deployment
+from .deployment import DeploymentManager
+
+# Exceptions
+from .exceptions import (
+    KonductorError,
+    ModuleLoadError,
+    ModuleDeploymentError,
+)
+
+# Initialization
+from .initialization import initialize_pulumi
 
 # Metadata management
 from .metadata import (
@@ -69,105 +101,92 @@ from .metadata import (
 
 # Git utilities
 from .git import (
-    collect_git_info,
     get_latest_semver_tag,
     get_remote_url,
     sanitize_git_info,
     extract_repo_name,
+    collect_git_info,
+    is_valid_git_url,
 )
 
 # Utility functions
 from .utils import (
     set_resource_metadata,
     generate_global_transformations,
+    apply_tags,
 )
 
-# Initialization
-from .initialization import initialize_pulumi
-
-# Deployment
-from .deployment import DeploymentManager
+# Stack outputs
+from .stack_outputs import (
+    get_stack_outputs,
+    collect_global_metadata,
+    collect_module_metadata,
+    collect_compliance_outputs,
+)
 
 # Public API
 __all__ = [
     # Types
-    "ComplianceConfig",
+    "GitInfo",
     "InitializationConfig",
-    "ModuleBase",
     "ModuleDefaults",
+    "ModuleRegistry",
+    "ConfigurationValidator",
     "FismaConfig",
     "NistConfig",
     "ScipConfig",
+    "ComplianceConfig",
+    "ModuleBase",
     "StackOutputs",
-
+    "GlobalMetadata",
     # Interfaces
+    "ResourceMetadata",
+    "ModuleDeploymentResult",
     "DeploymentContext",
     "ModuleInterface",
-    "ModuleDeploymentResult",
-    "ResourceMetadata",
-
+    "ResourceManagerInterface",
     # Configuration
+    "ensure_cache_dir",
+    "coerce_to_bool",
     "get_module_config",
+    "validate_version_format",
+    "load_versions_from_file",
+    "load_versions_from_url",
     "load_default_versions",
     "export_results",
+    "validate_url",
     "validate_module_config",
-    "initialize_config",
     "merge_configurations",
+    "initialize_config",
+    "get_enabled_modules",
     "DEFAULT_MODULE_CONFIG",
-    "get_stack_outputs",
-
+    "ConfigManager",
     # Deployment
+    "DeploymentManager",
+    # Exceptions
+    "KonductorError",
+    "ModuleLoadError",
+    "ModuleDeploymentError",
+    # Initialization
     "initialize_pulumi",
-
     # Metadata
     "setup_global_metadata",
     "set_global_labels",
     "set_global_annotations",
-
-    # Git Utilities
-    "collect_git_info",
+    # Git utilities
     "get_latest_semver_tag",
     "get_remote_url",
     "sanitize_git_info",
     "extract_repo_name",
-
+    "collect_git_info",
+    "is_valid_git_url",
     # Utilities
     "set_resource_metadata",
     "generate_global_transformations",
-
-    # Deployment
-    "DeploymentManager",
+    "apply_tags",
+    # Stack outputs
+    "get_stack_outputs",
+    "collect_global_metadata",
+    "collect_module_metadata",
+    "collect_compliance_outputs",
 ]
-
-def get_version() -> str:
-    """
-    Returns the core module version.
-
-    Returns:
-        str: The current version of the core module.
-    """
-    return __version__
-
-def get_module_metadata() -> Dict[str, Any]:
-    """
-    Returns metadata about the core module.
-
-    Returns:
-        Dict[str, Any]: A dictionary containing module metadata including:
-            - version: Current module version
-            - author: Module maintainers
-            - modules: List of available modules
-            - features: List of core features
-    """
-    return {
-        "version": __version__,
-        "author": __author__,
-        "modules": list(DEFAULT_MODULE_CONFIG.keys()),
-        "features": [
-            "Configuration Management",
-            "Deployment Orchestration",
-            "Resource Management",
-            "Compliance Controls",
-            "Metadata Management"
-        ]
-    }

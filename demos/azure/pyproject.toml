@@ -1,0 +1,18 @@
+[tool.poetry]
+name = "this-is-a-test"
+version = "0.1.0"
+description = "A Pulumi AWS project using Poetry for dependency management"
+authors = ["Your Name <your.email@example.com>"]
+license = "MIT"
+package-mode = false
+
+[tool.poetry.dependencies]
+python = "^3.10"
+pulumi = ">=3.83.1,<4.0.0"
+pulumi-azure-native = "^2.74.0"
+pulumi-azure = "^6.11.0"
+pulumi-aws = "^6.61.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -2,10 +2,11 @@
 from typing import Optional, Dict, Any
 import pulumi
 import pulumi_aws as aws
-from pulumi import ResourceOptions, Config, log
+from pulumi import log
 import os
 
 from .types import AWSConfig
+
 
 class AWSProvider:
     """Manages AWS provider initialization and configuration."""
@@ -24,57 +25,53 @@ class AWSProvider:
         self._region: str = ""
 
         try:
-            log.debug("Setting up AWS provider configuration")
-            # Get AWS credentials and region with proper fallbacks
-            pulumi_config = Config("aws")
+            # Load Pulumi configuration
+            pulumi_config = pulumi.Config()
+            aws_config = pulumi_config.get_object("aws") or {}
 
-            # Retrieve AWS region
-            aws_region = (
-                os.getenv("AWS_REGION") or
-                pulumi_config.get("region") or
-                self.config.region
-            )
-            if not aws_region:
-                raise ValueError("AWS region is not specified.")
-
-            # Retrieve AWS access key and secret access key
-            access_key_id = os.getenv("AWS_ACCESS_KEY_ID") or pulumi_config.get_secret("access_key_id")
-            secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY") or pulumi_config.get_secret("secret_access_key")
-
-            # Retrieve AWS profile if access keys are not provided
-            aws_profile = None
-            if not access_key_id and not secret_access_key:
-                aws_profile = os.getenv("AWS_PROFILE") or pulumi_config.get("profile") or self.config.profile
-                if not aws_profile:
-                    raise ValueError("AWS credentials not provided. Set access keys or profile.")
-
+            # Fetch AWS region from Pulumi config or AWSConfig
+            aws_region = aws_config.get("region") or self.config.region or os.getenv("AWS_REGION") or "us-east-1"
             self._region = aws_region
 
-            # Initialize AWS provider with the appropriate authentication method
-            provider_args = {
-                "region": aws_region,
-            }
-            if access_key_id and secret_access_key:
-                provider_args.update({
-                    "access_key": access_key_id,
-                    "secret_key": secret_access_key,
-                })
-                log.debug("Using AWS access key and secret key for authentication.")
-            elif aws_profile:
-                provider_args["profile"] = aws_profile
-                log.debug(f"Using AWS profile '{aws_profile}' for authentication.")
+            # Prepare AWS provider arguments
+            provider_args = {"region": aws_region}
+
+            # Fetch AWS credentials from Pulumi config
+            aws_access_key_id = aws_config.get("access_key_id")
+            aws_secret_access_key = aws_config.get("secret_access_key")
+
+            # If not in Pulumi config, check environment variables
+            if not aws_access_key_id or not aws_secret_access_key:
+                aws_access_key_id = os.getenv("AWS_ACCESS_KEY_ID")
+                aws_secret_access_key = os.getenv("AWS_SECRET_ACCESS_KEY")
+                if aws_access_key_id and aws_secret_access_key:
+                    log.debug("Using AWS credentials from environment variables.")
+
+            # If credentials are found, add them to provider args
+            if aws_access_key_id and aws_secret_access_key:
+                provider_args.update(
+                    {
+                        "access_key": aws_access_key_id,
+                        "secret_key": aws_secret_access_key,
+                    }
+                )
+                log.debug("Using AWS credentials from Pulumi configuration.")
             else:
-                raise ValueError("AWS credentials not provided. Set access keys or profile.")
+                # If no credentials, check for profile in Pulumi config or environment
+                aws_profile = aws_config.get("profile") or self.config.profile or os.getenv("AWS_PROFILE")
+                if aws_profile:
+                    provider_args["profile"] = aws_profile
+                    log.debug(f"Using AWS profile: {aws_profile}")
+                else:
+                    log.debug("No AWS credentials or profile found. Using default credential methods.")
 
-            log.debug(f"Created provider with args: {provider_args}")
-            self._provider = aws.Provider("aws-provider", **provider_args)
-            log.debug("AWS Provider instance created successfully")
-
+            # Create the AWS provider
+            log.debug(f"Creating AWS provider with args: {provider_args}")
+            self._provider = aws.Provider("aws_provider", **provider_args)
             log.info(f"AWS Provider initialized in region: {aws_region}")
 
         except Exception as e:
             log.error(f"Failed to initialize AWS provider: {str(e)}")
-            log.debug(f"Provider initialization failed with config: {self.config}")
             raise
 
     @property
@@ -116,12 +113,38 @@ class AWSProvider:
             if not self._provider:
                 raise RuntimeError("AWS Provider not initialized")
 
-            # Simplest possible version - no options merging
-            return aws.get_caller_identity()
+            # Always use the provider's InvokeOptions
+            return aws.get_caller_identity(opts=pulumi.InvokeOptions(provider=self._provider))
 
         except Exception as e:
             log.error(f"Failed to get caller identity: {str(e)}")
             raise
+
+    def sanitize_tag_value(self, value: str) -> str:
+        """
+        Sanitize AWS tag values to meet AWS requirements:
+        - Must be Unicode strings 1-256 characters long
+        - Cannot be empty strings
+        - Must not have leading/trailing spaces
+        """
+        if not value:
+            return "none"
+
+        # Convert to string and trim
+        sanitized = value.strip()
+
+        # Replace invalid characters with dashes
+        sanitized = "".join(c if c.isalnum() or c in "-_.:/=+@" else "-" for c in sanitized)
+
+        # Truncate to 256 characters
+        sanitized = sanitized[:256]
+
+        # Ensure non-empty value
+        return sanitized or "none"
+
+    def sanitize_tags(self, tags: Dict[str, str]) -> Dict[str, str]:
+        """Sanitize all tag values in a dictionary."""
+        return {k: self.sanitize_tag_value(v) for k, v in tags.items() if k and v is not None}
 
     def get_tags(self) -> Dict[str, str]:
         """
@@ -134,6 +157,32 @@ class AWSProvider:
             self._tags = {
                 "managed-by": "konductor",
                 "environment": self.config.profile or "default",
-                "region": self._region
+                "region": self._region,
             }
-        return self._tags
+        # Sanitize tags before returning
+        return self.sanitize_tags(self._tags)
+
+
+def collect_module_metadata(global_metadata: Dict[str, Any], provider: AWSProvider) -> Dict[str, Any]:
+    """Collect AWS-specific metadata."""
+    try:
+        caller_identity = aws.get_caller_identity(opts=pulumi.InvokeOptions(provider=provider.provider))
+
+        aws_metadata = {
+            "aws": {
+                "aws_user_account_id": caller_identity.account_id,
+                "aws_user_id": caller_identity.user_id,
+                "aws_user_arn": caller_identity.arn,
+            }
+        }
+
+        # Store in global metadata singleton
+        from modules.core.metadata import MetadataSingleton
+
+        MetadataSingleton().set_aws_metadata(aws_metadata["aws"])
+
+        return aws_metadata
+
+    except Exception as e:
+        pulumi.log.warn(f"Could not collect AWS caller identity: {e}")
+        return {"aws": {}}

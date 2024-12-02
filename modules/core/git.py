@@ -1,24 +1,28 @@
+# ./modules/core/git.py
 """
 Git Utilities Module
 
 This module provides utility functions for interacting with Git repositories.
-It includes functions for retrieving repository information, and sanitizing data.
+It includes functions for retrieving repository information and sanitizing data.
 
 Key Functions:
 - get_latest_semver_tag: Retrieves the latest semantic version tag.
 - get_remote_url: Retrieves the remote URL of a Git repository.
 - sanitize_git_info: Sanitizes Git information for use in tags/labels.
 - extract_repo_name: Extracts the repository name from a Git remote URL.
+- collect_git_info: Collects Git repository metadata.
+- is_valid_git_url: Validates Git URLs.
 """
 
 import os
 import re
 import semver
-from typing import Dict, Optional, Any
-from git import Repo, GitCommandError
+from typing import Dict, Optional
+from git import Repo, GitCommandError, InvalidGitRepositoryError
 from pulumi import log
 import subprocess
-from modules.core.types import GitInfo
+from .git_types import GitInfo
+
 
 def get_latest_semver_tag(repo: Repo) -> Optional[str]:
     """
@@ -37,10 +41,10 @@ def get_latest_semver_tag(repo: Repo) -> Optional[str]:
         # Filter and sort tags that are valid semver
         valid_tags = []
         for tag in repo.tags:
-            if hasattr(tag, 'name'):
+            if hasattr(tag, "name"):
                 # Remove 'v' prefix if present for semver parsing
-                version_str = tag.name.lstrip('v')
-                if semver.Version.is_valid(version_str):
+                version_str = tag.name.lstrip("v")
+                if semver.Version.parse(version_str, optional_minor_patch=True):
                     valid_tags.append(tag)
 
         if not valid_tags:
@@ -49,8 +53,8 @@ def get_latest_semver_tag(repo: Repo) -> Optional[str]:
         # Sort tags by version and return the latest
         sorted_tags = sorted(
             valid_tags,
-            key=lambda t: semver.Version.parse(t.name.lstrip('v')),
-            reverse=True
+            key=lambda t: semver.Version.parse(t.name.lstrip("v")),
+            reverse=True,
         )
 
         return sorted_tags[0].name if sorted_tags else None
@@ -62,32 +66,111 @@ def get_latest_semver_tag(repo: Repo) -> Optional[str]:
         log.warn(f"Error processing tags: {str(e)}")
         return None
 
-def get_remote_url(repo: Repo) -> str:
-    """
-    Retrieves the remote URL of a Git repository.
 
-    Args:
-        repo: GitPython Repo object
+def get_remote_url() -> str:
+    """
+    Retrieves the remote URL of a Git repository using multiple methods.
 
     Returns:
-        str: Remote URL or 'N/A' if not found
+        str: Remote URL or 'unknown' if not found
     """
+    remote_url = None
+
+    # Method 1: Use GitPython Repo object
     try:
-        return next(remote.url for remote in repo.remotes if remote.name == "origin")
-    except (StopIteration, AttributeError, GitCommandError) as e:
-        log.warn(f"Failed to get remote URL: {str(e)}")
-        pass
+        repo = Repo(os.getcwd(), search_parent_directories=True)
+        remote = next(
+            (remote for remote in repo.remotes if remote.name == "origin"), None
+        )
+        if remote:
+            remote_url = remote.url
+    except (InvalidGitRepositoryError, GitCommandError, StopIteration) as e:
+        log.warn(f"GitPython failed to get remote URL: {str(e)}")
 
-    try:
-        return repo.git.config("--get", "remote.origin.url")
-    except GitCommandError:
-        pass
+    # Method 2: Use git command `git config --get remote.origin.url`
+    if not remote_url:
+        try:
+            remote_url = (
+                subprocess.check_output(
+                    ["git", "config", "--get", "remote.origin.url"],
+                    stderr=subprocess.PIPE,
+                )
+                .decode()
+                .strip()
+            )
+            if not remote_url:
+                log.warn(
+                    "No remote URL found using 'git config --get remote.origin.url'."
+                )
+                remote_url = None
+        except subprocess.CalledProcessError as e:
+            log.warn(f"Git command failed to get remote URL: {str(e)}")
 
-    for env_var in ["CI_REPOSITORY_URL", "GITHUB_REPOSITORY", "GIT_URL"]:
-        if url := os.getenv(env_var):
-            return url
+    # Method 3: Use `git remote get-url origin`
+    if not remote_url:
+        try:
+            remote_url = (
+                subprocess.check_output(
+                    ["git", "remote", "get-url", "origin"],
+                    stderr=subprocess.PIPE,
+                )
+                .decode()
+                .strip()
+            )
+            if not remote_url:
+                log.warn("No remote URL found using 'git remote get-url origin'.")
+                remote_url = None
+        except subprocess.CalledProcessError as e:
+            log.warn(
+                f"Git command failed to get remote URL using 'git remote get-url origin': {str(e)}"
+            )
 
-    return "N/A"
+    # Method 4: Use environment variables
+    if not remote_url:
+        for env_var in [
+            "CI_REPOSITORY_URL",
+            "GITHUB_REPOSITORY",
+            "GIT_URL",
+            "GITHUB_SERVER_URL",
+            "GITHUB_REPOSITORY",
+        ]:
+            url = os.getenv(env_var)
+            if url:
+                # Handle GitHub specific format
+                if env_var == "GITHUB_REPOSITORY":
+                    github_server = os.getenv("GITHUB_SERVER_URL", "https://github.com")
+                    remote_url = f"{github_server}/{url}.git"
+                else:
+                    remote_url = url
+                break
+
+    # Method 5: Try reading .git/config file directly
+    if not remote_url:
+        try:
+            git_dir = (
+                subprocess.check_output(
+                    ["git", "rev-parse", "--git-dir"], stderr=subprocess.PIPE
+                )
+                .decode()
+                .strip()
+            )
+            config_path = os.path.join(git_dir, "config")
+
+            if os.path.exists(config_path):
+                with open(config_path, "r") as f:
+                    config_content = f.read()
+                    url_match = re.search(r"url\s*=\s*(.+)", config_content)
+                    if url_match:
+                        remote_url = url_match.group(1).strip()
+        except (subprocess.CalledProcessError, IOError) as e:
+            log.warn(f"Failed to read .git/config for remote URL: {str(e)}")
+
+    if remote_url and is_valid_git_url(remote_url):
+        return remote_url
+    else:
+        log.warn("Remote URL could not be determined.")
+        return "unknown"
+
 
 def sanitize_git_info(git_info: Dict[str, str]) -> Dict[str, str]:
     """
@@ -109,6 +192,7 @@ def sanitize_git_info(git_info: Dict[str, str]) -> Dict[str, str]:
         sanitized[key] = sanitized_value
 
     return sanitized
+
 
 def extract_repo_name(remote_url: str) -> str:
     """
@@ -135,55 +219,76 @@ def extract_repo_name(remote_url: str) -> str:
 
         return remote_url
     except Exception as e:
-        log.warning(f"Error extracting repo name from {remote_url}: {str(e)}")
+        log.warn(f"Error extracting repository name from URL: {str(e)}")
         return remote_url
+
 
 def collect_git_info() -> GitInfo:
     """
-    Collects Git repository information.
+    Collects Git repository information using multiple fallback methods.
 
     Returns:
-        GitInfo: An instance containing Git metadata including:
-            - commit_hash: Current commit hash
-            - branch_name: Current branch name
-            - remote_url: Repository remote URL
-
-    Raises:
-        subprocess.CalledProcessError: If Git commands fail
+        GitInfo: An instance containing Git metadata
     """
+    git_info = GitInfo(
+        commit_hash="unknown",
+        branch_name="unknown",
+        remote_url="unknown",
+    )
+
+    # Get commit hash
     try:
-        git_info = GitInfo()
-
-        try:
-            git_info.commit_hash = subprocess.check_output(
-                ['git', 'rev-parse', 'HEAD']
-            ).decode().strip()
-        except Exception as e:
-            log.warn(f"Failed to get commit hash: {str(e)}")
-            git_info.commit_hash = "unknown"
-
-        try:
-            git_info.branch_name = subprocess.check_output(
-                ['git', 'rev-parse', '--abbrev-ref', 'HEAD']
-            ).decode().strip()
-        except Exception as e:
-            log.warn(f"Failed to get branch name: {str(e)}")
-            git_info.branch_name = "unknown"
-
-        try:
-            git_info.remote_url = subprocess.check_output(
-                ['git', 'config', '--get', 'remote.origin.url']
-            ).decode().strip()
-        except Exception as e:
-            log.warn(f"Failed to get remote URL: {str(e)}")
-            git_info.remote_url = "unknown"
-
-        return git_info
-
-    except Exception as e:
-        log.error(f"Failed to collect Git information: {str(e)}")
-        return GitInfo(
-            commit_hash="unknown",
-            branch_name="unknown",
-            remote_url="unknown"
+        git_info.commit_hash = (
+            subprocess.check_output(
+                ["git", "rev-parse", "HEAD"], stderr=subprocess.PIPE
+            )
+            .decode()
+            .strip()
         )
+    except subprocess.CalledProcessError as e:
+        log.warn(f"Failed to get Git commit hash: {str(e)}")
+
+    # Get branch name
+    try:
+        git_info.branch_name = (
+            subprocess.check_output(
+                ["git", "rev-parse", "--abbrev-ref", "HEAD"], stderr=subprocess.PIPE
+            )
+            .decode()
+            .strip()
+        )
+    except subprocess.CalledProcessError as e:
+        log.warn(f"Failed to get Git branch name: {str(e)}")
+
+    # Get remote URL
+    git_info.remote_url = get_remote_url()
+
+    # Store in global metadata singleton
+    from .metadata import MetadataSingleton
+
+    MetadataSingleton().set_git_metadata(git_info.dict())
+
+    return git_info
+
+
+def is_valid_git_url(url: str) -> bool:
+    """
+    Validates if a string is a valid git URL.
+
+    Args:
+        url: URL to validate
+
+    Returns:
+        bool: True if valid git URL
+    """
+    if not url or url == "unknown":
+        return False
+
+    # Check for common git URL patterns
+    patterns = [
+        r"^git@[a-zA-Z0-9.\-]+:[a-zA-Z0-9/\-]+(\.git)?$",  # SSH format
+        r"^https?://[a-zA-Z0-9.\-]+/[a-zA-Z0-9/\-]+(\.git)?$",  # HTTPS format
+        r"^https?://[a-zA-Z0-9.\-]+/[a-zA-Z0-9/\-]+$",  # HTTPS without .git
+    ]
+
+    return any(re.match(pattern, url) for pattern in patterns)

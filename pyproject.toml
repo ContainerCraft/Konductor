@@ -1,34 +1,36 @@
 [tool.poetry]
 name = "konductor"
-version = "0.1.0"
+version = "0.0.1"
 description = "DevOps Platform IaC Template Repository"
-authors = ["Your Name <your.email@example.com>"]
+authors = ["Kat Morgan <kathryn.morgan@braincraft.io>"]
 readme = "README.md"
 packages = [
+    { include = "tests" },
     { include = "modules" },
     { include = "__main__.py" }
 ]
 
 [tool.poetry.dependencies]
 python = "^3.10"
-pulumi = "^3.0.0"
-pulumi-aws = "^6.0.0"
-pulumi-kubernetes = "^4.0.0"
+pulumi = ">=3.80.0,<4.0.0"
+pulumi-aws = ">=6.60.0,<7.0.0"
 pulumi-aws-native = "^0.90.0"
-pydantic = "^2.0.0"
-gitpython = "^3.1.0"
-semver = "^3.0.0"
+pulumi-kubernetes = "^4.0.0"
 packaging = "^23.0"
+gitpython = "^3.1.0"
+pydantic = "^2.0.0"
+protobuf = ">=4.21,<5.0"
 pyright = "^1.1.387"
-protobuf = "3.20.*"
+semver = ">=2.8.1,<3.0"
+requests = "^2.32.3"
 
 [tool.poetry.group.dev.dependencies]
-pyright = "^1.1.0"
 black = "^23.0.0"
 pylint = "^3.0.0"
-pytest = ">=7.0.0,<8.0.0"
-pytest-cov = "^4.0.0"
+pyright = "^1.1.0"
 pytest-asyncio = "<0.24"
+pytest-cov = "^4.0.0"
+pytest = ">=7.0.0,<8.0.0"
 
 [build-system]
 requires = ["poetry-core"]
@@ -36,6 +38,7 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.pyright]
 include = [
+    "tests",
     "modules",
     "__main__.py"
 ]
@@ -46,8 +49,8 @@ reportMissingImports = "warning"
 reportMissingTypeStubs = false
 
 [tool.black]
-line-length = 88
-target-version = ['py38']
+line-length = 120
+target-version = ['py310']
 include = '\.pyi?$'
 
 [tool.pylint.messages_control]
@@ -56,3 +59,7 @@ disable = [
     "C0330",  # bad-continuation
     "R0903",  # too-few-public-methods
 ]
+
+[tool.flake8]
+max-line-length = 88
+exclude = ["__pycache__", "build", "dist", ".git", ".venv", "venv", "node_modules"]

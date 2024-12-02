@@ -17,29 +17,26 @@ Includes proper data type handling to ensure configurations are correctly parsed
 
 import json
 import pulumi
-from typing import List, Dict, Any
+import requests
+
 from pulumi import log
 from pathlib import Path
-from typing import Any, Dict, Tuple, Optional, cast, Union, Literal, List
-import requests
+from typing import Any, Dict, Tuple, Optional, List
 from pydantic import ValidationError
 from urllib.parse import urlparse
 
-import pulumi
-from pulumi import log
-
 from .types import (
-    ComplianceConfig,
+    InitializationConfig,
     ModuleDefaults,
     ModuleBase,
-    InitializationConfig,
-    ModuleRegistry,
-    StackOutputs
+    StackOutputs,
 )
+from .compliance_types import ComplianceConfig
+
 
 # Configuration Constants
 DEFAULT_VERSIONS_URL_TEMPLATE = (
-    "https://raw.githubusercontent.com/ContainerCraft/Kargo/newfactor/pulumi/"
+    "https://raw.githubusercontent.com/ContainerCraft/Kargo/newfactor/modules/"
 )
 
 CACHE_DIR = Path("/tmp/konductor")
@@ -53,12 +50,14 @@ DEFAULT_MODULE_CONFIG: Dict[str, ModuleDefaults] = {
     "multus": {"enabled": False, "version": None, "config": {}},
     "hostpath_provisioner": {"enabled": False, "version": None, "config": {}},
     "containerized_data_importer": {"enabled": False, "version": None, "config": {}},
-    "prometheus": {"enabled": False, "version": None, "config": {}}
+    "prometheus": {"enabled": False, "version": None, "config": {}},
 }
+
 
 def ensure_cache_dir() -> None:
     """Ensures the cache directory exists."""
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def coerce_to_bool(value: Any) -> bool:
     """
@@ -76,11 +75,12 @@ def coerce_to_bool(value: Any) -> bool:
         return value.lower() == "true"
     return bool(value)
 
+
 def get_module_config(
     module_name: str,
     config: pulumi.Config,
     default_versions: Dict[str, str],
-    namespace: Optional[str] = None
+    namespace: Optional[str] = None,
 ) -> Tuple[Dict[str, Any], bool]:
     """
     Retrieves and prepares the configuration for a module.
@@ -100,11 +100,9 @@ def get_module_config(
         ValueError: If module configuration is invalid
     """
     try:
-        module_defaults = DEFAULT_MODULE_CONFIG.get(module_name, ModuleDefaults(
-            enabled=False,
-            version=None,
-            config={}
-        ))
+        module_defaults = DEFAULT_MODULE_CONFIG.get(
+            module_name, ModuleDefaults(enabled=False, version=None, config={})
+        )
 
         # Get module configuration from Pulumi config
         module_config: Dict[str, Any] = config.get_object(module_name) or {}
@@ -115,10 +113,7 @@ def get_module_config(
         )
 
         # Get module version
-        version = module_config.get(
-            "version",
-            default_versions.get(module_name)
-        )
+        version = module_config.get("version", default_versions.get(module_name))
 
         if version:
             module_config["version"] = version
@@ -128,6 +123,7 @@ def get_module_config(
     except Exception as e:
         log.error(f"Error configuring module {module_name}: {str(e)}")
         raise
+
 
 def validate_version_format(version: str) -> bool:
     """
@@ -141,10 +137,11 @@ def validate_version_format(version: str) -> bool:
     """
     try:
         # Basic semver validation
-        parts = version.split('.')
+        parts = version.split(".")
         return len(parts) >= 2 and all(part.isdigit() for part in parts)
     except Exception:
         return False
+
 
 def load_versions_from_file(file_path: Path) -> Dict[str, Any]:
     """
@@ -170,6 +167,7 @@ def load_versions_from_file(file_path: Path) -> Dict[str, Any]:
         log.warn(f"Error loading versions from {file_path}: {str(e)}")
     return {}
 
+
 def load_versions_from_url(url: str) -> Dict[str, Any]:
     """
     Loads version information from a URL.
@@ -190,9 +188,9 @@ def load_versions_from_url(url: str) -> Dict[str, Any]:
         log.warn(f"Error loading versions from {url}: {str(e)}")
     return {}
 
+
 def load_default_versions(
-    config: pulumi.Config,
-    force_refresh: bool = False
+    config: pulumi.Config, force_refresh: bool = False
 ) -> Dict[str, Any]:
     """
     Loads the default versions for modules based on configuration settings.
@@ -238,7 +236,9 @@ def load_default_versions(
 
     # Try stack-specific versions
     if versions_stack_name:
-        stack_versions_path = Path(__file__).parent.parent / "versions" / f"{stack_name}.json"
+        stack_versions_path = (
+            Path(__file__).parent.parent / "versions" / f"{stack_name}.json"
+        )
         if versions := load_versions_from_file(stack_versions_path):
             _cache_versions(versions)
             return versions
@@ -257,6 +257,7 @@ def load_default_versions(
 
     raise Exception("Cannot proceed without default versions")
 
+
 def _cache_versions(versions: Dict[str, Any]) -> None:
     """
     Caches version information to file.
@@ -269,6 +270,7 @@ def _cache_versions(versions: Dict[str, Any]) -> None:
             json.dump(versions, f)
     except OSError as e:
         log.warn(f"Failed to cache versions: {str(e)}")
+
 
 def export_results(
     versions: Dict[str, str],
@@ -300,6 +302,7 @@ def export_results(
         log.error(f"Failed to export results: {str(e)}")
         raise
 
+
 def validate_url(url: str) -> bool:
     """
     Validates URL format.
@@ -316,10 +319,11 @@ def validate_url(url: str) -> bool:
     except Exception:
         return False
 
+
 def validate_module_config(
     module_name: str,
     config: Dict[str, Any],
-    module_class: Optional[type[ModuleBase]] = None
+    module_class: Optional[type[ModuleBase]] = None,
 ) -> None:
     """
     Validates module configuration against its schema.
@@ -359,9 +363,9 @@ def validate_module_config(
         log.error(f"Configuration validation failed for {module_name}: {str(e)}")
         raise
 
+
 def merge_configurations(
-    base_config: Dict[str, Any],
-    override_config: Dict[str, Any]
+    base_config: Dict[str, Any], override_config: Dict[str, Any]
 ) -> Dict[str, Any]:
     """
     Merges two configurations with override taking precedence.
@@ -375,15 +379,12 @@ def merge_configurations(
     """
     result = base_config.copy()
     for key, value in override_config.items():
-        if (
-            key in result and
-            isinstance(result[key], dict) and
-            isinstance(value, dict)
-        ):
+        if key in result and isinstance(result[key], dict) and isinstance(value, dict):
             result[key] = merge_configurations(result[key], value)
         else:
             result[key] = value
     return result
+
 
 def initialize_config(stack_config: Dict[str, Any]) -> InitializationConfig:
     """
@@ -407,7 +408,9 @@ def initialize_config(stack_config: Dict[str, Any]) -> InitializationConfig:
         required_fields = {"project_name", "stack_name"}
         missing_fields = required_fields - set(stack_config.keys())
         if missing_fields:
-            raise ValueError(f"Missing required stack configuration fields: {missing_fields}")
+            raise ValueError(
+                f"Missing required stack configuration fields: {missing_fields}"
+            )
 
         # Initialize with validated config
         config = InitializationConfig(**stack_config)
@@ -425,6 +428,7 @@ def initialize_config(stack_config: Dict[str, Any]) -> InitializationConfig:
     except Exception as e:
         log.error(f"Configuration initialization failed: {str(e)}")
         raise
+
 
 def get_enabled_modules(config: pulumi.Config) -> List[str]:
     """
@@ -452,6 +456,7 @@ def get_enabled_modules(config: pulumi.Config) -> List[str]:
 
     return enabled_modules
 
+
 def load_default_versions(config: pulumi.Config) -> Dict[str, str]:
     """
     Loads the default versions for modules.
@@ -465,6 +470,7 @@ def load_default_versions(config: pulumi.Config) -> Dict[str, str]:
     # Implement logic to load default versions, possibly from a file or remote source
     # For simplicity, return an empty dictionary here
     return {}
+
 
 def get_stack_outputs(init_config: InitializationConfig) -> StackOutputs:
     """
@@ -485,27 +491,22 @@ def get_stack_outputs(init_config: InitializationConfig) -> StackOutputs:
             "stack_name": init_config.stack_name,
             "project_name": init_config.project_name,
             "versions": init_config.versions,
-            "configurations": init_config.configurations
+            "configurations": init_config.configurations,
         }
 
         # Get Kubernetes component versions
         k8s_versions = {
             name: config.get("version", "unknown")
             for name, config in init_config.configurations.items()
-            if name in [
-                "cert_manager",
-                "kubevirt",
-                "multus",
-                "pulumi_operator",
-                "crossplane"
-            ]
+            if name
+            in ["cert_manager", "kubevirt", "multus", "pulumi_operator", "crossplane"]
         }
 
         # Construct the StackOutputs TypedDict
         stack_outputs: StackOutputs = {
             "compliance": compliance_data,
             "config": config_data,
-            "k8s_app_versions": k8s_versions
+            "k8s_app_versions": k8s_versions,
         }
 
         return stack_outputs
@@ -513,3 +514,53 @@ def get_stack_outputs(init_config: InitializationConfig) -> StackOutputs:
     except Exception as e:
         log.error(f"Failed to generate stack outputs: {str(e)}")
         raise
+
+
+class ConfigManager:
+    def __init__(self):
+        self.pulumi_config = pulumi.Config()
+        self.global_config = self.load_global_config()
+        self.module_configs = self.load_module_configs()
+
+    def load_global_config(self):
+        # Load global configuration
+        return self.pulumi_config.get_object("global") or {}
+
+    def load_module_configs(self):
+        # Load configurations for each enabled module
+        module_configs = {}
+        enabled_modules = self.get_enabled_modules()
+        for module_name in enabled_modules:
+            module_key = f"module:{module_name}"
+            module_config = self.pulumi_config.get_object(module_key) or {}
+            module_configs[module_name] = module_config
+        return module_configs
+
+    def get_enabled_modules(self) -> List[str]:
+        """Get list of enabled modules from config."""
+        enabled_modules = []
+
+        # Get AWS configuration and check if enabled
+        aws_config = self.pulumi_config.get_object("aws")
+        if aws_config and aws_config.get("enabled"):
+            log.info("AWS module is enabled in configuration")
+            enabled_modules.append("aws")
+        else:
+            log.debug("AWS module is not enabled in configuration")
+
+        return enabled_modules
+
+    def get_module_config(self, module_name: str) -> Dict[str, Any]:
+        """Get configuration for a specific module."""
+        try:
+            # First try to get module-specific config
+            module_config = self.pulumi_config.get_object(module_name)
+            if module_config is None:
+                # Fallback to legacy format
+                module_config = self.pulumi_config.get_object(
+                    f"konductor:{module_name}"
+                )
+            return module_config or {}
+        except Exception as e:
+            log.warn(f"Error loading config for module {module_name}: {str(e)}")
+            return {}
