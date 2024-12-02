@@ -67,24 +67,6 @@ class AwsModule(ModuleInterface):
             # Get Git info as dictionary
             git_info = init_config.git_info.model_dump()
 
-            # Create example bucket with sanitized tags
-            bucket_name = f"konductor-{init_config.stack_name}-{provider.region}"
-            example_bucket = aws.s3.Bucket(
-                bucket_name,
-                tags=provider.sanitize_tags(
-                    {
-                        **provider.get_tags(),
-                        "git:commit": git_info["commit_hash"],
-                        "git:branch": git_info["branch_name"],
-                        "git:remote": git_info["remote_url"],
-                    }
-                ),
-                opts=pulumi.ResourceOptions(
-                    provider=provider.provider,
-                    protect=False,
-                ),
-            )
-
             # Collect metadata for resource tagging
             global_metadata = collect_global_metadata()
             aws_metadata = collect_module_metadata(
@@ -111,8 +93,10 @@ class AwsModule(ModuleInterface):
             )
 
             # Define AWS resources with sanitized tags
+            # Bucket is for demonstration purposes only during development
+            bucket_name = f"konductor-{init_config.stack_name}-{provider.region}"
             s3_bucket = aws.s3.Bucket(
-                "exampleBucket",
+                bucket_name,
                 bucket=aws_config.bucket,
                 tags=resource_tags,
                 opts=ResourceOptions(provider=provider.provider, protect=False),
@@ -136,13 +120,13 @@ class AwsModule(ModuleInterface):
 
             # Collect resource identifiers
             provider_urn = str(provider.provider.urn)
-            bucket_name = str(example_bucket.id)
+            bucket_name = str(s3_bucket.id)
 
             # Return deployment result without version
             return ModuleDeploymentResult(
                 success=True,
                 version="",  # Empty string since AWS module doesn't use versions
-                resources=[provider_urn, bucket_name],  # Pass strings instead of objects
+                resources=[provider_urn, bucket_name],
                 metadata=aws_metadata,
             )
 
