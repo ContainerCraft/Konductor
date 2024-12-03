@@ -10,6 +10,8 @@ from modules.core.types import InitializationConfig
 from .provider import AWSProvider
 from .types import AWSConfig
 from modules.core.stack_outputs import collect_global_metadata, collect_module_metadata
+from modules.core.compliance_types import ComplianceConfig
+from .eks import EksManager
 
 
 class AwsModule(ModuleInterface):
@@ -64,7 +66,24 @@ class AwsModule(ModuleInterface):
             log.info(f"Successfully authenticated as: {caller_identity.arn}")
             log.info(f"AWS Account ID: {caller_identity.account_id}")
 
+            # Deploy EKS if enabled
+            if aws_config.eks and aws_config.eks.enabled:
+                log.info(f"Deploying EKS cluster: {aws_config.eks.name}")
+                eks_manager = EksManager(provider)
+                eks_resources = eks_manager.deploy_cluster(
+                    name=aws_config.eks.name,
+                    version=aws_config.eks.version,
+                    instance_types=aws_config.eks.node_groups[0].instance_types if aws_config.eks.node_groups else None,
+                    scaling_config=aws_config.eks.node_groups[0].scaling_config if aws_config.eks.node_groups else None,
+                )
+
+                # Export EKS outputs
+                pulumi.export("eks_cluster_name", eks_resources["cluster"].name)
+                pulumi.export("eks_cluster_endpoint", eks_resources["cluster"].endpoint)
+                pulumi.export("eks_cluster_vpc_id", eks_resources["vpc"].id)
+
             # Get Git info as dictionary
+            # this is required code for initializing the git info, do not remove
             git_info = init_config.git_info.model_dump()
 
             # Collect metadata for resource tagging
@@ -122,16 +141,29 @@ class AwsModule(ModuleInterface):
             provider_urn = str(provider.provider.urn)
             bucket_name = str(s3_bucket.id)
 
+            # Update metadata to include EKS info if deployed
+            if aws_config.eks and aws_config.eks.enabled:
+                aws_metadata["eks_cluster_name"] = aws_config.eks.name
+
+            # Parse compliance config
+            compliance_config = ComplianceConfig.model_validate(config.get("compliance", {}))
+
+            # Return deployment result without version
             # Return deployment result without version
             return ModuleDeploymentResult(
                 success=True,
-                version="",  # Empty string since AWS module doesn't use versions
+                version="0.0.1",
                 resources=[provider_urn, bucket_name],
-                metadata=aws_metadata,
+                metadata={
+                    "compliance": compliance_config.model_dump(),
+                    "aws_account_id": caller_identity.account_id,
+                    "aws_user_id": caller_identity.user_id,
+                    "aws_arn": caller_identity.arn,
+                    **aws_metadata,
+                },
             )
 
         except Exception as e:
-            log.error(f"AWS deployment failed: {str(e)}")
             return ModuleDeploymentResult(
                 success=False, version="", errors=[str(e)]  # Empty string since AWS module doesn't use versions
             )

@@ -80,6 +80,7 @@ class AWSConfig(BaseModel):
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     compliance: ComplianceConfig = Field(default_factory=ComplianceConfig)
     tags: Dict[str, str] = Field(default_factory=dict)
+    eks: Optional[EksClusterConfig] = Field(default=None)
 
     @validator("region")
     def validate_region(cls, v):
@@ -134,3 +135,48 @@ class TenantAccountConfig(BaseModel):
     email: str = Field(..., description="Email address for the account root user")
     organizational_unit: Optional[str] = Field(None, description="OU to place the account in")
     tags: Dict[str, str] = Field(default_factory=dict)
+
+
+class AWSProviderMetadata(BaseModel):
+    """AWS provider metadata."""
+
+    account_id: str
+    user_id: str
+    arn: str
+    region: str
+
+
+class EksNodeGroupConfig(BaseModel):
+    """Configuration for EKS node groups."""
+
+    name: str = Field(..., description="Name of the node group")
+    instance_types: List[str] = Field(default_factory=lambda: ["t3.medium"])
+    scaling_config: Dict[str, int] = Field(
+        default_factory=lambda: {
+            "desired_size": 2,
+            "max_size": 4,
+            "min_size": 1,
+        }
+    )
+    subnet_ids: Optional[List[str]] = Field(default=None)
+    tags: Dict[str, str] = Field(default_factory=dict)
+
+
+class EksClusterConfig(BaseModel):
+    """Configuration for EKS cluster."""
+
+    enabled: bool = Field(default=True)
+    name: str = Field(..., description="Name of the EKS cluster")
+    version: str = Field(default="1.27", description="Kubernetes version")
+    subnet_ids: Optional[List[str]] = Field(default=None)
+    endpoint_private_access: bool = Field(default=True)
+    endpoint_public_access: bool = Field(default=True)
+    node_groups: List[EksNodeGroupConfig] = Field(default_factory=list)
+    tags: Dict[str, str] = Field(default_factory=dict)
+
+    @validator("version")
+    def validate_version(cls, v):
+        valid_versions = ["1.27", "1.26", "1.25"]  # Add supported versions
+        if v not in valid_versions:
+            raise ValueError(f"Invalid EKS version: {v}. Must be one of {valid_versions}")
+        return v

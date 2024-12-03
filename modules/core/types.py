@@ -7,6 +7,7 @@ This module defines all shared data classes and types used across all modules.
 It provides type-safe configuration structures using Pydantic models and TypedDict.
 """
 
+from datetime import datetime, timezone
 from typing import Dict, List, Optional, TypeVar, Union, TypedDict, Any, Protocol
 from pydantic import BaseModel, Field, ConfigDict
 import pulumi
@@ -72,10 +73,8 @@ class InitializationConfig(BaseModel):
     kubernetes_provider: Optional[k8s.Provider] = None
     git_info: GitInfo = Field(default_factory=GitInfo)
     compliance_config: ComplianceConfig = Field(default_factory=ComplianceConfig)
-    metadata: Dict[str, Dict[str, str]] = Field(
-        default_factory=lambda: {"labels": {}, "annotations": {}}
-    )
-
+    metadata: Dict[str, Dict[str, str]] = Field(default_factory=lambda: {"labels": {}, "annotations": {}})
+    deployment_date_time: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 

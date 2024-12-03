@@ -95,8 +95,7 @@ from .initialization import initialize_pulumi
 # Metadata management
 from .metadata import (
     setup_global_metadata,
-    set_global_labels,
-    set_global_annotations,
+    MetadataSingleton,
 )
 
 # Git utilities
@@ -171,8 +170,7 @@ __all__ = [
     "initialize_pulumi",
     # Metadata
     "setup_global_metadata",
-    "set_global_labels",
-    "set_global_annotations",
+    "MetadataSingleton",
     # Git utilities
     "get_latest_semver_tag",
     "get_remote_url",

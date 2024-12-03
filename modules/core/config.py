@@ -35,16 +35,13 @@ from .compliance_types import ComplianceConfig
 
 
 # Configuration Constants
-DEFAULT_VERSIONS_URL_TEMPLATE = (
-    "https://raw.githubusercontent.com/ContainerCraft/Kargo/newfactor/modules/"
-)
+DEFAULT_VERSIONS_URL_TEMPLATE = "https://raw.githubusercontent.com/ContainerCraft/Kargo/newfactor/modules/"
 
 CACHE_DIR = Path("/tmp/konductor")
 VERSION_CACHE_FILE = CACHE_DIR / "default_versions.json"
 
 # Default module configuration
 DEFAULT_MODULE_CONFIG: Dict[str, ModuleDefaults] = {
-    "aws": {"enabled": True, "version": None, "config": {}},
     "cert_manager": {"enabled": False, "version": None, "config": {}},
     "kubevirt": {"enabled": False, "version": None, "config": {}},
     "multus": {"enabled": False, "version": None, "config": {}},
@@ -100,17 +97,13 @@ def get_module_config(
         ValueError: If module configuration is invalid
     """
     try:
-        module_defaults = DEFAULT_MODULE_CONFIG.get(
-            module_name, ModuleDefaults(enabled=False, version=None, config={})
-        )
+        module_defaults = DEFAULT_MODULE_CONFIG.get(module_name, ModuleDefaults(enabled=False, version=None, config={}))
 
         # Get module configuration from Pulumi config
         module_config: Dict[str, Any] = config.get_object(module_name) or {}
 
         # Determine if module is enabled
-        enabled = coerce_to_bool(
-            module_config.get("enabled", module_defaults["enabled"])
-        )
+        enabled = coerce_to_bool(module_config.get("enabled", module_defaults["enabled"]))
 
         # Get module version
         version = module_config.get("version", default_versions.get(module_name))
@@ -189,9 +182,7 @@ def load_versions_from_url(url: str) -> Dict[str, Any]:
     return {}
 
 
-def load_default_versions(
-    config: pulumi.Config, force_refresh: bool = False
-) -> Dict[str, Any]:
+def load_default_versions(config: pulumi.Config, force_refresh: bool = False) -> Dict[str, Any]:
     """
     Loads the default versions for modules based on configuration settings.
 
@@ -236,9 +227,7 @@ def load_default_versions(
 
     # Try stack-specific versions
     if versions_stack_name:
-        stack_versions_path = (
-            Path(__file__).parent.parent / "versions" / f"{stack_name}.json"
-        )
+        stack_versions_path = Path(__file__).parent.parent / "versions" / f"{stack_name}.json"
         if versions := load_versions_from_file(stack_versions_path):
             _cache_versions(versions)
             return versions
@@ -287,11 +276,7 @@ def export_results(
     """
     try:
         # Convert compliance to dictionary if it's a Pydantic model
-        compliance_dict = (
-            compliance.dict()
-            if isinstance(compliance, ComplianceConfig)
-            else compliance
-        )
+        compliance_dict = compliance.dict() if isinstance(compliance, ComplianceConfig) else compliance
 
         # Export results
         pulumi.export("versions", versions)
@@ -364,9 +349,7 @@ def validate_module_config(
         raise
 
 
-def merge_configurations(
-    base_config: Dict[str, Any], override_config: Dict[str, Any]
-) -> Dict[str, Any]:
+def merge_configurations(base_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Merges two configurations with override taking precedence.
 
@@ -408,9 +391,7 @@ def initialize_config(stack_config: Dict[str, Any]) -> InitializationConfig:
         required_fields = {"project_name", "stack_name"}
         missing_fields = required_fields - set(stack_config.keys())
         if missing_fields:
-            raise ValueError(
-                f"Missing required stack configuration fields: {missing_fields}"
-            )
+            raise ValueError(f"Missing required stack configuration fields: {missing_fields}")
 
         # Initialize with validated config
         config = InitializationConfig(**stack_config)
@@ -498,8 +479,7 @@ def get_stack_outputs(init_config: InitializationConfig) -> StackOutputs:
         k8s_versions = {
             name: config.get("version", "unknown")
             for name, config in init_config.configurations.items()
-            if name
-            in ["cert_manager", "kubevirt", "multus", "pulumi_operator", "crossplane"]
+            if name in ["cert_manager", "kubevirt", "multus", "pulumi_operator", "crossplane"]
         }
 
         # Construct the StackOutputs TypedDict
@@ -540,27 +520,50 @@ class ConfigManager:
         """Get list of enabled modules from config."""
         enabled_modules = []
 
-        # Get AWS configuration and check if enabled
-        aws_config = self.pulumi_config.get_object("aws")
-        if aws_config and aws_config.get("enabled"):
-            log.info("AWS module is enabled in configuration")
-            enabled_modules.append("aws")
-        else:
-            log.debug("AWS module is not enabled in configuration")
+        # Look for modules directory
+        modules_dir = Path(__file__).parent.parent
+
+        # Scan for module directories
+        for module_dir in modules_dir.iterdir():
+            if not module_dir.is_dir() or module_dir.name == "core":
+                continue
+
+            module_name = module_dir.name
+            try:
+                # Import module's config
+                module_config = self.get_module_config(module_name)
+
+                # Check if module is enabled
+                is_enabled = module_config.get("enabled", False)
+
+                if is_enabled:
+                    log.info(f"{module_name} module is enabled in configuration")
+                    enabled_modules.append(module_name)
+                else:
+                    log.debug(f"{module_name} module is not enabled")
+
+            except Exception as e:
+                log.warn(f"Error checking module {module_name}: {str(e)}")
+                continue
 
         return enabled_modules
 
     def get_module_config(self, module_name: str) -> Dict[str, Any]:
         """Get configuration for a specific module."""
         try:
-            # First try to get module-specific config
-            module_config = self.pulumi_config.get_object(module_name)
-            if module_config is None:
-                # Fallback to legacy format
-                module_config = self.pulumi_config.get_object(
-                    f"konductor:{module_name}"
-                )
-            return module_config or {}
+            # Try to get module config from Pulumi stack config
+            stack_config = self.pulumi_config.get_object(module_name) or {}
+
+            # Try to import module's default config
+            try:
+                module_config = __import__(f"modules.{module_name}.config", fromlist=["DEFAULT_MODULE_CONFIG"])
+                default_config = getattr(module_config, "DEFAULT_MODULE_CONFIG", {})
+            except (ImportError, AttributeError):
+                default_config = {}
+
+            # Merge configs with stack config taking precedence
+            return {**default_config, **stack_config}
+
         except Exception as e:
             log.warn(f"Error loading config for module {module_name}: {str(e)}")
             return {}

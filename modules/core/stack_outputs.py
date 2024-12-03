@@ -32,17 +32,14 @@ def get_stack_outputs(
 
     # Add compliance data
     if compliance_config := init_config.get("compliance_config"):
-        config["compliance"] = {
-            "scip": compliance_config.scip.dict(),
-            "fisma": compliance_config.fisma.dict(),
-            "nist": compliance_config.nist.dict(),
-        }
+        # Convert compliance config to dict using model's method
+        config["compliance"] = compliance_config.to_dict()
 
     # Add module-specific configs
     for module_name, metadata in modules_metadata.items():
         config[module_name] = metadata
 
-    # Add kubernetes versions separately
+    # Add kubernetes versions
     k8s_versions = {
         name: {version: {} for version in versions}
         for name, versions in init_config.get("versions", {}).items()
@@ -76,13 +73,6 @@ def collect_global_metadata() -> GlobalMetadata:
 def collect_module_metadata(global_metadata: Dict[str, Any], modules_metadata: Dict[str, Any] = None) -> Dict[str, Any]:
     """
     Merge global metadata with module-specific metadata.
-
-    Args:
-        global_metadata (Dict[str, Any]): The global metadata collected.
-        modules_metadata (Dict[str, Any], optional): Metadata from modules.
-
-    Returns:
-        Dict[str, Any]: Combined module metadata dictionary.
     """
     module_metadata = global_metadata.copy()
     if modules_metadata:

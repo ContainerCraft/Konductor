@@ -6,6 +6,7 @@ from pulumi import log
 import os
 
 from .types import AWSConfig
+from modules.core.metadata import MetadataSingleton
 
 
 class AWSProvider:
@@ -162,6 +163,44 @@ class AWSProvider:
         # Sanitize tags before returning
         return self.sanitize_tags(self._tags)
 
+    def update_metadata(self) -> None:
+        """Update global metadata singleton with AWS-specific metadata."""
+        try:
+            caller_identity = self.get_caller_identity()
+
+            aws_metadata = {
+                "account_id": caller_identity.account_id,
+                "user_id": caller_identity.user_id,
+                "arn": caller_identity.arn,
+                "region": self.region,
+            }
+
+            # Update the global metadata singleton with AWS metadata
+            MetadataSingleton().set_module_metadata("aws", aws_metadata)
+
+            log.info("Successfully updated AWS metadata")
+
+        except Exception as e:
+            log.error(f"Failed to update AWS metadata: {str(e)}")
+            raise
+
+    def export_aws_metadata(self) -> None:
+        """Export AWS metadata to stack outputs."""
+        try:
+            # Get metadata from singleton
+            aws_metadata = MetadataSingleton().get_module_metadata("aws")
+
+            # Create AWS-specific stack outputs
+            stack_outputs = {"config": {"aws": {"sts_caller_identity": aws_metadata}}}
+
+            # Export AWS-specific outputs
+            pulumi.export("aws_metadata", stack_outputs)
+            log.info("Successfully exported AWS metadata")
+
+        except Exception as e:
+            log.error(f"Failed to export AWS metadata: {str(e)}")
+            raise
+
 
 def collect_module_metadata(global_metadata: Dict[str, Any], provider: AWSProvider) -> Dict[str, Any]:
     """Collect AWS-specific metadata."""
@@ -177,8 +216,6 @@ def collect_module_metadata(global_metadata: Dict[str, Any], provider: AWSProvid
         }
 
         # Store in global metadata singleton
-        from modules.core.metadata import MetadataSingleton
-
         MetadataSingleton().set_aws_metadata(aws_metadata["aws"])
 
         return aws_metadata

@@ -1,5 +1,4 @@
-# ../konductor/modules/core/initialization.py
-
+# ./modules/core/initialization.py
 """
 Pulumi Initialization Module
 
@@ -8,11 +7,13 @@ It provides functionality for loading configurations, setting up workspaces,
 and initializing the Pulumi runtime environment.
 """
 
-import pulumi
 from pulumi import Config, get_stack, get_project, log
+from datetime import datetime, timezone
 
-from modules.core.types import InitializationConfig, GitInfo
+from modules.core.types import InitializationConfig
 from modules.core.git import collect_git_info
+from modules.core.compliance_types import ComplianceConfig
+
 
 def initialize_pulumi() -> InitializationConfig:
     """
@@ -31,6 +32,9 @@ def initialize_pulumi() -> InitializationConfig:
         Exception: If initialization fails
     """
     try:
+        # Create program start timestamp in UTC
+        program_start_time = datetime.now(timezone.utc)
+
         # Load Pulumi configuration
         pulumi_config = Config()
 
@@ -39,11 +43,16 @@ def initialize_pulumi() -> InitializationConfig:
         project_name = get_project()
         log.info(f"Initializing Pulumi project: {project_name}, stack: {stack_name}")
 
+        # Get compliance config
+        compliance_config = ComplianceConfig.from_pulumi_config(pulumi_config, program_start_time)
+
+        # Store compliance config in singleton
+        from modules.core.metadata import MetadataSingleton
+
+        MetadataSingleton().set_module_metadata("compliance", compliance_config.model_dump())
+
         # Initialize default metadata structure
-        metadata = {
-            "labels": {},
-            "annotations": {}
-        }
+        metadata = {"labels": {}, "annotations": {}, "timestamps": {"last_touch": program_start_time.isoformat()}}
 
         # Create the initialization config
         init_config = InitializationConfig(
@@ -52,10 +61,12 @@ def initialize_pulumi() -> InitializationConfig:
             project_name=project_name,
             default_versions={},
             git_info=collect_git_info(),
-            metadata=metadata
+            metadata=metadata,
+            deployment_date_time=program_start_time.isoformat(),
+            compliance_config=compliance_config,
         )
 
-        log.info(f"Pulumi initialization completed successfully")
+        log.info(f"Pulumi initialization completed successfully at {program_start_time}")
         return init_config
 
     except Exception as e:

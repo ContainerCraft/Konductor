@@ -35,8 +35,21 @@ TAGGABLE_RESOURCES = [
     "aws:ec2/instance:Instance",
     "aws:iam/role:Role",
     "aws:rds/instance:Instance",
-    # Add other AWS resource types that support tagging
 ]
+
+DEFAULT_MODULE_CONFIG = {
+    "enabled": True,
+    "version": "latest",
+    "config": {"region": "us-east-1"},
+    "compliance": {
+        "fisma": {
+            "enabled": False,
+            "level": "low",
+            "mode": "strict",
+            "ato": {"id": None, "authorized": None, "eol": None},
+        }
+    },
+}
 
 
 def validate_config(raw_config: dict) -> AWSModuleConfig:
@@ -58,9 +71,7 @@ def initialize_aws_provider(config: AWSConfig) -> Provider:
     """
     aws_config = pulumi.Config("aws")
     aws_access_key = os.getenv("AWS_ACCESS_KEY_ID") or aws_config.get("access_key_id")
-    aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY") or aws_config.get(
-        "secret_access_key"
-    )
+    aws_secret_key = os.getenv("AWS_SECRET_ACCESS_KEY") or aws_config.get("secret_access_key")
     profile = os.getenv("AWS_PROFILE") or config.profile
 
     return Provider(
@@ -103,9 +114,7 @@ def generate_global_transformations(global_tags: Dict[str, str]) -> None:
     pulumi.runtime.register_stack_transformation(global_transform)
 
 
-def generate_tags(
-    config: AWSConfig, compliance_config: ComplianceConfig, git_info: Dict[str, str]
-) -> Dict[str, str]:
+def generate_tags(config: AWSConfig, compliance_config: ComplianceConfig, git_info: Dict[str, str]) -> Dict[str, str]:
     """
     Generates tags for AWS resources, including compliance and Git metadata.
 
@@ -181,16 +190,12 @@ def load_tenant_account_configs() -> Dict[str, TenantAccountConfig]:
             tenant_config = TenantAccountConfig(**tenant)
             tenant_accounts[tenant_config.name] = tenant_config
         except Exception as e:
-            log.warn(
-                f"Invalid tenant account configuration for '{tenant.get('name', 'unknown')}': {e}"
-            )
+            log.warn(f"Invalid tenant account configuration for '{tenant.get('name', 'unknown')}': {e}")
 
     return tenant_accounts
 
 
-def merge_configurations(
-    base_config: Dict[str, Any], override_config: Dict[str, Any]
-) -> Dict[str, Any]:
+def merge_configurations(base_config: Dict[str, Any], override_config: Dict[str, Any]) -> Dict[str, Any]:
     """
     Merges two configuration dictionaries with override taking precedence.
 
@@ -306,9 +311,7 @@ def generate_compliance_labels(compliance_config: ComplianceConfig) -> Dict[str,
     if compliance_config.nist.enabled:
         labels["compliance.nist.enabled"] = "true"
         if compliance_config.nist.controls:
-            labels["compliance.nist.controls"] = ",".join(
-                compliance_config.nist.controls
-            )
+            labels["compliance.nist.controls"] = ",".join(compliance_config.nist.controls)
 
     return labels
 

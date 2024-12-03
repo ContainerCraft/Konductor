@@ -27,11 +27,14 @@ class DeploymentManager:
             try:
                 module_class = self.load_module(module_name)
                 module_config = self.config_manager.get_module_config(module_name)
+
+                # Add compliance config to module config
+                module_config["compliance"] = self.init_config.compliance_config.model_dump()
+
                 module_instance = module_class(init_config=self.init_config)
                 result = module_instance.deploy(module_config)
 
                 if result.success:
-                    # Store metadata
                     self.modules_metadata[module_name] = result.metadata
                 else:
                     raise ModuleDeploymentError(f"Module {module_name} deployment failed.")
