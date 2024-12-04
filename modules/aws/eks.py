@@ -3,6 +3,8 @@
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
 import pulumi_aws as aws
 from pulumi import ResourceOptions, log
+import pulumi_kubernetes as k8s
+import pulumi
 
 if TYPE_CHECKING:
     from .provider import AWSProvider
@@ -235,16 +237,17 @@ class EksManager:
         # Merge with provider tags
         merged_tags = {**self.provider.get_tags(), **tags}
 
+        # Create the EKS cluster
         cluster = aws.eks.Cluster(
             f"eks-{name}",
             name=name,
             role_arn=cluster_role.arn,
             version=version,
-            vpc_config={
-                "subnetIds": subnet_ids,
-                "endpointPrivateAccess": True,
-                "endpointPublicAccess": True,
-            },
+            vpc_config=aws.eks.ClusterVpcConfigArgs(
+                subnet_ids=subnet_ids,
+                endpoint_private_access=True,
+                endpoint_public_access=True,
+            ),
             tags=merged_tags,
             opts=ResourceOptions(provider=self.provider.provider, protect=True),
         )
@@ -287,6 +290,21 @@ class EksManager:
 
         return node_group
 
+    def deploy_test_nginx(self, k8s_provider: k8s.Provider, name: str) -> k8s.core.v1.Pod:
+        """Deploy a test nginx pod to verify cluster functionality."""
+        try:
+            nginx_pod = k8s.core.v1.Pod(
+                f"nginx-test-{name}",
+                metadata={"name": f"nginx-test-{name}", "namespace": "default"},
+                spec={"containers": [{"name": "nginx", "image": "nginx:latest", "ports": [{"containerPort": 80}]}]},
+                opts=ResourceOptions(provider=k8s_provider),
+            )
+            return nginx_pod
+
+        except Exception as e:
+            log.error(f"Failed to deploy test nginx pod: {str(e)}")
+            raise
+
     def deploy_cluster(
         self,
         name: str,
@@ -295,7 +313,7 @@ class EksManager:
         scaling_config: Optional[Dict[str, int]] = None,
     ) -> Dict[str, Any]:
         """
-        Deploy a complete EKS cluster with VPC and node group.
+        Deploy a complete EKS cluster with VPC, node group, and test nginx pod.
         Returns cluster information and resources.
         """
         try:
@@ -322,6 +340,91 @@ class EksManager:
                 scaling_config=scaling_config,
             )
 
+            # Generate an external kubeconfig using cluster properties for use with kubectl
+            # This is not used by the Pulumi provider, but is useful for local testing
+            aws_auth_args = ["eks", "get-token", "--cluster-name", name]
+            if self.provider.config.profile:
+                aws_auth_args = ["--profile", self.provider.config.profile] + aws_auth_args
+
+            external_kubeconfig = pulumi.Output.all(
+                cluster.endpoint, cluster.certificate_authority.apply(lambda ca: ca.data)
+            ).apply(
+                lambda args: {
+                    "apiVersion": "v1",
+                    "clusters": [
+                        {
+                            "cluster": {"server": args[0], "certificate-authority-data": args[1]},
+                            "name": "kubernetes",
+                        }
+                    ],
+                    "contexts": [
+                        {
+                            "context": {
+                                "cluster": "kubernetes",
+                                "user": "aws",
+                            },
+                            "name": "aws",
+                        }
+                    ],
+                    "current-context": "aws",
+                    "kind": "Config",
+                    "users": [
+                        {
+                            "name": "aws",
+                            "user": {
+                                "exec": {
+                                    "apiVersion": "client.authentication.k8s.io/v1beta1",
+                                    "command": "aws",
+                                    "args": aws_auth_args,
+                                }
+                            },
+                        }
+                    ],
+                }
+            )
+
+            # Get cluster auth token using Pulumi's built-in AWS provider
+            try:
+                cluster_token = aws.eks.get_cluster_auth(
+                    name=cluster.name, opts=pulumi.InvokeOptions(provider=self.provider.provider)
+                )
+            except Exception as e:
+                log.error(f"Failed to get cluster auth token: {str(e)}")
+                raise
+
+            # Generate kubeconfig using direct token authentication
+            internal_kubeconfig = pulumi.Output.all(
+                cluster.endpoint, cluster.certificate_authority.apply(lambda ca: ca.data), cluster_token.token
+            ).apply(
+                lambda args: {
+                    "apiVersion": "v1",
+                    "clusters": [
+                        {"cluster": {"server": args[0], "certificate-authority-data": args[1]}, "name": "kubernetes"}
+                    ],
+                    "contexts": [{"context": {"cluster": "kubernetes", "user": "aws"}, "name": "aws"}],
+                    "current-context": "aws",
+                    "kind": "Config",
+                    "users": [{"name": "aws", "user": {"token": args[2]}}],
+                }
+            )
+
+            # Create k8s provider with the internal kubeconfig
+            k8s_provider = k8s.Provider(
+                f"k8s-provider-{name}",
+                kubeconfig=internal_kubeconfig.apply(lambda c: pulumi.Output.json_dumps(c)),
+                opts=ResourceOptions(depends_on=[cluster]),
+            )
+
+            # Export both kubeconfigs with descriptive names
+            pulumi.export("eks_kubeconfig_external", external_kubeconfig)
+            pulumi.export("eks_kubeconfig_internal", internal_kubeconfig)
+
+            # Export the k8s provider as a pulumi stack output secret for use by other Pulumi stacks
+            pulumi.export("k8s_provider", k8s_provider)
+
+            # Deploy test nginx pod
+            self.deploy_test_nginx(k8s_provider, name)
+
             return {
                 "vpc": vpc_resources["vpc"],
                 "public_subnets": vpc_resources["public_subnets"],
@@ -330,6 +433,9 @@ class EksManager:
                 "node_group": node_group,
                 "cluster_role": cluster_role,
                 "node_role": node_role,
+                "kubeconfig": external_kubeconfig,
+                "internal_kubeconfig": internal_kubeconfig,
+                "k8s_provider": k8s_provider,
             }
 
         except Exception as e:
