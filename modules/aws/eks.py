@@ -297,13 +297,16 @@ class EksManager:
                 f"nginx-test-{name}",
                 metadata={"name": f"nginx-test-{name}", "namespace": "default"},
                 spec={"containers": [{"name": "nginx", "image": "nginx:latest", "ports": [{"containerPort": 80}]}]},
-                opts=ResourceOptions(provider=k8s_provider),
+                opts=ResourceOptions(
+                    provider=k8s_provider,
+                    depends_on=[k8s_provider],
+                    custom_timeouts={"create": "5m", "delete": "5m"}),
             )
             return nginx_pod
 
         except Exception as e:
             log.error(f"Failed to deploy test nginx pod: {str(e)}")
-            raise
+            return None
 
     def deploy_cluster(
         self,
@@ -329,6 +332,7 @@ class EksManager:
 
             # Create EKS cluster
             cluster = self.create_cluster(name=name, subnet_ids=subnet_ids, cluster_role=cluster_role, version=version)
+            cluster_name = cluster.name.apply(lambda n: n)
 
             # Create node group
             node_group = self.create_node_group(
@@ -386,7 +390,10 @@ class EksManager:
             # Get cluster auth token using Pulumi's built-in AWS provider
             try:
                 cluster_token = aws.eks.get_cluster_auth(
-                    name=cluster.name, opts=pulumi.InvokeOptions(provider=self.provider.provider)
+                    name=cluster_name, opts=pulumi.InvokeOptions(
+                        provider=self.provider.provider,
+                        depends_on=[cluster]
+                    )
                 )
             except Exception as e:
                 log.error(f"Failed to get cluster auth token: {str(e)}")
@@ -416,11 +423,7 @@ class EksManager:
             )
 
             # Export both kubeconfigs with descriptive names
-            pulumi.export("eks_kubeconfig_external", external_kubeconfig)
-            pulumi.export("eks_kubeconfig_internal", internal_kubeconfig)
-
-            # Export the k8s provider as a pulumi stack output secret for use by other Pulumi stacks
-            pulumi.export("k8s_provider", k8s_provider)
+            pulumi.export("eks_kubeconfig_external", pulumi.Output.secret(external_kubeconfig))
 
             # Deploy test nginx pod
             self.deploy_test_nginx(k8s_provider, name)
