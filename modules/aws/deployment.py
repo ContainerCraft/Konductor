@@ -118,7 +118,7 @@ class AwsModule(ModuleInterface):
                 bucket_name,
                 bucket=aws_config.bucket,
                 tags=resource_tags,
-                opts=ResourceOptions(provider=provider.provider, protect=False),
+                opts=ResourceOptions(provider=provider.provider, protect=False, parent=provider.provider),
             )
 
             # Export outputs

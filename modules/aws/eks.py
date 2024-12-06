@@ -9,14 +9,13 @@ Features:
 - Sets up IAM roles for the EKS cluster and node groups.
 - Provisions the EKS cluster and node groups.
 - Generates a kubeconfig that uses IAM role-based temporary credentials retrieved
-    programmatically via AWS SDK calls, removing the need for external CLI tools like
-    `aws-iam-authenticator`.
+  programmatically via AWS SDK calls, removing the need for external CLI tools like
+  `aws-iam-authenticator`.
 - Creates a Pulumi Kubernetes provider that uses the generated kubeconfig.
-- Optionally deploys a test Nginx Pod to verify the cluster functionality.
+- Optionally deploys a test Nginx Pod to verify cluster functionality.
 
-This design ensures no shelling out to external CLI tools;
-all authentication is done through IAM roles and
-AWS APIs directly via Pulumi's `aws.eks.get_cluster_auth`.
+All authentication is done via IAM roles and AWS APIs through Pulumi, no external CLI
+tools are required.
 """
 
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
@@ -37,8 +36,7 @@ class EksManager:
         """
         Initialize EKS manager with a given AWS provider.
 
-        :param provider: AWSProvider instance that includes configuration,
-                            credentials, or assume-role details.
+        :param provider: AWSProvider instance including configuration and credentials.
         """
         self.provider = provider
 
@@ -56,7 +54,7 @@ class EksManager:
                  }
         """
         try:
-            # Create the VPC
+            # Create the VPC as a top-level network resource.
             vpc = aws.ec2.Vpc(
                 f"eks-vpc-{name}",
                 cidr_block="10.0.0.0/16",
@@ -67,10 +65,13 @@ class EksManager:
                     "Name": f"eks-vpc-{name}",
                     f"kubernetes.io/cluster/{name}": "shared",
                 },
-                opts=ResourceOptions(provider=self.provider.provider),
+                opts=ResourceOptions(
+                    provider=self.provider.provider,
+                    parent=self.provider.provider  # Parent is aws_provider
+                ),
             )
 
-            # Create Internet Gateway for public connectivity
+            # Internet Gateway as a child of the VPC.
             igw = aws.ec2.InternetGateway(
                 f"eks-igw-{name}",
                 vpc_id=vpc.id,
@@ -78,7 +79,7 @@ class EksManager:
                     **self.provider.get_tags(),
                     "Name": f"eks-igw-{name}",
                 },
-                opts=ResourceOptions(provider=self.provider.provider),
+                opts=ResourceOptions(provider=self.provider.provider, parent=vpc),
             )
 
             # Hardcoded AZs for simplicity. Adjust as needed.
@@ -87,8 +88,8 @@ class EksManager:
             public_subnets = []
             private_subnets = []
 
+            # Create subnets as children of the VPC.
             for i, az in enumerate(azs):
-                # Create a public subnet in each AZ
                 public_subnet = aws.ec2.Subnet(
                     f"eks-public-subnet-{name}-{i}",
                     vpc_id=vpc.id,
@@ -101,11 +102,10 @@ class EksManager:
                         f"kubernetes.io/cluster/{name}": "shared",
                         "kubernetes.io/role/elb": "1",
                     },
-                    opts=ResourceOptions(provider=self.provider.provider),
+                    opts=ResourceOptions(provider=self.provider.provider, parent=vpc),
                 )
                 public_subnets.append(public_subnet)
 
-                # Create a private subnet in each AZ
                 private_subnet = aws.ec2.Subnet(
                     f"eks-private-subnet-{name}-{i}",
                     vpc_id=vpc.id,
@@ -117,11 +117,11 @@ class EksManager:
                         f"kubernetes.io/cluster/{name}": "shared",
                         "kubernetes.io/role/internal-elb": "1",
                     },
-                    opts=ResourceOptions(provider=self.provider.provider),
+                    opts=ResourceOptions(provider=self.provider.provider, parent=vpc),
                 )
                 private_subnets.append(private_subnet)
 
-            # Route table for public subnets
+            # Public route table as a child of the VPC.
             public_rt = aws.ec2.RouteTable(
                 f"eks-public-rt-{name}",
                 vpc_id=vpc.id,
@@ -130,28 +130,30 @@ class EksManager:
                     **self.provider.get_tags(),
                     "Name": f"eks-public-rt-{name}",
                 },
-                opts=ResourceOptions(provider=self.provider.provider),
+                opts=ResourceOptions(provider=self.provider.provider, parent=vpc),
             )
 
-            # Associate public subnets with the public route table
+            # Associate public subnets with the public route table.
+            # Each association as a child of the public route table.
             for i, subnet in enumerate(public_subnets):
                 aws.ec2.RouteTableAssociation(
                     f"eks-public-rta-{name}-{i}",
                     subnet_id=subnet.id,
                     route_table_id=public_rt.id,
-                    opts=ResourceOptions(provider=self.provider.provider),
+                    opts=ResourceOptions(provider=self.provider.provider, parent=public_rt),
                 )
 
-            # Create EIP and NAT Gateway for private subnets outgoing traffic
+            # EIP for NAT Gateway as a child of the VPC.
             eip = aws.ec2.Eip(
                 f"eks-eip-{name}",
                 tags={
                     **self.provider.get_tags(),
                     "Name": f"eks-eip-{name}",
                 },
-                opts=ResourceOptions(provider=self.provider.provider),
+                opts=ResourceOptions(provider=self.provider.provider, parent=vpc),
             )
 
+            # NAT Gateway as a child of the relevant public subnet.
             nat_gateway = aws.ec2.NatGateway(
                 f"eks-nat-{name}",
                 allocation_id=eip.id,
@@ -160,10 +162,10 @@ class EksManager:
                     **self.provider.get_tags(),
                     "Name": f"eks-nat-{name}",
                 },
-                opts=ResourceOptions(provider=self.provider.provider),
+                opts=ResourceOptions(provider=self.provider.provider, parent=public_subnets[0]),
             )
 
-            # Route table for private subnets
+            # Private route table as a child of the VPC.
             private_rt = aws.ec2.RouteTable(
                 f"eks-private-rt-{name}",
                 vpc_id=vpc.id,
@@ -172,16 +174,17 @@ class EksManager:
                     **self.provider.get_tags(),
                     "Name": f"eks-private-rt-{name}",
                 },
-                opts=ResourceOptions(provider=self.provider.provider),
+                opts=ResourceOptions(provider=self.provider.provider, parent=vpc),
             )
 
-            # Associate private subnets with the private route table
+            # Associate private subnets with the private route table.
+            # As children of the private route table for hierarchy.
             for i, subnet in enumerate(private_subnets):
                 aws.ec2.RouteTableAssociation(
                     f"eks-private-rta-{name}-{i}",
                     subnet_id=subnet.id,
                     route_table_id=private_rt.id,
-                    opts=ResourceOptions(provider=self.provider.provider),
+                    opts=ResourceOptions(provider=self.provider.provider, parent=private_rt),
                 )
 
             return {
@@ -204,27 +207,30 @@ class EksManager:
         assume_role_policy = {
             "Version": "2012-10-17",
             "Statement": [
-                {
-                    "Effect": "Allow",
-                    "Principal": {"Service": "eks.amazonaws.com"},
-                    "Action": "sts:AssumeRole"
-                }
+                {"Effect": "Allow", "Principal": {"Service": "eks.amazonaws.com"}, "Action": "sts:AssumeRole"}
             ],
         }
 
+        # Create cluster role as direct child of aws_provider
         role = aws.iam.Role(
             f"eks-cluster-role-{name}",
-            assume_role_policy=assume_role_policy,
+            assume_role_policy=json.dumps(assume_role_policy),
             tags=self.provider.get_tags(),
-            opts=ResourceOptions(provider=self.provider.provider),
+            opts=ResourceOptions(
+                provider=self.provider.provider,
+                parent=self.provider.provider  # Explicitly set parent to aws_provider
+            )
         )
 
-        # Attach the AmazonEKSClusterPolicy for EKS cluster management
+        # Policy attachment as child of the role
         aws.iam.RolePolicyAttachment(
             f"eks-cluster-policy-{name}",
             policy_arn="arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
             role=role.name,
-            opts=ResourceOptions(provider=self.provider.provider),
+            opts=ResourceOptions(
+                provider=self.provider.provider,
+                parent=role  # Make policy attachment child of role
+            ),
         )
 
         return role
@@ -239,22 +245,22 @@ class EksManager:
         assume_role_policy = {
             "Version": "2012-10-17",
             "Statement": [
-                {
-                    "Effect": "Allow",
-                    "Principal": {"Service": "ec2.amazonaws.com"},
-                    "Action": "sts:AssumeRole"
-                }
+                {"Effect": "Allow", "Principal": {"Service": "ec2.amazonaws.com"}, "Action": "sts:AssumeRole"}
             ],
         }
 
+        # Node role as child of aws_provider
         role = aws.iam.Role(
             f"eks-node-role-{name}",
-            assume_role_policy=assume_role_policy,
+            assume_role_policy=json.dumps(assume_role_policy),
             tags=self.provider.get_tags(),
-            opts=ResourceOptions(provider=self.provider.provider),
+            opts=ResourceOptions(
+                provider=self.provider.provider,
+                parent=self.provider.provider  # Explicitly set parent to aws_provider
+            ),
         )
 
-        # Attach required policies for EKS worker nodes
+        # Policy attachments as children of the node role
         required_policies = [
             "AmazonEKSWorkerNodePolicy",
             "AmazonEKS_CNI_Policy",
@@ -266,7 +272,10 @@ class EksManager:
                 f"eks-node-policy-{policy}-{name}",
                 policy_arn=f"arn:aws:iam::aws:policy/{policy}",
                 role=role.name,
-                opts=ResourceOptions(provider=self.provider.provider),
+                opts=ResourceOptions(
+                    provider=self.provider.provider,
+                    parent=role  # Make policy attachments children of role
+                )
             )
 
         return role
@@ -276,8 +285,10 @@ class EksManager:
         name: str,
         subnet_ids: List[str],
         cluster_role: aws.iam.Role,
+        vpc: aws.ec2.Vpc,
         version: Optional[str] = "1.27",
         tags: Optional[Dict[str, str]] = None,
+        depends_on: Optional[List[Any]] = None,
     ) -> aws.eks.Cluster:
         """
         Create the EKS cluster control plane.
@@ -287,6 +298,7 @@ class EksManager:
         :param cluster_role: IAM role for the cluster control plane.
         :param version: Kubernetes version of the EKS cluster.
         :param tags: Additional tags for the cluster.
+        :param depends_on: Additional dependencies (if needed).
         :return: The created EKS cluster resource.
         """
         if tags is None:
@@ -294,6 +306,7 @@ class EksManager:
 
         merged_tags = {**self.provider.get_tags(), **tags}
 
+        # The cluster is now a child of the VPC
         cluster = aws.eks.Cluster(
             f"eks-{name}",
             name=name,
@@ -305,7 +318,11 @@ class EksManager:
                 endpoint_public_access=True,
             ),
             tags=merged_tags,
-            opts=ResourceOptions(provider=self.provider.provider, protect=True),
+            opts=ResourceOptions(
+                provider=self.provider.provider,
+                depends_on=depends_on,
+                parent=vpc  # Make cluster a child of VPC
+            ),
         )
 
         return cluster
@@ -319,17 +336,19 @@ class EksManager:
         instance_types: Optional[List[str]] = None,
         scaling_config: Optional[Dict[str, int]] = None,
         tags: Optional[Dict[str, str]] = None,
+        depends_on: Optional[List[Any]] = None,
     ) -> aws.eks.NodeGroup:
         """
         Create an EKS node group (worker nodes) attached to the EKS cluster.
 
-        :param name: Name for identifying the node group.
+        :param name: Name for the node group.
         :param cluster: The EKS cluster resource.
         :param node_role: IAM role for the nodes.
         :param subnet_ids: Subnets where the worker nodes will run.
         :param instance_types: Optional EC2 instance types for worker nodes.
-        :param scaling_config: Optional scaling config with desired, min, and max sizes.
+        :param scaling_config: Optional scaling config (desired, min, max).
         :param tags: Additional tags for the node group.
+        :param depends_on: Additional dependencies (if needed).
         :return: The created EKS NodeGroup resource.
         """
         if instance_types is None:
@@ -343,15 +362,20 @@ class EksManager:
 
         merged_tags = {**self.provider.get_tags(), **tags}
 
+        # Create node group as child of the cluster
         node_group = aws.eks.NodeGroup(
             f"eks-nodegroup-{name}",
             cluster_name=cluster.name,
             node_role_arn=node_role.arn,
             subnet_ids=subnet_ids,
             instance_types=instance_types,
-            scaling_config=scaling_config,
+            scaling_config=aws.eks.NodeGroupScalingConfigArgs(**scaling_config),
             tags=merged_tags,
-            opts=ResourceOptions(provider=self.provider.provider, depends_on=[cluster]),
+            opts=ResourceOptions(
+                provider=self.provider.provider,
+                parent=cluster,  # Make node group child of cluster
+                depends_on=depends_on or [],
+            ),
         )
 
         return node_group
@@ -364,103 +388,90 @@ class EksManager:
         scaling_config: Optional[Dict[str, int]] = None,
     ) -> Dict[str, Any]:
         """
-        Deploy a complete EKS cluster with VPC, node group, and test nginx pod.
-        Returns cluster information and resources.
+        Deploy a complete EKS cluster with VPC, node group, and a test Nginx Pod.
+        Returns a dictionary with references to key cluster resources.
         """
         try:
-            # Step 1: Create VPC and networking
+            # Step 1: Create VPC and networking.
             vpc_resources = self.create_vpc(name)
 
-            # Use private subnets for the EKS cluster control plane
-            subnet_ids = [subnet.id for subnet in vpc_resources["private_subnets"]]
+            # Use private subnets for EKS control plane.
+            private_subnet_ids = [subnet.id for subnet in vpc_resources["private_subnets"]]
 
-            # Step 2: Create IAM roles for cluster and node group
+            # Step 2: Create IAM roles.
             cluster_role = self.create_cluster_role(name)
             node_role = self.create_node_role(name)
 
-            # Step 3: Create EKS cluster
+            # Step 3: Create EKS cluster - now passing the VPC
             cluster = self.create_cluster(
                 name=name,
-                subnet_ids=subnet_ids,
+                subnet_ids=private_subnet_ids,
                 cluster_role=cluster_role,
-                version=version
+                vpc=vpc_resources["vpc"],  # Pass the VPC reference
+                version=version or "1.27",
+                tags=self.provider.get_tags(),
+                depends_on=[vpc_resources["vpc"]],
             )
 
-            # Step 4: Create a node group
+            # Step 4: Create a node group.
+            # Parent node group under cluster.
             node_group = self.create_node_group(
                 name=name,
                 cluster=cluster,
                 node_role=node_role,
-                subnet_ids=subnet_ids,
+                subnet_ids=private_subnet_ids,
                 instance_types=instance_types,
                 scaling_config=scaling_config,
+                depends_on=[cluster],
             )
 
-            # Step 5: Generate IAM-based kubeconfig
+            # Step 5: Generate IAM-based kubeconfig.
             log.debug(f"AWS profile: {self.provider.config.profile}")
             log.debug(f"Generating IAM-based kubeconfig for {name}")
             internal_kubeconfig = pulumi.Output.all(
                 name=cluster.name,
                 endpoint=cluster.endpoint,
-                cert_auth=cluster.certificate_authority,
-                profile=self.provider.config.profile
+                ca=cluster.certificate_authority,
+                profile=self.provider.config.profile,
             ).apply(
                 lambda args: {
                     "apiVersion": "v1",
-                    "clusters": [{
-                        "cluster": {
-                            "server": args["endpoint"],
-                            "certificate-authority-data": args["cert_auth"]["data"]
-                        },
-                        "name": "kubernetes"
-                    }],
-                    "contexts": [{
-                        "context": {
-                            "cluster": "kubernetes",
-                            "user": "aws"
-                        },
-                        "name": "aws"
-                    }],
+                    "clusters": [
+                        {
+                            "cluster": {"server": args["endpoint"], "certificate-authority-data": args["ca"]["data"]},
+                            "name": "kubernetes",
+                        }
+                    ],
+                    "contexts": [{"context": {"cluster": "kubernetes", "user": "aws"}, "name": "aws"}],
                     "current-context": "aws",
                     "kind": "Config",
                     "preferences": {},
-                    "users": [{
-                        "name": "aws",
-                        "user": {
-                            "exec": {
-                                "apiVersion": "client.authentication.k8s.io/v1beta1",
-                                "command": "aws-iam-authenticator",
-                                "args": [
-                                    "token",
-                                    "-i",
-                                    args["name"]
-                                ],
-                                "env": [
-                                    {
-                                        "name": "AWS_PROFILE",
-                                        "value": args["profile"] or "default"
-                                    }
-                                ]
-                            }
+                    "users": [
+                        {
+                            "name": "aws",
+                            "user": {
+                                "exec": {
+                                    "apiVersion": "client.authentication.k8s.io/v1beta1",
+                                    "command": "aws-iam-authenticator",
+                                    "args": ["token", "-i", args["name"]],
+                                    "env": [{"name": "AWS_PROFILE", "value": args["profile"] or "default"}],
+                                }
+                            },
                         }
-                    }]
+                    ],
                 }
             )
 
-            # Step 6: Create k8s provider with IAM-based kubeconfig
-            log.debug(f"Creating k8s provider for {name}")
+            # Step 6: Create k8s provider after cluster is ready.
             k8s_provider = k8s.Provider(
                 f"k8s-provider-{name}",
                 kubeconfig=internal_kubeconfig.apply(json.dumps),
-                opts=ResourceOptions(
-                    depends_on=[cluster, node_group]
-                )
+                opts=ResourceOptions(parent=cluster),
             )
 
-            # Step 7: Deploy test nginx pod with the new provider
+            # Step 7: Deploy test nginx pod to verify the cluster.
             self.deploy_test_nginx(k8s_provider, name)
 
-            # Return references to all major resources and configurations
             return {
                 "vpc": vpc_resources["vpc"],
                 "public_subnets": vpc_resources["public_subnets"],
@@ -477,33 +488,24 @@ class EksManager:
             log.error(f"Failed to deploy EKS cluster: {str(e)}")
             raise
 
-    def deploy_test_nginx(
-        self,
-        k8s_provider: k8s.Provider,
-        name: str
-    ) -> Optional[k8s.core.v1.Pod]:
+    def deploy_test_nginx(self, k8s_provider: k8s.Provider, name: str) -> Optional[k8s.core.v1.Pod]:
         """
-        Deploy a simple test nginx Pod to verify cluster and provider functionality.
+        Deploy a simple test Nginx Pod to verify cluster and provider functionality.
 
-        :param k8s_provider: The Kubernetes provider resource configured with the cluster's kubeconfig.
+        :param k8s_provider: Kubernetes provider resource configured with cluster's kubeconfig.
         :param name: Name suffix for the test pod resource.
         :return: The created Pod resource, or None if deployment fails.
         """
         try:
             log.debug(f"Deploying test Nginx pod for cluster {name}")
+            # The Nginx Pod as a child of the Kubernetes provider.
             nginx_pod = k8s.core.v1.Pod(
                 f"nginx-test-{name}",
                 metadata={"name": f"nginx-test-{name}", "namespace": "default"},
-                spec={
-                    "containers": [{
-                        "name": "nginx",
-                        "image": "nginx:latest",
-                        "ports": [{"containerPort": 80}]
-                    }]
-                },
+                spec={"containers": [{"name": "nginx", "image": "nginx:latest", "ports": [{"containerPort": 80}]}]},
                 opts=ResourceOptions(
                     provider=k8s_provider,
-                    depends_on=[k8s_provider],
+                    parent=k8s_provider,
                     custom_timeouts={"create": "1m", "delete": "1m"}
                 ),
             )
