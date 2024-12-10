@@ -29,9 +29,12 @@ class ModuleDeploymentResult(BaseModel):
 
     success: bool
     version: Optional[str] = Field(default="")
-    resources: List[str] = Field(default_factory=list)
+    resources: List[str] = Field(default_factory=list, description="List of resource names/identifiers")
     errors: List[str] = Field(default_factory=list)
     metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class DeploymentContext(Protocol):

@@ -533,8 +533,16 @@ class ConfigManager:
                 # Import module's config
                 module_config = self.get_module_config(module_name)
 
-                # Check if module is enabled
+                # Check if module is enabled either directly or through submodules
                 is_enabled = module_config.get("enabled", False)
+
+                # For kubernetes module, also check submodules
+                if module_name == "kubernetes":
+                    # Check if any kubernetes submodule is enabled
+                    for submodule, subconfig in module_config.items():
+                        if isinstance(subconfig, dict) and subconfig.get("enabled", False):
+                            is_enabled = True
+                            break
 
                 if is_enabled:
                     log.info(f"{module_name} module is enabled in configuration")

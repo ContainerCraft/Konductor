@@ -167,7 +167,7 @@ class EksClusterConfig(BaseModel):
 
     enabled: bool = Field(default=True)
     name: str = Field(..., description="Name of the EKS cluster")
-    version: str = Field(default="1.27", description="Kubernetes version")
+    version: str = Field(default="1.29", description="Kubernetes version")
     subnet_ids: Optional[List[str]] = Field(default=None)
     endpoint_private_access: bool = Field(default=True)
     endpoint_public_access: bool = Field(default=True)
@@ -176,7 +176,7 @@ class EksClusterConfig(BaseModel):
 
     @validator("version")
     def validate_version(cls, v):
-        valid_versions = ["1.27", "1.26", "1.25"]  # Add supported versions
+        valid_versions = ["1.29", "1.28", "1.27", "1.26", "1.25"]  # Add supported versions
         if v not in valid_versions:
             raise ValueError(f"Invalid EKS version: {v}. Must be one of {valid_versions}")
         return v

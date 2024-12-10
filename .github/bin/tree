@@ -11,4 +11,4 @@ else
 fi
 
 set -x
-$TREE_BIN -a -I .git -I .mypy_cache -I .github -I demos -I .pytest_cache -I .pixi -I .actrc -I .cursorrules -I .cursorignore -I __pycache__
+$TREE_BIN -a -I .git -I .mypy_cache -I .github -I demos -I .pytest_cache -I .pixi -I .actrc -I .cursorrules -I .cursorignore -I __pycache__ $@

@@ -36,6 +36,14 @@ def main() -> None:
             log.info(f"Deploying modules: {modules_to_deploy}")
             deployment_manager = DeploymentManager(init_config, config_manager)
             deployment_manager.deploy_modules(modules_to_deploy)
+
+            # Test k8s provider
+            k8s_provider = deployment_manager.get_k8s_provider()
+            if k8s_provider:
+                log.info("Successfully retrieved k8s_provider from EKS cluster")
+            else:
+                log.warn("No k8s_provider available - EKS cluster may not be enabled")
+
         else:
             # Log and proceed with core IaC execution even if no modules are deployed
             log.info("No modules to deploy.. Proceeding with core IaC execution...")

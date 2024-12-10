@@ -469,6 +469,10 @@ class EksManager:
                 opts=ResourceOptions(parent=cluster),
             )
 
+            # Export the kubeconfig for use in other resources.
+            secret_kubeconfig = pulumi.Output.secret(internal_kubeconfig)
+            pulumi.export("kubeconfig", secret_kubeconfig)
+
             # Step 7: Deploy test nginx pod to verify the cluster.
             self.deploy_test_nginx(k8s_provider, name)
 
