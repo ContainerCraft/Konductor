@@ -1,6 +1,6 @@
-# modules/kubernetes/crossplane/deployment.py
+# ./modules/kubernetes/crossplane/deployment.py
 from typing import Dict, Any, List
-from pulumi import log, ResourceOptions
+from pulumi import log, ResourceOptions, CustomTimeouts
 import pulumi_kubernetes as k8s
 
 from ..deployment import KubernetesModule
@@ -39,31 +39,35 @@ class CrossplaneModule(KubernetesModule):
                     labels={
                         "app.kubernetes.io/name": "crossplane",
                         "app.kubernetes.io/part-of": "crossplane",
-                    }
+                    },
                 ),
-                opts=ResourceOptions(provider=self.provider.provider),
+                opts=ResourceOptions(
+                    custom_timeouts=CustomTimeouts(create="5m", update="5m", delete="10s"),
+                    provider=self.provider.provider,
+                    parent=self.provider.provider,
+                ),
             )
 
             # Configure Helm values
             helm_values = {
                 "metrics": {
-                    "enabled": True,
+                    "enabled": crossplane_config.metrics_enabled,
+                    "service": {"annotations": {"prometheus.io/scrape": "true", "prometheus.io/port": "8080"}},
                 },
                 "resourcesCrossplane": crossplane_config.resource_limits,
-                "serviceAccount": {
-                    "create": True,
-                    "name": "crossplane"
-                },
-                "provider": {
-                    "packages": []
-                }
+                "serviceAccount": {"create": True, "name": "crossplane"},
+                "deploymentStrategy": "RollingUpdate",
+                "rbacManager": {"deploy": True, "deploymentStrategy": "RollingUpdate"},
+                "provider": {"packages": []},
+                # Initialize args so it's ready for appending
+                "args": [],
             }
 
             # Add feature flags if enabled
             if crossplane_config.enable_external_secret_stores:
-                helm_values["args"] = ["--enable-external-secret-stores"]
+                helm_values["args"].append("--enable-external-secret-stores")
             if crossplane_config.enable_composition_revisions:
-                helm_values["args"] = helm_values.get("args", []) + ["--enable-composition-revisions"]
+                helm_values["args"].append("--enable-composition-revisions")
 
             # Deploy Helm release
             log.info(f"Deploying Crossplane Helm release to namespace {crossplane_config.namespace}")
@@ -71,18 +75,20 @@ class CrossplaneModule(KubernetesModule):
                 f"{self.name}-system",
                 k8s.helm.v3.ReleaseArgs(
                     chart="crossplane",
-                    repository_opts=k8s.helm.v3.RepositoryOptsArgs(
-                        repo="https://charts.crossplane.io/stable"
-                    ),
+                    repository_opts=k8s.helm.v3.RepositoryOptsArgs(repo="https://charts.crossplane.io/stable"),
                     version=crossplane_config.version,
                     namespace=crossplane_config.namespace,
                     values=helm_values,
                     wait_for_jobs=True,
+                    timeout=600,  # 10 minutes
+                    cleanup_on_fail=True,
+                    atomic=True,
                 ),
                 opts=ResourceOptions(
                     provider=self.provider.provider,
                     parent=namespace,
                     depends_on=[namespace],
+                    custom_timeouts=CustomTimeouts(create="1200s", update="600s", delete="30s"),
                 ),
             )
 
@@ -96,13 +102,9 @@ class CrossplaneModule(KubernetesModule):
                 metadata={
                     "namespace": crossplane_config.namespace,
                     "version": crossplane_config.version,
-                }
+                },
             )
 
         except Exception as e:
             log.error(f"Failed to deploy Crossplane: {str(e)}")
-            return ModuleDeploymentResult(
-                success=False,
-                version="",
-                errors=[str(e)]
-            )
+            return ModuleDeploymentResult(success=False, version="", errors=[str(e)])

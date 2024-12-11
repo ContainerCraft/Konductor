@@ -5,7 +5,7 @@ Deploys the Prometheus module following the shared design patterns.
 """
 
 from typing import Dict, Any, List
-from pulumi import log, ResourceOptions
+from pulumi import log, ResourceOptions, CustomTimeouts
 import pulumi_kubernetes as k8s
 
 from ..deployment import KubernetesModule
@@ -66,7 +66,11 @@ class PrometheusModule(KubernetesModule):
                     labels=prometheus_config.labels,
                     annotations=prometheus_config.annotations,
                 ),
-                opts=ResourceOptions(provider=self.provider.provider)
+                opts=ResourceOptions(
+                    custom_timeouts=CustomTimeouts(create="5m", update="5m", delete="10s"),
+                    provider=self.provider.provider,
+                    parent=self.provider.provider
+                )
             )
 
             # Deploy Prometheus stack
@@ -105,6 +109,7 @@ class PrometheusModule(KubernetesModule):
                     values=helm_values,
                 ),
                 opts=ResourceOptions(
+                    custom_timeouts=CustomTimeouts(create="5m", update="5m", delete="10s"),
                     provider=self.provider.provider,
                     parent=namespace,
                     depends_on=[namespace]
@@ -192,6 +197,7 @@ class PrometheusModule(KubernetesModule):
                     selector={svc_def["selector"]: svc_def["name"]},
                 ),
                 opts=ResourceOptions(
+                    custom_timeouts=CustomTimeouts(create="5m", update="5m", delete="10s"),
                     provider=self.provider.provider,
                     parent=namespace,
                     depends_on=[release]

@@ -10,14 +10,25 @@ class FluxConfig(KubernetesConfig):
     """Flux module configuration."""
 
     namespace: str = Field(default="flux-system")
-    version: Optional[str] = Field(default=None)
-    git_repository: str = Field(...)  # Required
-    git_branch: str = Field(default="main")
-    git_path: str = Field(default="./")
-    interval: str = Field(default="1m")
+    version: Optional[str] = Field(default="2.x")
+    operator_version: Optional[str] = Field(default="latest")
     components: List[str] = Field(
-        default=["source-controller", "kustomize-controller", "helm-controller", "notification-controller"]
+        default=[
+            "source-controller",
+            "kustomize-controller",
+            "helm-controller",
+            "notification-controller",
+        ]
     )
+    storage_class: str = Field(default="standard")
+    storage_size: str = Field(default="10Gi")
+    network_policy: bool = Field(default=True)
+    multitenant: bool = Field(default=False)
+    cluster_domain: str = Field(default="cluster.local")
+    reconcile_interval: str = Field(default="1h")
+    reconcile_timeout: str = Field(default="3m")
+    concurrent_reconciles: int = Field(default=10)
+    requeue_dependency_interval: str = Field(default="5s")
 
     class Config:
         arbitrary_types_allowed = True

@@ -1,0 +1,202 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+# Uncomment for debug
+#set -x
+
+# Dependency checks
+if ! command -v kubectl &>/dev/null; then
+  echo "ERROR: 'kubectl' not found in PATH. Please install or adjust PATH."
+  exit 1
+fi
+
+if ! command -v jq &>/dev/null; then
+  echo "ERROR: 'jq' not found in PATH. Please install jq."
+  exit 1
+fi
+
+if ! command -v mapfile &>/dev/null; then
+  echo "ERROR: 'mapfile' command not found. Please run this script with Bash 4+."
+  exit 1
+fi
+
+LAST_RESORT=false
+KUBECTL_OPTS=()
+NAMESPACES=()
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+  --last-resort)
+    LAST_RESORT=true
+    shift
+    ;;
+  -*)
+    KUBECTL_OPTS+=("$1")
+    shift
+    if [[ $# -gt 0 && ! "$1" =~ ^- ]]; then
+      KUBECTL_OPTS+=("$1")
+      shift
+    fi
+    ;;
+  *)
+    NAMESPACES+=("$1")
+    shift
+    ;;
+  esac
+done
+
+if [ ${#NAMESPACES[@]} -eq 0 ]; then
+  echo "Usage: $0 [--last-resort] [kubectl-flags...] <namespace1> [namespace2 ...]"
+  exit 1
+fi
+
+timestamp() {
+  date +"%Y-%m-%d %H:%M:%S"
+}
+
+discover_namespace_resources() {
+  local namespace=$1
+  local results=()
+
+  # Get all namespaced resource types
+  local resources
+  resources=$(kubectl "${KUBECTL_OPTS[@]}" api-resources --verbs=list --namespaced -o name || true)
+  while read -r resource; do
+    [ -z "$resource" ] && continue
+    local items
+    items=$(kubectl "${KUBECTL_OPTS[@]}" get "$resource" -n "$namespace" --no-headers 2>/dev/null || true)
+    if [ -n "$items" ]; then
+      while read -r line; do
+        [ -z "$line" ] && continue
+        local name
+        name=$(echo "$line" | awk '{print $1}')
+        results+=("$resource $name")
+      done <<<"$items"
+    fi
+  done <<<"$resources"
+
+  for r in "${results[@]}"; do
+    echo "$r"
+  done
+}
+
+remove_finalizers_from_resource() {
+  local namespace=$1
+  local resource=$2
+  local name=$3
+
+  local json
+  json=$(kubectl "${KUBECTL_OPTS[@]}" get "$resource" "$name" -n "$namespace" -o json 2>/dev/null || true)
+  if [ -n "$json" ]; then
+    local patched
+    patched=$(echo "$json" | jq 'del(.metadata.finalizers)')
+    echo "$patched" | kubectl "${KUBECTL_OPTS[@]}" replace -n "$namespace" -f - &>/dev/null || true
+  fi
+}
+
+force_delete_resource() {
+  local namespace=$1
+  local resource=$2
+  local name=$3
+  # Force delete immediately
+  kubectl "${KUBECTL_OPTS[@]}" delete "$resource" "$name" -n "$namespace" --force --grace-period=0 --ignore-not-found &>/dev/null || true
+}
+
+remove_namespace_finalizers() {
+  local namespace=$1
+  local json
+  json=$(kubectl "${KUBECTL_OPTS[@]}" get namespace "$namespace" -o json 2>/dev/null || true)
+  if [ -n "$json" ]; then
+    local patched
+    patched=$(echo "$json" | jq 'del(.spec.finalizers)')
+    echo "$patched" | kubectl "${KUBECTL_OPTS[@]}" replace --raw "/api/v1/namespaces/$namespace/finalize" -f - &>/dev/null || true
+  fi
+}
+
+force_delete_namespace() {
+  local namespace=$1
+
+  remove_namespace_finalizers "$namespace"
+  kubectl "${KUBECTL_OPTS[@]}" delete namespace "$namespace" --ignore-not-found --wait=false &>/dev/null || true
+
+  # Attempt a few times if still present
+  for i in {1..5}; do
+    if ! kubectl "${KUBECTL_OPTS[@]}" get namespace "$namespace" &>/dev/null; then
+      echo "$(timestamp) INFO: Namespace $namespace deleted."
+      break
+    else
+      echo "$(timestamp) WARNING: Namespace $namespace still present, removing finalizers again..."
+      remove_namespace_finalizers "$namespace"
+      kubectl "${KUBECTL_OPTS[@]}" delete namespace "$namespace" --ignore-not-found --wait=false &>/dev/null || true
+      sleep 2
+    fi
+  done
+}
+
+confirm_deletion() {
+  echo
+  echo "WARNING: This is a NUCLEAR OPTION. It will forcibly remove finalizers and destroy all resources/namespaces listed."
+  echo "Are you sure you want to proceed? (y/n)"
+  read -r answer
+  if [[ "$answer" != "y" && "$answer" != "Y" ]]; then
+    echo "Aborting."
+    exit 1
+  fi
+}
+
+echo "$(timestamp) INFO: Starting nuclear cleanup..."
+
+all_resources=()
+for namespace in "${NAMESPACES[@]}"; do
+  echo "$(timestamp) INFO: Discovering resources in namespace: $namespace..."
+  namespace_resources=$(discover_namespace_resources "$namespace")
+  if [ -n "$namespace_resources" ]; then
+    echo "$(timestamp) INFO: The following resources will be deleted in namespace $namespace:"
+    echo "$namespace_resources" | awk '{print "- " $1 ": " $2}'
+    all_resources+=("$namespace_resources")
+  else
+    echo "$(timestamp) INFO: No resources found in $namespace. We will just force delete the namespace."
+  fi
+done
+
+confirm_deletion
+
+for namespace in "${NAMESPACES[@]}"; do
+  echo "$(timestamp) INFO: Cleaning up resources in $namespace..."
+  namespace_resources=$(discover_namespace_resources "$namespace")
+
+  if [ -n "$namespace_resources" ]; then
+    while read -r line; do
+      resource=$(echo "$line" | awk '{print $1}')
+      name=$(echo "$line" | awk '{print $2}')
+      echo "$(timestamp) INFO: Removing finalizers and force deleting $resource/$name in $namespace..."
+      remove_finalizers_from_resource "$namespace" "$resource" "$name"
+      force_delete_resource "$namespace" "$resource" "$name"
+    done <<<"$namespace_resources"
+  else
+    echo "$(timestamp) INFO: No resources in $namespace."
+  fi
+
+  echo "$(timestamp) INFO: Force deleting namespace $namespace..."
+  force_delete_namespace "$namespace"
+done
+
+echo "$(timestamp) INFO: Nuclear cleanup completed."
+
+# Post-check: If LAST_RESORT is true and there's still stuck resources
+if $LAST_RESORT; then
+  echo "$(timestamp) INFO: Last resort mode enabled. Checking if any stuck resources remain..."
+  # Attempt to detect stuck CRDs or APIs that won't go away.
+  stuck_crds=$(kubectl "${KUBECTL_OPTS[@]}" api-resources 2>/dev/null | grep fluxcd.controlplane.io || true)
+  if [ -n "$stuck_crds" ]; then
+    echo "$(timestamp) WARNING: The following resources still appear to be present:"
+    echo "$stuck_crds"
+    echo "You may need to:"
+    echo "1. Recreate their CRDs and namespaces."
+    echo "2. Remove finalizers from them manually (using 'kubectl patch' or 'jq')."
+    echo "3. Delete them again."
+    echo "If this fails, consider restarting the API server or contacting support."
+  fi
+fi

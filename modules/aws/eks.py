@@ -20,7 +20,7 @@ tools are required.
 
 from typing import Dict, List, Optional, Any, TYPE_CHECKING
 import pulumi_aws as aws
-from pulumi import ResourceOptions, log
+from pulumi import ResourceOptions, log, CustomTimeouts
 import pulumi_kubernetes as k8s
 import pulumi
 import json
@@ -321,7 +321,9 @@ class EksManager:
             opts=ResourceOptions(
                 provider=self.provider.provider,
                 depends_on=depends_on,
-                parent=vpc  # Make cluster a child of VPC
+                parent=vpc,
+                # Allowed: 20 minute create, 15 minute update, 10 minute delete
+                custom_timeouts=CustomTimeouts(create="1200s", update="900s", delete="600s")
             ),
         )
 
@@ -373,8 +375,9 @@ class EksManager:
             tags=merged_tags,
             opts=ResourceOptions(
                 provider=self.provider.provider,
-                parent=cluster,  # Make node group child of cluster
+                parent=cluster,
                 depends_on=depends_on or [],
+                custom_timeouts=CustomTimeouts(create="5m", update="5m", delete="10s"),
             ),
         )
 
