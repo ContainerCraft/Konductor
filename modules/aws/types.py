@@ -3,9 +3,10 @@
 
 from __future__ import annotations
 from typing import List, Dict, Optional, Any, TypedDict
+import pulumi_aws as aws
 from pydantic import BaseModel, Field, validator
 from ..core.types import ComplianceConfig, GlobalMetadata
-import pulumi_aws as aws
+from .eks.types import EksConfig
 
 
 class IAMUserConfig(BaseModel):
@@ -23,7 +24,7 @@ class IAMUserConfig(BaseModel):
 class NetworkConfig(BaseModel):
     """Network configuration for AWS resources."""
 
-    vpc_cidr: str = Field(default="10.0.0.0/16", description="VPC CIDR block")
+    vpc_cidr: str = Field(default="10.0.0.0/16")
     subnet_cidrs: Dict[str, List[str]] = Field(
         default_factory=lambda: {
             "public": ["10.0.1.0/24", "10.0.2.0/24"],
@@ -50,12 +51,12 @@ class NetworkConfig(BaseModel):
 class SecurityConfig(BaseModel):
     """Security configuration for AWS resources."""
 
-    enable_security_hub: bool = Field(True)
-    enable_guard_duty: bool = Field(True)
-    enable_config: bool = Field(True)
-    enable_cloudtrail: bool = Field(True)
-    kms_deletion_window: int = Field(30)
-    enable_key_rotation: bool = Field(True)
+    enable_security_hub: bool = Field(default=True)
+    enable_guard_duty: bool = Field(default=True)
+    enable_config: bool = Field(default=True)
+    enable_cloudtrail: bool = Field(default=True)
+    kms_deletion_window: int = Field(default=30)
+    enable_key_rotation: bool = Field(default=True)
 
 
 class AWSProviderConfig(TypedDict):
@@ -73,14 +74,14 @@ class AWSConfig(BaseModel):
 
     enabled: bool = Field(default=True)
     profile: Optional[str] = Field(default=None)
-    region: str = Field(default="us-west-2")
+    region: str = Field(default="us-east-1")
     account_id: Optional[str] = Field(default=None)
     bucket: Optional[str] = Field(default=None)
     network: Optional[NetworkConfig] = Field(default_factory=NetworkConfig)
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     compliance: ComplianceConfig = Field(default_factory=ComplianceConfig)
     tags: Dict[str, str] = Field(default_factory=dict)
-    eks: Optional[EksClusterConfig] = Field(default=None)
+    eks: Optional[EksConfig] = Field(default=None)
 
     @validator("region")
     def validate_region(cls, v):

@@ -1,0 +1,8 @@
+I'm working on a Pulumi codebase which is multi hybrid cloud platform engineering focused.
+
+This is an ambitious project and there is quite a bit of nuance across the codebase due to the fact that pulumi state based infrastructure as code paradigms are a bit unique compared to normal python development.
+
+When you're ready I'll show you the code we're going to work on next. Let me know when you've familiarized yourself with this project.
+
+Before I show you the code we need to enhance, let me first get you familiarized with the fundamentals.
+

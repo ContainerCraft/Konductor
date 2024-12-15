@@ -66,6 +66,10 @@ def initialize_pulumi() -> InitializationConfig:
             compliance_config=compliance_config,
         )
 
+        # Create deployment manager and attach it to init_config
+        from modules.core.deployment import DeploymentManager
+        init_config.deployment_manager = DeploymentManager(init_config, pulumi_config)
+
         log.info(f"Pulumi initialization completed successfully at {program_start_time}")
         return init_config
 

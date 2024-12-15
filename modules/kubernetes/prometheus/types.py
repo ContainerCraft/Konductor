@@ -1,4 +1,4 @@
-# modules/kubernetes/prometheus/types.py
+# ./modules/kubernetes/prometheus/types.py
 
 """
 Defines the data structure for the Prometheus module configuration.
@@ -13,9 +13,12 @@ from pulumi import log
 class PrometheusConfig(KubernetesConfig):
     """Prometheus module configuration."""
 
+    enabled: bool = Field(default=False)
     namespace: str = Field(default="monitoring")
     version: Optional[str] = Field(default=None)
     openunison_enabled: bool = Field(default=False)
+    labels: Dict[str, str] = Field(default_factory=dict)
+    annotations: Dict[str, str] = Field(default_factory=dict)
 
     class Config:
         arbitrary_types_allowed = True

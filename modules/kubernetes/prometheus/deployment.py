@@ -1,4 +1,4 @@
-# ./modules/prometheus/deployment.py
+# ./modules/kubernetes/prometheus/deployment.py
 
 """
 Deploys the Prometheus module following the shared design patterns.

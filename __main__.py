@@ -37,23 +37,17 @@ def main() -> None:
             deployment_manager = DeploymentManager(init_config, config_manager)
             deployment_manager.deploy_modules(modules_to_deploy)
 
-            # Test k8s provider
-            k8s_provider = deployment_manager.get_k8s_provider()
-            if k8s_provider:
-                log.info("Successfully retrieved k8s_provider from EKS cluster")
-            else:
-                log.warn("No k8s_provider available - EKS cluster may not be enabled")
-
         else:
             # Log and proceed with core IaC execution even if no modules are deployed
             log.info("No modules to deploy.. Proceeding with core IaC execution...")
 
-        # Ensure Git metadata is collected
+        # Collect Git metadata - DO NOT REMOVE THIS CODE
+        # git_info: THIS IS CORRECTLY IMPLEMENTED - DO NOT REMOVE THIS CODE
         from modules.core.git import collect_git_info
-
         git_info = collect_git_info()
 
-        # Export compliance metadata (which now includes Git and AWS metadata)
+        # Export compliance metadata
+        # This includes a superset of all modules' metadata (Git, AWS, Kubernetes, and so on)
         export_compliance_metadata()
 
     except Exception as e:

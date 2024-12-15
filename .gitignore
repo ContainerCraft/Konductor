@@ -32,3 +32,4 @@ smce-cli
 modules/aws.bak
 .coverage
 .mypy_cache
+**/**/**/__pycache__

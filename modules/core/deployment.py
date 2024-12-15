@@ -5,8 +5,8 @@ from pulumi import log
 from modules.core.types import InitializationConfig
 from modules.core.interfaces import ModuleInterface
 from modules.core.exceptions import ModuleDeploymentError
-from modules.kubernetes.deployment import KubernetesModule
 from modules.kubernetes.provider import KubernetesProvider
+from modules.core.providers import KubernetesProviderRegistry
 
 
 class DeploymentManager:
@@ -23,6 +23,7 @@ class DeploymentManager:
         self.init_config = init_config
         self.config_manager = config_manager
         self.modules_metadata = {}
+        self.k8s_registry = KubernetesProviderRegistry()
         self.k8s_provider = None
 
     def deploy_modules(self, modules_to_deploy: List[str]) -> None:
@@ -140,3 +141,26 @@ class DeploymentManager:
         except Exception as e:
             log.error(f"Failed to load module {module_name}: {str(e)}")
             raise
+
+    def register_kubernetes_provider(
+        self,
+        provider_id: str,
+        provider: Any,
+        cluster_name: str,
+        platform: str,
+        environment: str,
+        region: str,
+        metadata: Dict[str, Any] = None,
+        make_default: bool = False
+    ) -> None:
+        """Register a kubernetes provider."""
+        self.k8s_registry.register_provider(
+            provider_id=provider_id,
+            provider=provider,
+            cluster_name=cluster_name,
+            platform=platform,
+            environment=environment,
+            region=region,
+            metadata=metadata,
+            make_default=make_default
+        )

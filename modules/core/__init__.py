@@ -188,3 +188,10 @@ __all__ = [
     "collect_module_metadata",
     "collect_compliance_outputs",
 ]
+
+from .providers import KubernetesProviderRegistry, KubernetesProviderContext
+
+__all__ = [
+    "KubernetesProviderRegistry",
+    "KubernetesProviderContext",
+]

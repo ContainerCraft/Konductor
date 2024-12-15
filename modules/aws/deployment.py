@@ -4,15 +4,15 @@ import pulumi
 from pulumi import log
 import pulumi_aws as aws
 from pulumi import ResourceOptions
-import json
 
+from modules.core.compliance_types import ComplianceConfig
 from modules.core.interfaces import ModuleInterface, ModuleDeploymentResult
 from modules.core.types import InitializationConfig
 from .provider import AWSProvider
 from .types import AWSConfig
 from modules.core.stack_outputs import collect_global_metadata, collect_module_metadata
-from modules.core.compliance_types import ComplianceConfig
-from .eks import EksManager
+from .eks.deployment import EksManager
+from modules.core.providers import KubernetesProviderRegistry
 
 
 class AwsModule(ModuleInterface):
@@ -43,6 +43,9 @@ class AwsModule(ModuleInterface):
             # Access init_config from the instance if necessary
             init_config = self.init_config
 
+            # Get compliance config from init_config
+            compliance_config = init_config.compliance_config
+
             # Ensure we have a valid config dictionary
             if not config:
                 config = {}
@@ -72,28 +75,47 @@ class AwsModule(ModuleInterface):
             k8s_provider = None
 
             # Deploy EKS if enabled
-            if aws_config.eks and aws_config.eks.enabled:
-                log.info(f"Deploying EKS cluster: {aws_config.eks.name}")
+            if aws_config.eks and aws_config.eks.enabled and aws_config.eks.clusters:
+                log.info(f"Deploying {len(aws_config.eks.clusters)} EKS clusters")
                 eks_manager = EksManager(provider)
-                eks_resources = eks_manager.deploy_cluster(
-                    name=aws_config.eks.name,
-                    version=aws_config.eks.version,
-                    instance_types=aws_config.eks.node_groups[0].instance_types if aws_config.eks.node_groups else None,
-                    scaling_config=aws_config.eks.node_groups[0].scaling_config if aws_config.eks.node_groups else None,
-                )
+                eks_resources = eks_manager.deploy_clusters(aws_config.eks)
 
-                # Store k8s_provider and EKS info in metadata
-                k8s_provider = eks_resources["k8s_provider"]
-                aws_metadata["k8s_provider"] = k8s_provider
-                aws_metadata["eks_cluster_name"] = aws_config.eks.name
+                # Store results in metadata
+                aws_metadata["eks_clusters"] = {}
+
+                # Register each cluster's provider
+                for cluster_name, resources in eks_resources.items():
+                    aws_metadata["eks_clusters"][cluster_name] = {
+                        "cluster_name": resources["cluster"].name,
+                        "cluster_endpoint": resources["cluster"].endpoint,
+                        "cluster_vpc_id": resources["vpc"].id,
+                    }
+
+                    if k8s_provider := resources.get("k8s_provider"):
+                        provider_id = f"aws-eks-{cluster_name}"
+                        self.init_config.deployment_manager.register_kubernetes_provider(
+                            provider_id=provider_id,
+                            provider=k8s_provider,
+                            cluster_name=cluster_name,
+                            platform="aws",
+                            environment=resources.get("environment", "unknown"),
+                            region=provider.region,
+                            metadata={
+                                "vpc_id": resources["vpc"].id,
+                                "cluster_endpoint": resources["cluster"].endpoint,
+                            }
+                        )
+                        log.info(f"Successfully registered k8s provider for cluster: {cluster_name}")
+                    else:
+                        log.warn(f"No k8s_provider available for cluster: {cluster_name}")
 
                 # Export EKS outputs
-                pulumi.export("eks_cluster_name", eks_resources["cluster"].name)
-                pulumi.export("eks_cluster_endpoint", eks_resources["cluster"].endpoint)
-                pulumi.export("eks_cluster_vpc_id", eks_resources["vpc"].id)
+                for name, resources in eks_resources.items():
+                    pulumi.export(f"eks_cluster_{name}_name", resources["cluster"].name)
+                    pulumi.export(f"eks_cluster_{name}_endpoint", resources["cluster"].endpoint)
+                    pulumi.export(f"eks_cluster_{name}_vpc_id", resources["vpc"].id)
 
             # Get Git info as dictionary
-            # retain this code for now, do not remove
             git_info = init_config.git_info.model_dump()
 
             # Collect metadata for resource tagging
@@ -129,74 +151,15 @@ class AwsModule(ModuleInterface):
                 bucket_name,
                 bucket=aws_config.bucket,
                 tags=resource_tags,
-                opts=ResourceOptions(provider=provider.provider, protect=False, parent=provider.provider),
+                opts=ResourceOptions(
+                    provider=provider.provider,
+                    protect=False,
+                    parent=provider.provider
+                ),
             )
 
             # Export outputs
             pulumi.export("aws_s3_bucket_name", s3_bucket.id)
-
-            # Parse compliance config
-            compliance_config = ComplianceConfig.model_validate(config.get("compliance", {}))
-
-            # Create IAM role for Crossplane AWS Provider if EKS is enabled
-            crossplane_role = None
-            if aws_config.eks and aws_config.eks.enabled:
-                # Get the OIDC issuer URL and clean it properly
-                oidc_url = eks_resources['cluster'].identities[0].oidcs[0].issuer.apply(
-                    lambda x: x.removeprefix('https://')
-                )
-
-                # Get the OIDC provider ARN
-                oidc_provider_arn = pulumi.Output.all(account_id=caller_identity.account_id, url=oidc_url).apply(
-                    lambda args: f"arn:aws:iam::{args['account_id']}:oidc-provider/{args['url']}"
-                )
-
-                # Create the trust policy with proper formatting
-                crossplane_trust_policy = pulumi.Output.all(provider_arn=oidc_provider_arn, url=oidc_url).apply(
-                    lambda args: {
-                        "Version": "2012-10-17",
-                        "Statement": [
-                            {
-                                "Effect": "Allow",
-                                "Principal": {
-                                    "Federated": args['provider_arn']
-                                },
-                                "Action": "sts:AssumeRoleWithWebIdentity",
-                                "Condition": {
-                                    "StringEquals": {
-                                        f"{args['url']}:sub": "system:serviceaccount:crossplane-system:provider-aws",
-                                        f"{args['url']}:aud": "sts.amazonaws.com"
-                                    }
-                                }
-                            }
-                        ]
-                    }
-                )
-
-                # Create the IAM role with the fixed trust policy
-                crossplane_role = aws.iam.Role(
-                    "crossplane-provider-aws",
-                    assume_role_policy=pulumi.Output.json_dumps(crossplane_trust_policy),
-                    tags=resource_tags,
-                    opts=ResourceOptions(
-                        provider=provider.provider,
-                        depends_on=[eks_resources['cluster']]
-                    )
-                )
-
-                # Attach required policies
-                aws.iam.RolePolicyAttachment(
-                    "crossplane-provider-aws-admin",
-                    role=crossplane_role.name,
-                    policy_arn="arn:aws:iam::aws:policy/AdministratorAccess",  # Note: Consider limiting this in production
-                    opts=ResourceOptions(
-                        provider=provider.provider,
-                        depends_on=[crossplane_role]
-                    )
-                )
-
-                # Add role ARN to metadata
-                aws_metadata["crossplane_provider_role_arn"] = crossplane_role.arn
 
             # Return deployment result
             return ModuleDeploymentResult(
@@ -204,7 +167,7 @@ class AwsModule(ModuleInterface):
                 version="0.0.1",
                 resources=[str(provider.provider.urn), str(s3_bucket.id)],
                 metadata={
-                    "compliance": compliance_config.model_dump(),
+                    "compliance": init_config.compliance_config.model_dump(),
                     "aws_account_id": caller_identity.account_id,
                     "aws_user_id": caller_identity.user_id,
                     "aws_arn": caller_identity.arn,
@@ -214,11 +177,8 @@ class AwsModule(ModuleInterface):
             )
 
         except Exception as e:
-            return ModuleDeploymentResult(
-                success=False,
-                version="",
-                errors=[str(e)]
-            )
+            log.error(f"AWS module deployment failed: {str(e)}")
+            raise  # Let Pulumi handle the error
 
     def get_dependencies(self) -> List[str]:
         """Get module dependencies."""

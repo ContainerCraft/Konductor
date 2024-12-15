@@ -20,3 +20,4 @@ smce-cli
 **/.gitconfig
 .github/staging
 .mypy_cache
+**/**/**/__pycache__

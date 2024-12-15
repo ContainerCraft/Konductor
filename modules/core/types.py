@@ -75,6 +75,7 @@ class InitializationConfig(BaseModel):
     compliance_config: ComplianceConfig = Field(default_factory=ComplianceConfig)
     metadata: Dict[str, Dict[str, str]] = Field(default_factory=lambda: {"labels": {}, "annotations": {}})
     deployment_date_time: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    deployment_manager: Optional[Any] = None
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
 
