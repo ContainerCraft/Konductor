@@ -6,3 +6,13 @@ When you're ready I'll show you the code we're going to work on next. Let me kno
 
 Before I show you the code we need to enhance, let me first get you familiarized with the fundamentals.
 
+Here is the config spec we're developing against for now.
+
+
+Here's the entrypoint
+
+
+Here is the core module which exclusively encapsulates only logic that is not related to any aws, azure, kubernetes, kubernetes submodule, or any other cloud provider. it is just core module common code and that is all.
+
+
+Let me know when you're familiar and ready for the code we are working on next.

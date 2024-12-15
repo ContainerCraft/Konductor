@@ -29,34 +29,21 @@ class DeploymentManager:
     def deploy_modules(self, modules_to_deploy: List[str]) -> None:
         for module_name in modules_to_deploy:
             try:
-                if module_name == "kubernetes":
-                    # Get kubernetes config
-                    k8s_config = self.config_manager.get_module_config(module_name)
+                # Standard module deployment for all modules including kubernetes
+                module_class = self.load_module(module_name)
+                module_config = self.config_manager.get_module_config(module_name)
+                module_config["compliance"] = self.init_config.compliance_config.model_dump()
 
-                    # Deploy each enabled kubernetes submodule
-                    if k8s_config.get("prometheus", {}).get("enabled"):
-                        self.deploy_k8s_submodule("prometheus", k8s_config.get("prometheus", {}))
+                module_instance = module_class(init_config=self.init_config)
+                result = module_instance.deploy(module_config)
 
-                    if k8s_config.get("flux", {}).get("enabled"):
-                        self.deploy_k8s_submodule("flux", k8s_config.get("flux", {}))
-
-                    if k8s_config.get("crossplane", {}).get("enabled"):
-                        self.deploy_k8s_submodule("crossplane", k8s_config.get("crossplane", {}))
+                if result.success:
+                    self.modules_metadata[module_name] = result.metadata
+                    if module_name == "aws" and "k8s_provider" in result.metadata:
+                        self.k8s_provider = result.metadata["k8s_provider"]
                 else:
-                    # Standard module deployment
-                    module_class = self.load_module(module_name)
-                    module_config = self.config_manager.get_module_config(module_name)
-                    module_config["compliance"] = self.init_config.compliance_config.model_dump()
+                    raise ModuleDeploymentError(f"Module {module_name} deployment failed.")
 
-                    module_instance = module_class(init_config=self.init_config)
-                    result = module_instance.deploy(module_config)
-
-                    if result.success:
-                        self.modules_metadata[module_name] = result.metadata
-                        if module_name == "aws" and "k8s_provider" in result.metadata:
-                            self.k8s_provider = result.metadata["k8s_provider"]
-                    else:
-                        raise ModuleDeploymentError(f"Module {module_name} deployment failed.")
             except Exception as e:
                 raise ModuleDeploymentError(f"Error deploying module {module_name}: {str(e)}") from e
 

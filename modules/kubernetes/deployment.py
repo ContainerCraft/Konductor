@@ -4,7 +4,9 @@ Kubernetes submodule deployment handler
 """
 from typing import Dict, Any, List, Optional
 import pulumi_kubernetes as k8s
+import pulumi
 from pulumi import log
+from datetime import datetime, timezone
 
 from ..core.interfaces import ModuleInterface, ModuleDeploymentResult
 from ..core.types import InitializationConfig
@@ -42,84 +44,134 @@ class KubernetesModule(ModuleInterface):
             return [str(e)]
 
     def deploy(self, config: Dict[str, Any]) -> ModuleDeploymentResult:
-        """Deploy Kubernetes resources."""
+        """Deploy Kubernetes resources to all available clusters."""
         try:
             registry = KubernetesProviderRegistry()
             providers = registry.list_providers()
 
             if not providers:
-                log.warn("No Kubernetes providers available - EKS clusters may not be enabled")
+                log.warn("No Kubernetes providers available - skipping deployment")
                 return ModuleDeploymentResult(
                     success=True,
                     version="0.0.1",
                     metadata={"status": "no_providers_available"}
                 )
 
-            log.info(f"Found {len(providers)} Kubernetes providers")
-            deployed_resources = []
-            deployment_metadata = {}
+            # Simple provider count
+            log.info(f"Found {len(providers)} Kubernetes clusters for deployment")
 
-            # Deploy to each available provider
+            # List enabled modules
+            enabled_submodules = []
+            if config.get("prometheus", {}).get("enabled"): enabled_submodules.append("prometheus")
+            if config.get("flux", {}).get("enabled"): enabled_submodules.append("flux")
+            if config.get("crossplane", {}).get("enabled"): enabled_submodules.append("crossplane")
+            log.info(f"Enabled modules: {', '.join(enabled_submodules)}")
+
+            # List target clusters simply
             for provider_id, context in providers.items():
-                log.info(f"Deploying to Kubernetes cluster: {context.cluster_name} ({provider_id})")
-                cluster_metadata = {
-                    "name": context.cluster_name,
-                    "platform": context.platform,
-                    "environment": context.environment,
-                    "region": context.region,
-                    "submodules": {}
-                }
+                log.info(f"Target cluster: {context.cluster_name} ({context.environment})")
 
-                # Deploy Prometheus if enabled
-                if config.get("prometheus", {}).get("enabled"):
-                    log.info(f"Deploying Prometheus to cluster: {context.cluster_name}")
-                    prometheus_result = self._deploy_prometheus(
-                        provider=context.provider,
-                        config=config.get("prometheus", {}),
-                        context=context
-                    )
-                    if prometheus_result:
-                        deployed_resources.extend(prometheus_result.get("resources", []))
-                        cluster_metadata["submodules"]["prometheus"] = prometheus_result.get("metadata", {})
+            # Create deployment summary for metadata
+            deployment_summary = {
+                "total_clusters": len(providers),
+                "clusters": [
+                    {
+                        "name": ctx.cluster_name,
+                        "platform": ctx.platform,
+                        "environment": ctx.environment,
+                        "region": ctx.region,
+                        "provider_id": pid,
+                        "target_modules": enabled_submodules
+                    }
+                    for pid, ctx in providers.items()
+                ],
+                "enabled_modules": enabled_submodules
+            }
 
-                # Deploy Flux if enabled
-                if config.get("flux", {}).get("enabled"):
-                    log.info(f"Deploying Flux to cluster: {context.cluster_name}")
-                    flux_result = self._deploy_flux(
-                        provider=context.provider,
-                        config=config.get("flux", {}),
-                        context=context
-                    )
-                    if flux_result:
-                        deployed_resources.extend(flux_result.get("resources", []))
-                        cluster_metadata["submodules"]["flux"] = flux_result.get("metadata", {})
+            deployment_results = {}
+            all_resources = []
+            failed_deployments = []
 
-                # Deploy Crossplane if enabled
-                if config.get("crossplane", {}).get("enabled"):
-                    log.info(f"Deploying Crossplane to cluster: {context.cluster_name}")
-                    crossplane_result = self._deploy_crossplane(
-                        provider=context.provider,
-                        config=config.get("crossplane", {}),
-                        context=context
-                    )
-                    if crossplane_result:
-                        deployed_resources.extend(crossplane_result.get("resources", []))
-                        cluster_metadata["submodules"]["crossplane"] = crossplane_result.get("metadata", {})
+            # Deploy to each cluster
+            for provider_id, context in providers.items():
+                try:
+                    log.info(f"Starting deployment to cluster: {context.cluster_name}")
 
-                deployment_metadata[provider_id] = cluster_metadata
+                    # Initialize cluster metadata
+                    cluster_metadata = {
+                        "name": context.cluster_name,
+                        "platform": context.platform,
+                        "environment": context.environment,
+                        "region": context.region,
+                        "provider_id": provider_id,
+                        "submodules": {},
+                        "status": "success"
+                    }
 
-            log.info(f"Successfully deployed to {len(deployment_metadata)} clusters")
+                    # Deploy each enabled submodule
+                    submodules = {
+                        "prometheus": (config.get("prometheus", {}).get("enabled"), self._deploy_prometheus),
+                        "flux": (config.get("flux", {}).get("enabled"), self._deploy_flux),
+                        "crossplane": (config.get("crossplane", {}).get("enabled"), self._deploy_crossplane)
+                    }
+
+                    for submodule_name, (enabled, deploy_func) in submodules.items():
+                        if enabled:
+                            log.info(f"Deploying {submodule_name} to cluster {context.cluster_name}")
+                            submodule_config = config.get(submodule_name, {})
+
+                            result = deploy_func(
+                                provider=context.provider,
+                                config=submodule_config,
+                                context=context
+                            )
+
+                            if result:
+                                all_resources.extend(result.get("resources", []))
+                                cluster_metadata["submodules"][submodule_name] = {
+                                    "status": "success",
+                                    "metadata": result.get("metadata", {}),
+                                    "version": submodule_config.get("version")
+                                }
+                            else:
+                                cluster_metadata["submodules"][submodule_name] = {
+                                    "status": "failed",
+                                    "error": f"Failed to deploy {submodule_name}"
+                                }
+                                cluster_metadata["status"] = "partial_failure"
+
+                    deployment_results[provider_id] = cluster_metadata
+
+                except Exception as e:
+                    error_msg = f"Failed to deploy to cluster {context.cluster_name}: {str(e)}"
+                    log.error(error_msg)
+                    failed_deployments.append({
+                        "cluster": context.cluster_name,
+                        "provider_id": provider_id,
+                        "error": error_msg
+                    })
+                    deployment_results[provider_id] = {
+                        **cluster_metadata,
+                        "status": "failed",
+                        "error": error_msg
+                    }
+
+            # Determine overall success
+            success = len(failed_deployments) == 0
+            status = "success" if success else "partial_failure" if deployment_results else "failed"
+
             return ModuleDeploymentResult(
-                success=True,
+                success=success,
                 version="0.0.1",
-                resources=deployed_resources,
+                resources=all_resources,
                 metadata={
-                    "clusters": deployment_metadata,
+                    "status": status,
+                    "clusters": deployment_results,
                     "total_clusters": len(providers),
-                    "successful_deployments": len([
-                        cluster for cluster in deployment_metadata.values()
-                        if cluster["submodules"]
-                    ])
+                    "successful_clusters": len(providers) - len(failed_deployments),
+                    "failed_deployments": failed_deployments,
+                    "deployment_timestamp": datetime.now(timezone.utc).isoformat(),
+                    "deployment_summary": deployment_summary
                 }
             )
 
@@ -229,10 +281,34 @@ class KubernetesModule(ModuleInterface):
             from .flux.deployment import FluxModule
             module = FluxModule(self.init_config)
             module.set_provider(KubernetesProvider(provider))
-            result = module.deploy(config)
+
+            # Add cluster-specific metadata to config
+            flux_config = config.copy()
+            flux_config.setdefault("labels", {}).update({
+                "cluster-name": context.cluster_name,
+                "platform": context.platform,
+                "environment": context.environment,
+                "region": context.region,
+            })
+
+            result = module.deploy(flux_config)
             return {
                 "resources": result.resources,
-                "metadata": result.metadata
+                "metadata": {
+                    **result.metadata,
+                    "cluster_context": {
+                        "name": context.cluster_name,
+                        "platform": context.platform,
+                        "environment": context.environment,
+                        "region": context.region,
+                    },
+                    "components": flux_config.get("components", []),
+                    "reconcile_interval": flux_config.get("reconcile_interval"),
+                    "storage_config": {
+                        "class": flux_config.get("storage_class"),
+                        "size": flux_config.get("storage_size"),
+                    }
+                }
             }
         except Exception as e:
             log.error(f"Failed to deploy Flux: {str(e)}")
@@ -249,11 +325,69 @@ class KubernetesModule(ModuleInterface):
             from .crossplane.deployment import CrossplaneModule
             module = CrossplaneModule(self.init_config)
             module.set_provider(KubernetesProvider(provider))
-            result = module.deploy(config)
+
+            # Add cluster-specific metadata to config
+            crossplane_config = config.copy()
+            crossplane_config.setdefault("labels", {}).update({
+                "cluster-name": context.cluster_name,
+                "platform": context.platform,
+                "environment": context.environment,
+                "region": context.region,
+            })
+
+            # Add provider-specific configurations
+            if context.platform == "aws":
+                crossplane_config.setdefault("provider_configs", {}).update({
+                    "aws": {
+                        "region": context.region,
+                        "environment": context.environment,
+                    }
+                })
+
+            result = module.deploy(crossplane_config)
             return {
                 "resources": result.resources,
-                "metadata": result.metadata
+                "metadata": {
+                    **result.metadata,
+                    "cluster_context": {
+                        "name": context.cluster_name,
+                        "platform": context.platform,
+                        "environment": context.environment,
+                        "region": context.region,
+                    },
+                    "providers": crossplane_config.get("providers", []),
+                    "provider_versions": {
+                        "aws": crossplane_config.get("aws_provider_version"),
+                        "kubernetes": crossplane_config.get("kubernetes_provider_version"),
+                    },
+                    "features": {
+                        "external_secret_stores": crossplane_config.get("enable_external_secret_stores"),
+                        "composition_revisions": crossplane_config.get("enable_composition_revisions"),
+                    }
+                }
             }
         except Exception as e:
             log.error(f"Failed to deploy Crossplane: {str(e)}")
             return None
+
+    def _validate_provider(self, context: KubernetesProviderContext) -> List[str]:
+        """Validate provider configuration."""
+        errors = []
+
+        if not context.provider:
+            errors.append(f"No valid provider for cluster {context.cluster_name}")
+            return errors
+
+        try:
+            # Test provider connectivity
+            namespace = k8s.core.v1.Namespace(
+                f"test-{context.cluster_name}",
+                metadata={
+                    "name": f"test-{context.cluster_name}",
+                },
+                opts=pulumi.ResourceOptions(provider=context.provider, protect=False)
+            )
+        except Exception as e:
+            errors.append(f"Failed to validate provider for cluster {context.cluster_name}: {str(e)}")
+
+        return errors
