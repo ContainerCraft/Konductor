@@ -33,7 +33,7 @@ def get_stack_outputs(
     # Add compliance data
     if compliance_config := init_config.get("compliance_config"):
         # Convert compliance config to dict using model's method
-        config["compliance"] = compliance_config.to_dict()
+        config["compliance"] = compliance_config.model_dump()
 
     # Add module-specific configs
     for module_name, metadata in modules_metadata.items():

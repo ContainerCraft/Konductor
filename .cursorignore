@@ -1,23 +1,57 @@
-# Add directories or file patterns to ignore during indexing (e.g. foo/ or *.csv)
+# Add directories or file patterns to ignore during indexing
+
+# Environment files
+.env
+.envrc
+.tmpenv
+**/.tmpenv
+
+# Local configuration and runtime files
 local
-.kube
-.talos
+.kube/
+.talos/
+.ssh/
 
+# Python-specific files
 *.pyc
-venv/
+*.pyo
+*.pyd
 __pycache__/
+*.pytest_cache/
+.mypy_cache/
 
-*.pyc
+# Virtual environments
 venv/
-__pycache__/
-**/Pulumi.*.yaml
+.virtualenv/
+
+# Pulumi-specific files
+.pulumi/
+.pulumi/plugins/
+Pulumi.*.yaml
+
+# Docker and DevContainer-related files
+.devcontainer/docker/
+.devcontainer/ccio-maintainer/docker/
 tmp.*
 tmp
-.ssh
-smce-cli
+
+# Coverage and test-related files
+.coverage
+.tox/
+.nox/
+.pytest_cache/
+
+# Credentials and sensitive configurations
 **/config
 **/credentials
 **/.gitconfig
-.github/staging
-.mypy_cache
-**/**/**/__pycache__
+
+# Logs and debugging artifacts
+*.log
+logs/
+debug.log
+
+# Generated files from indexing
+cursor_index.json
+cursor_cache/
+

@@ -1,16 +1,18 @@
+# ./modules/kubernetes/components/flux/deployment.py
 from typing import Dict, Any, List
 from pulumi import log, ResourceOptions, CustomTimeouts
 import pulumi_kubernetes as k8s
 
-from pulumi_kubernetes.helm.v4 import Chart
-
-from ..deployment import KubernetesModule
+from ...resources.workload.namespace import create_namespace
+from ...resources.storage.pvc import create_persistent_volume_claim
+from ...resources.helm.chart import create_helm_chart
+from ..base import KubernetesComponent
 from .types import FluxConfig
 from modules.core.interfaces import ModuleDeploymentResult
 
 
-class FluxModule(KubernetesModule):
-    """Flux module implementation."""
+class FluxComponent(KubernetesComponent):
+    """Flux component implementation."""
 
     def __init__(self, init_config):
         super().__init__(init_config)
@@ -26,6 +28,7 @@ class FluxModule(KubernetesModule):
             return [str(e)]
 
     def sanitize_version(self, version: str) -> str:
+        """Sanitize version string by removing 'v' prefix if present."""
         return version.lstrip("v") if version and version.startswith("v") else version
 
     def deploy(self, config: Dict[str, Any]) -> ModuleDeploymentResult:
@@ -35,46 +38,38 @@ class FluxModule(KubernetesModule):
 
             log.info(f"Deploying Flux Operator {operator_version} from OCI registry...")
 
-            # Deploy namespace (no strict parent, so it doesn't block teardown)
-            namespace = k8s.core.v1.Namespace(
+            # Create namespace
+            namespace = create_namespace(
                 f"{self.name}-system",
-                metadata=k8s.meta.v1.ObjectMetaArgs(
-                    name=flux_config.namespace,
-                    labels={
-                        "app.kubernetes.io/name": "flux",
-                        "app.kubernetes.io/part-of": "flux",
-                    },
-                    annotations={
-                        "fluxcd.controlplane.io/reconcile": "enabled",
-                        "fluxcd.controlplane.io/reconcileEvery": "1h",
-                        "fluxcd.controlplane.io/reconcileTimeout": "3m",
-                    },
-                ),
-                opts=ResourceOptions(
-                    provider=self.provider.provider,
-                    parent=self.provider.provider
-                ),
+                self.provider.provider,
+                labels={
+                    "app.kubernetes.io/name": "flux",
+                    "app.kubernetes.io/part-of": "flux",
+                },
+                annotations={
+                    "fluxcd.controlplane.io/reconcile": "enabled",
+                    "fluxcd.controlplane.io/reconcileEvery": "1h",
+                    "fluxcd.controlplane.io/reconcileTimeout": "3m",
+                },
             )
 
-            # Deploy storage PVC (child of namespace)
-            storage_pvc = k8s.core.v1.PersistentVolumeClaim(
+            # Create storage PVC
+            storage_pvc = create_persistent_volume_claim(
                 f"{self.name}-storage",
-                metadata=k8s.meta.v1.ObjectMetaArgs(name=f"{self.name}-storage", namespace=flux_config.namespace),
-                spec=k8s.core.v1.PersistentVolumeClaimSpecArgs(
-                    access_modes=["ReadWriteOnce"],
-                    resources=k8s.core.v1.ResourceRequirementsArgs(requests={"storage": flux_config.storage_size}),
-                    storage_class_name=flux_config.storage_class,
-                ),
+                flux_config.namespace,
+                flux_config.storage_class,
+                flux_config.storage_size,
+                self.provider.provider,
                 opts=ResourceOptions(provider=self.provider.provider, parent=namespace),
             )
 
-            # Deploy Flux Operator chart with minimal deletion wait times
-            operator_chart = Chart(
+            # Deploy Flux Operator chart
+            operator_chart = create_helm_chart(
                 "flux-operator",
-                chart="oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator",
-                version=operator_version,
-                namespace=flux_config.namespace,
-                values={
+                "oci://ghcr.io/controlplaneio-fluxcd/charts/flux-operator",
+                flux_config.namespace,
+                operator_version,
+                {
                     "operator": {
                         "create": True,
                         "resources": {
@@ -83,14 +78,14 @@ class FluxModule(KubernetesModule):
                         },
                     }
                 },
+                self.provider.provider,
                 opts=ResourceOptions(
                     provider=self.provider.provider,
                     parent=storage_pvc,
-                    custom_timeouts=CustomTimeouts(create="5m", update="5m", delete="10s"),
                 ),
             )
 
-            # Deploy FluxInstance CR with short delete timeout
+            # Deploy FluxInstance CR
             flux_instance = k8s.apiextensions.CustomResource(
                 f"{self.name}-instance",
                 api_version="fluxcd.controlplane.io/v1",
@@ -140,7 +135,12 @@ class FluxModule(KubernetesModule):
             return ModuleDeploymentResult(
                 success=True,
                 version=flux_config.version,
-                resources=[f"{self.name}-namespace", f"{self.name}-storage", "flux-operator", f"{self.name}-instance"],
+                resources=[
+                    f"{self.name}-namespace",
+                    f"{self.name}-storage",
+                    "flux-operator",
+                    f"{self.name}-instance"
+                ],
                 metadata={
                     "namespace": flux_config.namespace,
                     "version": flux_config.version,

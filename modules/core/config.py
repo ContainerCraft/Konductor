@@ -31,7 +31,7 @@ from .types import (
     ModuleBase,
     StackOutputs,
 )
-from .compliance_types import ComplianceConfig
+from .types import ComplianceConfig
 
 
 # Configuration Constants
@@ -500,78 +500,81 @@ class ConfigManager:
     def __init__(self):
         self.pulumi_config = pulumi.Config()
         self.global_config = self.load_global_config()
-        self.module_configs = self.load_module_configs()
+        self.module_configs = {}  # Initialize empty, load only when needed
 
     def load_global_config(self):
-        # Load global configuration
+        """Load global configuration."""
         return self.pulumi_config.get_object("global") or {}
 
-    def load_module_configs(self):
-        # Load configurations for each enabled module
-        module_configs = {}
-        enabled_modules = self.get_enabled_modules()
-        for module_name in enabled_modules:
-            module_key = f"module:{module_name}"
-            module_config = self.pulumi_config.get_object(module_key) or {}
-            module_configs[module_name] = module_config
-        return module_configs
-
     def get_enabled_modules(self) -> List[str]:
-        """Get list of enabled modules from config."""
+        """
+        Get list of enabled modules from config.
+        Only checks config without importing any module code.
+        """
         enabled_modules = []
 
-        # Look for modules directory
-        modules_dir = Path(__file__).parent.parent
-
-        # Scan for module directories
-        for module_dir in modules_dir.iterdir():
-            if not module_dir.is_dir() or module_dir.name == "core":
-                continue
-
-            module_name = module_dir.name
+        # Check module status directly from config without importing
+        for module_name in ["aws", "kubernetes"]:
             try:
-                # Import module's config
-                module_config = self.get_module_config(module_name)
-
-                # Check if module is enabled either directly or through submodules
-                is_enabled = module_config.get("enabled", False)
-
-                # For kubernetes module, also check submodules
-                if module_name == "kubernetes":
-                    # Check if any kubernetes submodule is enabled
-                    for submodule, subconfig in module_config.items():
-                        if isinstance(subconfig, dict) and subconfig.get("enabled", False):
-                            is_enabled = True
-                            break
-
-                if is_enabled:
-                    log.info(f"{module_name} module is enabled in configuration")
+                # Get raw config object without any imports
+                raw_config = self.pulumi_config.get_object(module_name)
+                if raw_config and raw_config.get("enabled") is True:  # Strict boolean check
                     enabled_modules.append(module_name)
-                else:
-                    log.debug(f"{module_name} module is not enabled")
-
             except Exception as e:
-                log.warn(f"Error checking module {module_name}: {str(e)}")
-                continue
+                log.debug(f"Module {module_name} not configured: {str(e)}")
 
         return enabled_modules
 
     def get_module_config(self, module_name: str) -> Dict[str, Any]:
-        """Get configuration for a specific module."""
+        """
+        Get configuration for a specific module.
+        Only imports module code if the module is enabled.
+        """
         try:
-            # Try to get module config from Pulumi stack config
-            stack_config = self.pulumi_config.get_object(module_name) or {}
+            # First check if module is enabled in raw config
+            raw_config = self.pulumi_config.get_object(module_name) or {}
 
-            # Try to import module's default config
+            # Strict check - module must be explicitly enabled
+            if raw_config.get("enabled") is not True:
+                log.debug(f"Module {module_name} is disabled, skipping import")
+                return {"enabled": False}
+
+            # Return cached config if exists
+            if module_name in self.module_configs:
+                return self.module_configs[module_name]
+
+            # Only proceed with import for enabled modules
             try:
-                module_config = __import__(f"modules.{module_name}.config", fromlist=["DEFAULT_MODULE_CONFIG"])
-                default_config = getattr(module_config, "DEFAULT_MODULE_CONFIG", {})
-            except (ImportError, AttributeError):
-                default_config = {}
+                # Import module's config without importing the full module
+                config_module = __import__(
+                    f"modules.{module_name}.config",
+                    fromlist=["DEFAULT_MODULE_CONFIG"]
+                )
+                default_config = getattr(config_module, "DEFAULT_MODULE_CONFIG", {})
 
-            # Merge configs with stack config taking precedence
-            return {**default_config, **stack_config}
+                # Merge configs with raw config taking precedence
+                merged_config = {**default_config, **raw_config}
+
+                # Cache the merged config
+                self.module_configs[module_name] = merged_config
+                return merged_config
+
+            except ImportError as e:
+                log.debug(f"Module {module_name} config import failed: {str(e)}")
+                return raw_config
 
         except Exception as e:
             log.warn(f"Error loading config for module {module_name}: {str(e)}")
-            return {}
+            return {"enabled": False}
+
+    def load_module_configs(self):
+        """
+        Load configurations only for enabled modules.
+        """
+        configs = {}
+        enabled_modules = self.get_enabled_modules()
+
+        for module_name in enabled_modules:
+            configs[module_name] = self.get_module_config(module_name)
+
+        return configs

@@ -1,73 +1,47 @@
-# ../konductor/modules/core/utils.py
+# ./modules/core/utils.py
 """
 Utility Functions Module
 
-This module provides generic, reusable utility functions for Pulumi resource management.
-Includes resource transformations, Helm interactions, and infrastructure utilities.
+This module provides a collection of generic and reusable utility functions
+designed to assist with Pulumi resource management. These utilities include
+functions for resource transformations, Helm interactions, and other
+infrastructure-related operations.
 """
 
-from typing import Any, Dict, TypeVar, Union, cast
+from typing import Any, Dict
 
 from pulumi import (
-    Output,
     ResourceTransformationArgs,
     ResourceTransformationResult,
     log,
     runtime,
 )
-from pulumi_kubernetes.meta.v1 import ObjectMetaArgs
-
-# Type variables for generic functions
-T = TypeVar("T")
-MetadataType = Union[Dict[str, Any], ObjectMetaArgs, Output[Dict[str, Any]]]
 
 
 def set_resource_metadata(
-    metadata: MetadataType,
+    metadata: Dict[str, Any],
     global_labels: Dict[str, str],
     global_annotations: Dict[str, str],
-) -> MetadataType:
+) -> Dict[str, Any]:
     """
-    Updates resource metadata with global labels and annotations.
+    Update the metadata of a resource with global labels and annotations.
+
+    This function modifies the provided metadata dictionary by adding or updating
+    its 'labels' and 'annotations' fields with the specified global labels and
+    annotations. This is a base implementation and can be extended for
+    provider-specific requirements.
 
     Args:
-        metadata: Resource metadata to update
-        global_labels: Global labels to apply
-        global_annotations: Global annotations to apply
+        metadata (Dict[str, Any]): The metadata dictionary to be updated.
+        global_labels (Dict[str, str]): A dictionary of global labels to apply.
+        global_annotations (Dict[str, str]): A dictionary of global annotations to apply.
 
     Returns:
-        MetadataType: Updated metadata
-
-    Raises:
-        TypeError: If metadata is of an unsupported type
+        Dict[str, Any]: The updated metadata dictionary with applied labels and annotations.
     """
-    try:
-        if isinstance(metadata, (dict, ObjectMetaArgs)):
-            if isinstance(metadata, dict):
-                metadata.setdefault("labels", {}).update(global_labels)
-                metadata.setdefault("annotations", {}).update(global_annotations)
-            else:
-                if metadata.labels is None:
-                    metadata.labels = {}
-                metadata.labels.update(global_labels)
-                if metadata.annotations is None:
-                    metadata.annotations = {}
-                metadata.annotations.update(global_annotations)
-        elif isinstance(metadata, Output):
-            metadata_output = cast(Output[Dict[str, Any]], metadata)
-            return metadata_output.apply(
-                lambda m: {
-                    **m,
-                    "labels": {**(m.get("labels", {})), **global_labels},
-                    "annotations": {**(m.get("annotations", {})), **global_annotations},
-                }
-            )
-        else:
-            raise TypeError(f"Unsupported metadata type: {type(metadata)}")
-    except Exception as e:
-        log.error(f"Failed to update resource metadata: {str(e)}")
-        raise
-
+    if isinstance(metadata, dict):
+        metadata.setdefault("labels", {}).update(global_labels)
+        metadata.setdefault("annotations", {}).update(global_annotations)
     return metadata
 
 
@@ -75,26 +49,32 @@ def generate_global_transformations(
     global_labels: Dict[str, str], global_annotations: Dict[str, str]
 ) -> None:
     """
-    Registers global transformations for all Pulumi resources.
-    Ensures consistent metadata across all resources.
+    Register global transformations to apply consistent metadata across all Pulumi resources.
+
+    This function sets up a transformation that will be applied to every Pulumi resource
+    in the stack. It ensures that each resource has the specified global labels and
+    annotations in its metadata, promoting uniformity and ease of management.
 
     Args:
-        global_labels: Global labels to apply
-        global_annotations: Global annotations to apply
+        global_labels (Dict[str, str]): A dictionary of global labels to apply to all resources.
+        global_annotations (Dict[str, str]): A dictionary of global annotations to apply to all resources.
     """
 
     def global_transform(
         args: ResourceTransformationArgs,
     ) -> ResourceTransformationResult:
         """
-        Global transformation function for Pulumi resources.
-        Applies metadata consistently across all resources.
+        Apply a global transformation to a Pulumi resource to ensure consistent metadata.
+
+        This function is called for each resource during the transformation process. It checks
+        if the resource has a 'metadata' or 'spec.metadata' field and updates it with the
+        provided global labels and annotations.
 
         Args:
-            args: Resource transformation arguments
+            args (ResourceTransformationArgs): The arguments containing resource properties and options.
 
         Returns:
-            ResourceTransformationResult: Transformed resource properties
+            ResourceTransformationResult: The result containing the transformed resource properties.
         """
         props = args.props
 
@@ -118,5 +98,16 @@ def generate_global_transformations(
 
 
 def apply_tags(resource, tags: dict):
+    """
+    Apply tags to a resource if it supports tagging.
+
+    This function checks if the given resource has a 'tags' attribute and, if so,
+    updates it with the provided tags. This is useful for adding metadata to resources
+    that support tagging, such as cloud infrastructure components.
+
+    Args:
+        resource: The resource to which tags should be applied.
+        tags (dict): A dictionary of tags to apply to the resource.
+    """
     if hasattr(resource, "tags"):
         resource.tags.update(tags)

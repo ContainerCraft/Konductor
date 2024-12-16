@@ -1,50 +1,57 @@
 {
-    "config": {
+    "stack": {
+        // Consolidated Compliance Metadata collected from all configuration and data sources.
         "compliance": {
-            "scip": {
-                "environment": "production",
+            "project": {
+                "environment": "prod-us-west",
+                // Explicitly label resources as production resources and enable protection from deletion on supported resources.
+                "production": "true",
                 "ownership": {
-                    "operator": {
+                    "owner": {
                         "contacts": [
                             "seti2@nasa.gov",
                             "alien51@nasa.gov"
                         ],
-                        "name": "science-team-seti2-obs2819"
+                        "name": "proj123-team-orl2819"
                     },
                     "operations": {
                         "contacts": [
                             "scip@nasa.gov",
                             "boberta@nasa.gov"
                         ],
-                        "name": "scip-team-ops"
+                        "name": "proj123-ops-bc862735"
                     }
                 },
+                "ato": {
+                    // Tag, Label, Annotate resources with ATO information.
+                    "id": "1234-ATO",
+                    // Authorized date required if production=true, is the date the project was authorized to operate and comes from Pulumi Stack config ISO datetime else use None
+                    "authorized": "2025-03-27T00:00:00Z",
+                    // Include resource expiration date.
+                    "eol": "2028-03-27T00:00:00Z",
+                    // Include resource last touch date.
+                    "last_touch": "2026-03-27T00:00:00Z"
+                },
                 "providers": {
+                    // Return a full list of all providers used in this deployment.
                     "name": [
-                        "Azure",
                         "AWS",
+                        "Azure",
                         "Kubernetes"
                     ],
                     "regions": [
-                        "us-east-1",
-                        "scip-west-1",
-                        "scip-east-1",
-                        "scip-lunar-2"
+                        "aws-us-east-1",
+                        "proj123-dc-west-sf",
+                        "azure-west-us"
                     ]
                 }
             },
             "fisma": {
                 "level": "moderate",
-                "mode": "strict",
-                "ato": {
-                    "id": "1234-ATO",
-                    "authorized": "2025-03-27T00:00:00Z",
-                    "eol": "2028-03-27T00:00:00Z",
-                    "last_touch": "2026-03-27T00:00:00Z"
-                }
+                "mode": "warn"
             },
             "nist": {
-                "controls": [
+                "auxiliary": [
                     "AC-2",
                     "AC-3",
                     "AC-6",
@@ -59,18 +66,27 @@
                 ]
             }
         },
+        // Global metadata tags, labels, and annotations.
         "metadata": {
-            "globalLabels": {
+            "Tags": {
+                "production": "true",
+                "project": "proj123",
+                "opsTeam": "proj123-team-orl2819",
+            },
+            "Labels": {
+                "production": "true",
                 "project": "SCIP_Ops",
                 "managedBy": "NASA_SCIP_OPERATIONS",
-                "version": "v1.03.11"
             },
-            "globalAnnotations": {
-                "purpose": "production",
-                "owner": "scip-ops-team"
+            "Annotations": {
+                "production": "true",
+                "project": "proj123",
+                "owner": "proj123-team-orl2819"
             }
         },
+        // (Optional) Metadata returned from the AWS module if / when enabled.
         "aws": {
+            // AWS STS caller identity for traceability.
             "sts_caller_identity": {
                 "aws_user_account_id": "<current_aws_user_id_from->",
                 "aws_user_id": "<current_aws_account_name>",
@@ -79,36 +95,51 @@
             "aws_account_id": "111122223333",
             "profile": "smdc-cba",
             "region": "us-east-1",
-            "opsStateBucket": "scip-ops-prod-state-bucket",
+            "operationsBucket": "proj123-ops-state-bucket",
             "controlTower": {
-                "organizationalUnitName": "NASA_SCIP_PRODUCTION",
+                "organizationalUnitName": "SCIP_PRODUCTION",
                 "executionRoleName": "AWSControlTowerExec",
                 "adminRoleName": "AWSControlTowerAdmin",
                 "auditRoleName": "AWSControlTowerAudit",
                 "logArchiveBucket": "aws-control-tower-logs-111122223333"
             },
-            "iamUsers": [
-                {
-                    "name": "alice",
-                    "email": "alice@example.com",
-                    "groups": [
-                        "Developers"
-                    ],
-                    "policies": [
-                        "arn:aws:iam::aws:policy/AdministratorAccess"
-                    ]
-                },
-                {
-                    "name": "bob",
-                    "email": "bob@example.com",
-                    "groups": [
-                        "Operations"
-                    ],
-                    "policies": [
-                        "arn:aws:iam::aws:policy/ReadOnlyAccess"
-                    ]
-                }
-            ],
+            "iam": {
+                "users": [
+                    {
+                        "name": "alice",
+                        "email": "alice@example.com",
+                        "groups": [
+                            "Developers"
+                        ],
+                        "policies": [
+                            "arn:aws:iam::aws:policy/AdministratorAccess"
+                        ]
+                    },
+                    {
+                        "name": "bob",
+                        "email": "bob@example.com",
+                        "groups": [
+                            "Operations"
+                        ],
+                        "policies": [
+                            "arn:aws:iam::aws:policy/ReadOnlyAccess"
+                        ]
+                    }
+                ]
+            },
+            // (Optional) Metadata returned to the aws module from the eks submodule if / when enabled.
+            "eks": {
+                "clusters": [
+                    {
+                        "name": "proj123-prod-cluster",
+                        "region": "us-east-1"
+                    },
+                    {
+                        "name": "proj123-staging-cluster",
+                        "region": "us-east-1"
+                    }
+                ]
+            },
             "landingzones": [
                 {
                     "name": "Tenant1",
@@ -134,22 +165,36 @@
                 }
             ]
         },
+        // (Optional) Metadata returned from the Kubernetes module if / when enabled.
         "kubernetes": {
-            "context": "scip-prod-cluster",
-            "kubeconfig": "${KUBECONFIG}"
+            "context": "proj123-prod-cluster",
+            // return auth identity details from kubernetes authenticated service account or user.
+            "identity": {
+                "type": "service_account",
+                "name": "proj123-runner-service-account"
+            }
         },
-        "k8s_versions": {
+        "k8s_component_versions": {
             "cert_manager": {
-                "1.15.3": {}
+                "1.15.3"
+            },
+            "flux": {
+                "1.15.3"
             },
             "kubevirt": {
-                "1.3.1": {}
+                "1.3.1"
             }
         },
         "source_repository": {
-            "branch": "rerefactor",
+            "branch": "main",
             "commit": "1714788619ba712bdc5d90e0cc1d919a3eb8a6",
-            "remote": "https://github.com/ContainerCraft/Kargo"
+            "remote": "https://github.com/ContainerCraft/Kargo",
+            "tag": "v1.0.0" // (optional) else use short commit hash with leading 'prerelease-'
+        }
+    },
+    "secrets": {
+        "kubernetes": {
+            "kubeconfig": "[SECRET_KUBECONFIG]"
         }
     }
 }

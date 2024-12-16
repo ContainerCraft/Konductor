@@ -1,35 +1,76 @@
+# Environment files
 .env
 .envrc
 .tmpenv
 **/.tmpenv
 
+# Local configuration and runtime files
 local
-.kube
-.talos
+.kube/
+.talos/
+.ssh/
 
+# Python-specific files
 *.pyc
-venv/
+*.pyo
+*.pyd
 __pycache__/
-.pulumi
+*.pytest_cache/
+.mypy_cache/
 
-*.pyc
+# Virtual environments
 venv/
-__pycache__/
-.talos/manifest
-.pulumi/plugins
-.pulumi/*
+.virtualenv/
+
+# Pulumi-specific files
+.pulumi/
+.pulumi/plugins/
+.pulumi/stack-backups/
 Pulumi.*.yaml
-.env
-.devcontainer/docker
+
+# Docker and DevContainer-related files
+.devcontainer/docker/
+.devcontainer/ccio-maintainer/docker/
 tmp.*
 tmp
-.ssh
-tmp
-smce-cli
+
+# Coverage and test-related files
+.coverage
+.tox/
+.nox/
+.pytest_cache/
+
+# Editor and IDE settings
+*.swp
+*.swo
+.idea/
+.vscode/
+*.iml
+
+# Credentials and sensitive configurations
 **/config
 **/credentials
 **/.gitconfig
+
+# Build and distribution artifacts
+*.egg-info/
+*.eggs/
+build/
+dist/
+
+# Modules and vendor files
 modules/aws.bak
-.coverage
-.mypy_cache
-**/**/**/__pycache__
+modules/core.bak
+modules/kubernetes.bak
+
+# Logs and debugging artifacts
+*.log
+logs/
+debug.log
+
+# Cursor-specific artifacts
+.cursorignore
+.cursorcacherules
+
+# Ignore generated files from task runners
+Taskfile.lock

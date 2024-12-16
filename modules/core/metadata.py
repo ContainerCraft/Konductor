@@ -16,7 +16,7 @@ from threading import Lock
 import pulumi
 from pulumi import Config, log
 
-from .compliance_types import ComplianceConfig
+from .types import ComplianceConfig
 
 
 class MetadataSingleton:
@@ -190,7 +190,7 @@ def export_compliance_metadata() -> None:
         # Create the compliance export structure
         stack_outputs = {
             "config": {
-                "compliance": compliance_metadata.to_dict(),
+                "compliance": compliance_metadata.model_dump(),
                 "source_repository": git_info,
             }
         }

@@ -10,9 +10,8 @@ and initializing the Pulumi runtime environment.
 from pulumi import Config, get_stack, get_project, log
 from datetime import datetime, timezone
 
-from modules.core.types import InitializationConfig
 from modules.core.git import collect_git_info
-from modules.core.compliance_types import ComplianceConfig
+from .types import ComplianceConfig, InitializationConfig
 
 
 def initialize_pulumi() -> InitializationConfig:

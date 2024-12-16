@@ -5,14 +5,13 @@ from pulumi import log
 import pulumi_aws as aws
 from pulumi import ResourceOptions
 
-from modules.core.compliance_types import ComplianceConfig
 from modules.core.interfaces import ModuleInterface, ModuleDeploymentResult
 from modules.core.types import InitializationConfig
 from .provider import AWSProvider
 from .types import AWSConfig
 from modules.core.stack_outputs import collect_global_metadata, collect_module_metadata
 from .eks.deployment import EksManager
-from modules.core.providers import KubernetesProviderRegistry
+from modules.kubernetes import KubernetesProviderRegistry
 
 
 class AwsModule(ModuleInterface):
@@ -93,7 +92,9 @@ class AwsModule(ModuleInterface):
 
                     if k8s_provider := resources.get("k8s_provider"):
                         provider_id = f"aws-eks-{cluster_name}"
-                        self.init_config.deployment_manager.register_kubernetes_provider(
+                        # Get registry from kubernetes module
+                        registry = KubernetesProviderRegistry()
+                        registry.register_provider(
                             provider_id=provider_id,
                             provider=k8s_provider,
                             cluster_name=cluster_name,

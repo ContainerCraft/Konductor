@@ -1,16 +1,24 @@
-# ./modules/kubernetes/crossplane/deployment.py
-from typing import Dict, Any, List
-from pulumi import log, ResourceOptions, CustomTimeouts
-import pulumi_kubernetes as k8s
-from pulumi_kubernetes.apiextensions import CustomResource
+# ./modules/kubernetes/components/crossplane/deployment.py
+"""
+Crossplane component deployment implementation.
 
-from ..deployment import KubernetesModule
+TODO:
+- Migrate, add, and complete Crossplane component deployment logic implementation.
+"""
+from typing import Dict, Any, List
+from pulumi import log, ResourceOptions
+
+from ...resources.workload.namespace import create_namespace
+from ...resources.workload.custom_resource import create_custom_resource
+from ...resources.helm.chart import create_helm_chart
+from ...resources.rbac.binding import create_cluster_role_binding
+from ..base import KubernetesComponent
 from .types import CrossplaneConfig
 from modules.core.interfaces import ModuleDeploymentResult
 
 
-class CrossplaneModule(KubernetesModule):
-    """Crossplane module implementation."""
+class CrossplaneComponent(KubernetesComponent):
+    """Crossplane component implementation."""
 
     def __init__(self, init_config):
         super().__init__(init_config)
@@ -29,27 +37,19 @@ class CrossplaneModule(KubernetesModule):
     def deploy(self, config: Dict[str, Any]) -> ModuleDeploymentResult:
         """Deploy Crossplane system and related resources."""
         try:
-            # Parse config
             crossplane_config = CrossplaneConfig(**config)
 
-            # 1. Deploy namespace (crossplane-system)
-            namespace = k8s.core.v1.Namespace(
+            # Deploy namespace
+            namespace = create_namespace(
                 f"{self.name}-namespace",
-                metadata={
-                    "name": crossplane_config.namespace,
-                    "labels": {
-                        "app.kubernetes.io/name": "crossplane",
-                        "app.kubernetes.io/part-of": "crossplane",
-                    },
+                self.provider.provider,
+                labels={
+                    "app.kubernetes.io/name": "crossplane",
+                    "app.kubernetes.io/part-of": "crossplane",
                 },
-                opts=ResourceOptions(
-                    custom_timeouts=CustomTimeouts(create="5m", update="5m", delete="10s"),
-                    provider=self.provider.provider,
-                    parent=self.provider.provider,
-                ),
             )
 
-            # 2. Install Crossplane via Helm
+            # Configure Helm values
             helm_values = {
                 "metrics": {
                     "enabled": crossplane_config.metrics_enabled,
@@ -68,30 +68,28 @@ class CrossplaneModule(KubernetesModule):
             if crossplane_config.enable_composition_revisions:
                 helm_values["args"].append("--enable-composition-revisions")
 
-            log.info(f"Deploying Crossplane Helm release to namespace {crossplane_config.namespace}")
-            release = k8s.helm.v3.Release(
+            # Deploy Helm release
+            repository_url = "https://charts.crossplane.io/stable"
+            release = create_helm_chart(
                 f"{self.name}-system",
-                k8s.helm.v3.ReleaseArgs(
-                    chart="crossplane",
-                    repository_opts=k8s.helm.v3.RepositoryOptsArgs(repo="https://charts.crossplane.io/stable"),
-                    version=crossplane_config.version,
-                    namespace=crossplane_config.namespace,
-                    values=helm_values,
-                    wait_for_jobs=True,
-                    timeout=600,  # 10 minutes
-                    cleanup_on_fail=True,
-                    atomic=True,
-                ),
+                "crossplane",
+                crossplane_config.namespace,
+                crossplane_config.version,
+                helm_values,
+                self.provider.provider,
+                repository=repository_url,
+                atomic=True,
+                cleanup_on_fail=True,
+                timeout=600,
                 opts=ResourceOptions(
                     provider=self.provider.provider,
                     parent=namespace,
                     depends_on=[namespace],
-                    custom_timeouts=CustomTimeouts(create="1200s", update="600s", delete="30s"),
                 ),
             )
 
-            # 3. Create DeploymentRuntimeConfig for provider-helm
-            deployment_runtime_config = CustomResource(
+            # Create DeploymentRuntimeConfig
+            runtime_config = create_custom_resource(
                 "provider-helm-deployment-runtime-config",
                 api_version="pkg.crossplane.io/v1beta1",
                 kind="DeploymentRuntimeConfig",
@@ -100,6 +98,7 @@ class CrossplaneModule(KubernetesModule):
                     "namespace": crossplane_config.namespace,
                 },
                 spec={"serviceAccountTemplate": {"metadata": {"name": "provider-helm"}}},
+                provider=self.provider.provider,
                 opts=ResourceOptions(
                     provider=self.provider.provider,
                     parent=release,
@@ -107,8 +106,8 @@ class CrossplaneModule(KubernetesModule):
                 ),
             )
 
-            # 4. Create the Provider resource for provider-helm
-            provider_helm = CustomResource(
+            # Create Provider
+            provider_helm = create_custom_resource(
                 "provider-helm",
                 api_version="pkg.crossplane.io/v1",
                 kind="Provider",
@@ -124,22 +123,22 @@ class CrossplaneModule(KubernetesModule):
                         "name": "provider-helm",
                     },
                 },
+                provider=self.provider.provider,
                 opts=ResourceOptions(
                     provider=self.provider.provider,
-                    parent=deployment_runtime_config,
-                    depends_on=[deployment_runtime_config],
+                    parent=runtime_config,
+                    depends_on=[runtime_config],
                 ),
             )
 
-            # 5. Create ClusterRoleBinding for provider-helm SA
-            # Using dictionary fields directly to avoid k8s.types
-            cluster_role_binding = k8s.rbac.v1.ClusterRoleBinding(
+            # Create ClusterRoleBinding
+            cluster_role_binding = create_cluster_role_binding(
                 "provider-helm-cluster-admin",
-                metadata={"name": "provider-helm-cluster-admin"},
                 subjects=[
                     {"kind": "ServiceAccount", "name": "provider-helm", "namespace": crossplane_config.namespace}
                 ],
                 role_ref={"kind": "ClusterRole", "name": "cluster-admin", "apiGroup": "rbac.authorization.k8s.io"},
+                provider=self.provider.provider,
                 opts=ResourceOptions(
                     provider=self.provider.provider,
                     parent=provider_helm,
@@ -147,21 +146,22 @@ class CrossplaneModule(KubernetesModule):
                 ),
             )
 
-            # 6. Create ProviderConfig for the helm provider
-            provider_helm_config = CustomResource(
-                "provider-helm-vcluster-moo",
+            # Create ProviderConfig
+            provider_config = create_custom_resource(
+                "provider-helm-vcluster",
                 api_version="helm.crossplane.io/v1beta1",
                 kind="ProviderConfig",
                 metadata={
-                    "name": "provider-helm-vcluster-moo",
+                    "name": "provider-helm-vcluster",
                     "namespace": crossplane_config.namespace,
                 },
                 spec={
                     "credentials": {
                         "source": "Secret",
-                        "secretRef": {"namespace": "vcluster-moo-cluster", "name": "moo-kubeconfig", "key": "value"},
+                        "secretRef": {"namespace": "vcluster-cluster", "name": "vcluster-kubeconfig", "key": "value"},
                     }
                 },
+                provider=self.provider.provider,
                 opts=ResourceOptions(
                     provider=self.provider.provider,
                     parent=provider_helm,
@@ -178,13 +178,14 @@ class CrossplaneModule(KubernetesModule):
                     "provider-helm-deployment-runtime-config",
                     "provider-helm",
                     "provider-helm-cluster-admin",
-                    "provider-helm-vcluster-moo",
+                    "provider-helm-vcluster",
                 ],
                 metadata={
                     "namespace": crossplane_config.namespace,
                     "version": crossplane_config.version,
                 },
             )
+
         except Exception as e:
-            log.error(f"Failed to deploy Crossplane and related resources: {str(e)}")
+            log.error(f"Failed to deploy Crossplane: {str(e)}")
             return ModuleDeploymentResult(success=False, version="", errors=[str(e)])

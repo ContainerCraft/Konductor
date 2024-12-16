@@ -21,7 +21,7 @@ from typing import Dict, Optional
 from git import Repo, GitCommandError, InvalidGitRepositoryError
 from pulumi import log
 import subprocess
-from .git_types import GitInfo
+from .types import GitInfo
 
 
 def get_latest_semver_tag(repo: Repo) -> Optional[str]:
@@ -266,7 +266,7 @@ def collect_git_info() -> GitInfo:
     # Store in global metadata singleton
     from .metadata import MetadataSingleton
 
-    MetadataSingleton().set_git_metadata(git_info.dict())
+    MetadataSingleton().set_git_metadata(git_info.model_dump())
 
     return git_info
 

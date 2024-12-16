@@ -52,13 +52,15 @@ from .types import (
 )
 
 # Interfaces
-from .interfaces import (
-    ResourceMetadata,
+from .types.interfaces import (
     ModuleDeploymentResult,
     DeploymentContext,
     ModuleInterface,
     ResourceManagerInterface,
 )
+
+# Resource Metadata
+from .types.metadata import ResourceMetadata
 
 # Configuration management
 from .config import (
@@ -139,11 +141,12 @@ __all__ = [
     "StackOutputs",
     "GlobalMetadata",
     # Interfaces
-    "ResourceMetadata",
     "ModuleDeploymentResult",
     "DeploymentContext",
     "ModuleInterface",
     "ResourceManagerInterface",
+    # Resource Metadata
+    "ResourceMetadata",
     # Configuration
     "ensure_cache_dir",
     "coerce_to_bool",
@@ -187,11 +190,4 @@ __all__ = [
     "collect_global_metadata",
     "collect_module_metadata",
     "collect_compliance_outputs",
-]
-
-from .providers import KubernetesProviderRegistry, KubernetesProviderContext
-
-__all__ = [
-    "KubernetesProviderRegistry",
-    "KubernetesProviderContext",
 ]

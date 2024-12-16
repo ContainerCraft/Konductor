@@ -1,12 +1,13 @@
 # ./modules/core/deployment.py
+"""
+Core module deployment implementation.
+"""
 from typing import List, Any, Dict
 from pulumi import log
 
 from modules.core.types import InitializationConfig
 from modules.core.interfaces import ModuleInterface
 from modules.core.exceptions import ModuleDeploymentError
-from modules.kubernetes.provider import KubernetesProvider
-from modules.core.providers import KubernetesProviderRegistry
 
 
 class DeploymentManager:
@@ -23,64 +24,32 @@ class DeploymentManager:
         self.init_config = init_config
         self.config_manager = config_manager
         self.modules_metadata = {}
-        self.k8s_registry = KubernetesProviderRegistry()
-        self.k8s_provider = None
 
     def deploy_modules(self, modules_to_deploy: List[str]) -> None:
         for module_name in modules_to_deploy:
             try:
-                # Standard module deployment for all modules including kubernetes
-                module_class = self.load_module(module_name)
+                # Verify module is enabled before attempting to load or deploy
                 module_config = self.config_manager.get_module_config(module_name)
-                module_config["compliance"] = self.init_config.compliance_config.model_dump()
+                if not module_config.get("enabled"):
+                    continue
 
-                module_instance = module_class(init_config=self.init_config)
-                result = module_instance.deploy(module_config)
+                # Only load module class if module is enabled
+                module_class = self.load_module(module_name)
+                if module_class:
+                    module_config["compliance"] = self.init_config.compliance_config.model_dump()
 
-                if result.success:
-                    self.modules_metadata[module_name] = result.metadata
-                    if module_name == "aws" and "k8s_provider" in result.metadata:
-                        self.k8s_provider = result.metadata["k8s_provider"]
-                else:
-                    raise ModuleDeploymentError(f"Module {module_name} deployment failed.")
+                    module_instance = module_class(init_config=self.init_config)
+                    result = module_instance.deploy(module_config)
+
+                    if result.success:
+                        self.modules_metadata[module_name] = result.metadata
+                        if module_name == "aws" and "k8s_provider" in result.metadata:
+                            self.k8s_provider = result.metadata["k8s_provider"]
+                    else:
+                        raise ModuleDeploymentError(f"Module {module_name} deployment failed.")
 
             except Exception as e:
                 raise ModuleDeploymentError(f"Error deploying module {module_name}: {str(e)}") from e
-
-    def deploy_k8s_submodule(self, submodule_name: str, submodule_config: Dict[str, Any]) -> None:
-        """Deploy a Kubernetes submodule."""
-        try:
-            # Load the submodule
-            if submodule_name == "prometheus":
-                module = __import__("modules.kubernetes.prometheus.deployment", fromlist=[""])
-                module_class = getattr(module, "PrometheusModule")
-            elif submodule_name == "flux":
-                module = __import__("modules.kubernetes.flux.deployment", fromlist=[""])
-                module_class = getattr(module, "FluxModule")
-            elif submodule_name == "crossplane":
-                module = __import__("modules.kubernetes.crossplane.deployment", fromlist=[""])
-                module_class = getattr(module, "CrossplaneModule")
-            else:
-                raise ValueError(f"Unknown kubernetes submodule: {submodule_name}")
-
-            # Initialize and configure the module
-            module_instance = module_class(init_config=self.init_config)
-            if self.k8s_provider:
-                module_instance.set_provider(KubernetesProvider(self.k8s_provider))
-
-            # Deploy the submodule
-            result = module_instance.deploy(submodule_config)
-            if result.success:
-                self.modules_metadata[f"kubernetes_{submodule_name}"] = result.metadata
-            else:
-                raise ModuleDeploymentError(f"Kubernetes submodule {submodule_name} deployment failed.")
-
-        except Exception as e:
-            raise ModuleDeploymentError(f"Error deploying kubernetes submodule {submodule_name}: {str(e)}")
-
-    def get_k8s_provider(self):
-        """Get the Kubernetes provider if available"""
-        return self.k8s_provider
 
     # Dynamically load module classes from modules/<module_name>/deployment.py
     # This allows us to maintain a shared interface for all modules while
@@ -89,38 +58,19 @@ class DeploymentManager:
     def load_module(self, module_name: str) -> ModuleInterface:
         """
         Dynamically load module classes from modules/<module_name>/deployment.py
+        Only if the module is enabled.
         """
         try:
-            if module_name == "kubernetes":
-                # Get kubernetes config to check which submodule to load
-                k8s_config = self.config_manager.get_module_config(module_name)
+            # Verify module is enabled before loading
+            module_config = self.config_manager.get_module_config(module_name)
+            if not module_config.get("enabled"):
+                return None
 
-                # Check for enabled submodules
-                # TODO: re-enable dynamic submodule loading without hardcoding submodule names
-                if k8s_config.get("prometheus", {}).get("enabled"):
-                    # Import and return Prometheus module
-                    module = __import__(f"modules.kubernetes.prometheus.deployment", fromlist=[""])
-                    module_class = getattr(module, "PrometheusModule")
-                    log.info(f"Successfully loaded kubernetes submodule: prometheus")
-                    return module_class
-                if k8s_config.get("flux", {}).get("enabled"):
-                    # Import and return Flux module
-                    module = __import__(f"modules.kubernetes.flux.deployment", fromlist=[""])
-                    module_class = getattr(module, "FluxModule")
-                    log.info(f"Successfully loaded kubernetes submodule: flux")
-                    return module_class
-                if k8s_config.get("crossplane", {}).get("enabled"):
-                    # Import and return Crossplane module
-                    module = __import__(f"modules.kubernetes.crossplane.deployment", fromlist=[""])
-                    module_class = getattr(module, "CrossplaneModule")
-                    log.info(f"Successfully loaded kubernetes submodule: crossplane")
-                    return module_class
-            else:
-                # Standard module loading
-                module = __import__(f"modules.{module_name}.deployment", fromlist=[""])
-                module_class = getattr(module, f"{module_name.capitalize()}Module")
-                log.info(f"Successfully loaded module: {module_name}")
-                return module_class
+            # Standard module loading
+            module = __import__(f"modules.{module_name}.deployment", fromlist=[""])
+            module_class = getattr(module, f"{module_name.capitalize()}Module")
+            log.info(f"Successfully loaded module: {module_name}")
+            return module_class
 
         except ImportError as e:
             log.error(f"Failed to load module {module_name}: {str(e)}")
