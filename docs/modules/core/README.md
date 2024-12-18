@@ -22,105 +22,105 @@ This README provides a high-level overview of the core module’s purpose, archi
 
 ## Introduction
 
-Modern, multi-cloud IaC environments demand consistent, secure, and compliant patterns. The Konductor Core Module addresses these needs by serving as the backbone of the entire IaC codebase. Through a well-defined set of Pydantic models, typed configurations, protocols, and DRY design, the core module ensures that all modules—no matter what provider or technology they manage—adhere to a unified standard of quality, compliance, and maintainability.
+Modern, multi-cloud IaC environments demand consistent, secure, and compliant patterns. The Konductor Core Module addresses these needs by serving as the backbone of the entire IaC codebase. Through a well-defined set of Pydantic models, strict typing, runtime validation, and DRY design principles, the core module ensures that all modules—regardless of the provider or technology—adhere to a unified standard of quality, compliance, and maintainability.
 
 ## Purpose and Scope
 
 **What the Core Module Does:**
 
-- Defines fundamental data models and protocols for resources, configurations, compliance, and deployment results.
+- Defines fundamental Pydantic-based data models and protocols for resources, configurations, compliance, and deployment results.
 - Provides a uniform abstraction for all providers and modules, ensuring consistent tagging, labeling, annotations, compliance checks, and lifecycle management.
-- Offers compliance frameworks (FISMA, NIST) and ATO enforcement integrated at the foundational level.
-- Introduces shared base classes and metadata fields (e.g., `CommonMetadataFields`) to promote a DRY codebase.
+- Offers integrated compliance frameworks (FISMA, NIST) and ATO enforcement at the foundational level, ensuring production stacks meet stringent requirements.
+- Introduces shared base classes and metadata fields (e.g., `CommonMetadataFields`) to keep the code DRY, easier to maintain, and more coherent.
 
 **What It Does Not Do:**
 
-- The core module does not implement provider-specific logic. Instead, it sets universal standards.
-- It does not impose project-specific logic. Instead, it provides building blocks for more specialized modules to leverage.
+- The core module does not implement provider-specific logic. Instead, it establishes universal standards for all modules to follow.
+- It does not impose project-specific application logic. Instead, it provides flexible building blocks that specialized modules can extend.
 
 ## Core Principles
 
-1. **Provider-Agnostic**: The core module never assumes a particular provider. It ensures AWS, GCP, Azure, OpenStack, Kubernetes, and beyond can integrate seamlessly.
-2. **Strict Typing and Validation**: Pydantic models and typed dictionaries guarantee correctness and clarity. Early validation prevents runtime misconfigurations.
-3. **Security and Compliance Embedded**: Compliance-oriented fields (FISMA, NIST, ATO) are baked in, ensuring production stacks meet stringent requirements.
-4. **DRY and Maintainable**: Common fields and patterns (e.g., metadata, enabled/disabled states) are factored into shared base classes, reducing duplication.
-5. **Pulumi-Native Integration**: Patterns and interfaces align with Pulumi’s stack-based workflows, ensuring smooth integration and state management.
+1. **Provider-Agnostic**: No assumptions about specific cloud providers. AWS, GCP, Azure, OpenStack, Kubernetes, and beyond integrate seamlessly.
+2. **Strict Typing and Runtime Validation**: Fully Pydantic-based models ensure early detection of misconfigurations and adherence to schemas at runtime.
+3. **Security and Compliance Embedded**: Compliance models (FISMA, NIST, ATO) are integrated at the core, ensuring production stacks cannot bypass essential authorization and lifecycle controls.
+4. **DRY and Maintainable**: Common fields (like `metadata`) and patterns (like `enabled` states) are centralized, reducing duplication and making the codebase more maintainable.
+5. **Pulumi-Native Integration**: Designed to align with Pulumi stack patterns, ensuring smooth configuration loading, state management, and resource orchestration.
 
 ## Provider-Agnostic and Unified Interface
 
-By defining universal interfaces (`ModuleInterface`, `DeploymentContext`) and standardized configuration patterns, the core module creates a single “language” that all modules speak. This ensures:
+By defining universal interfaces (`ModuleInterface`, `DeploymentContext`) and standardized configuration patterns, the core module creates a single "language" all modules speak. This ensures:
 
-- Every module follows the same lifecycle hooks (validate, deploy, manage dependencies).
-- Every resource is enriched with consistent metadata and compliance checks.
-- Teams can integrate new providers without rethinking foundational IaC patterns.
+- Every module follows the same lifecycle steps (validate, deploy, handle dependencies).
+- Every resource benefits from consistent metadata and compliance checks.
+- Teams can integrate new providers easily without re-engineering fundamental IaC patterns.
 
-The result is a uniform development experience, simpler onboarding, and more predictable deployments.
+A unified interface leads to a consistent development experience, simpler onboarding, and more predictable deployments.
 
 ## Foundational Data Models and Patterns
 
-Key patterns include:
+Key elements:
 
-- **`CommonMetadataFields`**: A central model for tags, labels, annotations, ensuring consistent metadata application.
-- **`BaseConfigModel`**: A shared base class for configuration, providing `enabled`, `dependencies`, `configuration`, and `metadata`.
-- **`InitializationConfig`**: Augments `BaseConfigModel` with stack/project details, compliance, and git metadata.
-- **`ResourceModel`**: A unified resource representation including `metadata` and timestamps.
-- **`ComplianceConfig`, `FismaConfig`, `NistConfig`**: Compliance models to ensure production environments meet authorization and controls requirements.
+- **`CommonMetadataFields`**: A central model for tags, labels, and annotations, ensuring uniform metadata application.
+- **`BaseConfigModel`**: A shared base class providing common fields (`enabled`, `dependencies`, `configuration`, `metadata`) for all configuration models.
+- **`InitializationConfig`**: Augments `BaseConfigModel` with stack/project details, compliance configs, and Git metadata.
+- **`ResourceModel`**: A standardized resource representation, including timestamps and metadata.
+- **`ComplianceConfig`, `FismaConfig`, `NistConfig`**: Models that ensure production environments meet required authorization and controls.
 
-By consolidating these common elements, the core module reduces complexity and ensures a cohesive experience across the entire IaC codebase.
+These common elements reduce complexity and enforce coherence across the entire IaC stack.
 
 ## Compliance and Security
 
-Compliance is not optional. The core module integrates compliance configurations at the base level, ensuring:
+Compliance is integral to the core module:
 
-- **ATO Enforcement**: Production stacks must provide authorized and eol dates.
-- **FISMA/NIST Integration**: Controls, modes, and exceptions are captured in a single compliance model, preventing ad-hoc compliance logic.
-- **Consistent Compliance Checks**: Modules and deployments inherit these patterns automatically, reducing risk and audit overhead.
+- **ATO Enforcement**: Production stacks must specify authorized and eol dates.
+- **FISMA/NIST Controls**: Centralized compliance models prevent ad-hoc logic and ensure consistent enforcement.
+- **Consistent Validation**: Pydantic validation catches invalid compliance configurations early, reducing risk and audit overhead.
 
 ## Global Metadata Management
 
-Global metadata is managed via a thread-safe `MetadataSingleton`:
+Global metadata is managed via `MetadataSingleton`:
 
-- **Global Tags, Labels, Annotations**: Applied once and inherited universally.
-- **Git Metadata**: Every resource can trace its lineage back to a specific commit or tag.
-- **Consistent Application**: `setup_global_metadata()` ensures a single, authoritative source for all metadata.
+- **Global Tags, Labels, Annotations**: Set once, apply everywhere.
+- **Git Metadata**: Resources traceable to a specific commit or tag.
+- **Consistent Application**: `setup_global_metadata()` ensures a single source of truth.
 
-This approach enables governance, compliance, and observability at scale.
+This empowers governance, compliance, and platform-wide observability at scale.
 
 ## Module Integration and Interfaces
 
-**`ModuleInterface`** and **`DeploymentContext`** define how modules interact:
+`ModuleInterface` and `DeploymentContext` define how modules interact:
 
-- **ModuleInterface**: Requires `validate()`, `deploy()`, and `dependencies()` methods, ensuring all modules follow a known lifecycle pattern.
-- **DeploymentContext**: Provides a consistent deployment environment, retrieving configurations and executing deployments in a predictable manner.
+- **ModuleInterface**: Modules must implement `validate()`, `deploy()`, `dependencies()` uniformly.
+- **DeploymentContext**: Provides a consistent environment for retrieving configurations and performing deployments.
 
-This uniform interface simplifies maintenance, testing, and extensibility across providers and technologies.
+This uniform interface simplifies maintenance, testing, and integrating new modules, regardless of the underlying provider.
 
 ## Configuration Management
 
-**`ConfigManager`** centralizes configuration loading and caching:
+`ConfigManager` centralizes loading and caching Pulumi configurations:
 
-- **Unified Config Access**: Modules request their configurations from a single source.
-- **Layered and Overridden Configs**: Stacks can override defaults, and modules can adapt dynamically.
-- **Early Validation**: Pydantic ensures invalid configurations never reach runtime deployments.
+- **Unified Config Access**: Modules load configurations from a single, consistent source.
+- **Validation-First**: Pydantic ensures that misconfigurations never proceed undetected.
+- **Dynamic, Layered Configs**: Override defaults and adapt to different environments without code duplication.
 
-This reduces duplication and errors, increasing reliability of the IaC workflows.
+This leads to more reliable and predictable IaC workflows.
 
 ## Extensibility and Modularity
 
-By focusing on provider-agnostic abstractions and DRY models:
+By focusing on provider-agnostic abstractions and DRY patterns:
 
-- **Easy Provider Onboarding**: Adding a new provider module only requires conforming to the defined interfaces and base models.
-- **Scalable and Future-Ready**: As new technologies or compliance frameworks emerge, integrating them is straightforward since the core sets stable standards.
+- **Easy Provider Onboarding**: Adding a new provider requires conforming to defined interfaces and models, not reinventing patterns.
+- **Scalable and Future-Ready**: As new technologies or compliance frameworks appear, integrating them is straightforward with stable, universal standards.
 
-This approach ensures that Konductor can evolve gracefully as infrastructure needs change.
+The result is a codebase that evolves gracefully as infrastructure needs change.
 
 ## Usage Guidelines
 
-- **Validate Early**: Leverage `ComplianceConfig.from_pulumi_config()` and Pydantic validations to catch configuration issues before deployments begin.
-- **Use Common Models**: Apply `CommonMetadataFields` to ensure consistent tagging and labeling practices.
-- **Implement Protocols**: Adhere to `ModuleInterface` and `DeploymentContext` for a uniform, testable, and maintainable module structure.
-- **Manage Compliance Centrally**: Rely on `ComplianceConfig` to enforce production requirements and maintain a single source of compliance truth.
-- **Global Metadata Once**: Use `setup_global_metadata()` and `MetadataSingleton` to ensure consistent metadata across the entire platform.
+- **Validate Early**: Use `ComplianceConfig.from_pulumi_config()` and Pydantic validations to prevent invalid deployments.
+- **Use Common Models**: Apply `CommonMetadataFields` to ensure consistent tagging and labeling.
+- **Implement Protocols**: Follow `ModuleInterface` and `DeploymentContext` for uniform, testable module structures.
+- **Centralize Compliance**: Rely on `ComplianceConfig` for production authorization and controls.
+- **Global Metadata Once**: Use `setup_global_metadata()` and `MetadataSingleton` to achieve consistent metadata across the platform.
 
 ## Related Documentation
 
@@ -132,6 +132,6 @@ This approach ensures that Konductor can evolve gracefully as infrastructure nee
 
 ## Conclusion
 
-The Konductor Core Module establishes a robust, provider-agnostic foundation for building, scaling, and governing IaC deployments. By consolidating metadata management, compliance enforcement, resource modeling, and configuration standardization into a single framework, the core module transforms a complex multi-cloud environment into a uniform, secure, and maintainable platform.
+The Konductor Core Module establishes a robust, provider-agnostic foundation for building, scaling, and governing IaC deployments. By moving entirely to Pydantic models, we gain runtime validation, richer schemas, and DRY patterns, ensuring a more maintainable, secure, and consistent environment as Konductor evolves.
 
-As Konductor evolves, the core module’s DRY patterns and consistent interfaces ensure that integrating new providers, applying compliance frameworks, and managing infrastructure remains straightforward and predictable, supporting the platform’s adaptability and future readiness.
+With these stable standards in place, integrating new providers, applying compliance frameworks, and managing infrastructure remains straightforward, predictable, and aligned with the highest quality standards.

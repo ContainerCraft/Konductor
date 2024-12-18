@@ -1,6 +1,8 @@
 # ./modules/aws/types/__init__.py
 """
 AWS Module Configuration Types
+
+This is still a large omnibus module for testing before splitting into submodules.
 """
 
 from .components.eks import (
