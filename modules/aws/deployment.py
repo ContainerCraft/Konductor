@@ -1,4 +1,10 @@
 # ./modules/aws/deployment.py
+"""
+AWS Module Deployment
+
+This module implements the AWS module interface and provides the deployment logic for AWS resources.
+"""
+
 from typing import Dict, Any, List
 import pulumi
 from pulumi import log

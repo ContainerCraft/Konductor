@@ -331,10 +331,3 @@ def generate_git_labels(git_info: Dict[str, str]) -> Dict[str, str]:
         "git.branch": git_info.get("branch_name", "unknown"),
         "git.repository": git_info.get("remote_url", "unknown"),
     }
-
-
-class AWSModuleConfig(BaseModel):
-    region: str = Field(..., description="AWS region to deploy resources")
-    access_key_id: str = Field(None, description="AWS access key ID")
-    secret_access_key: str = Field(None, description="AWS secret access key")
-    bucket_name: str = Field(..., description="Name of the S3 bucket to create")
