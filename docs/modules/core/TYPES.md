@@ -1,290 +1,246 @@
-# Core Module Types
+# Core Module Types (revision08)
 
-Welcome to the **Core Module Types** reference. This document provides a detailed explanation of the `core/types` module, which defines foundational data models, interfaces, and configurations used throughout the Konductor codebase. These types form the backbone of our Infrastructure as Code (IaC), enabling a consistent, secure, and maintainable approach to Platform Engineering with Pulumi.
+Welcome to the **Core Module Types** reference. This document provides a detailed explanation of the `core/types` module after the DRY-focused refactoring (revision08). The refactoring introduces common models to reduce duplication and clarifies responsibilities of each class and interface. These types serve as the foundational building blocks for Konductor's Infrastructure as Code (IaC) environment, ensuring consistency, security, compliance, and maintainability.
 
-This guide is suitable for engineers at all levels, from those new to the project and Pulumi, to experienced Staff and Principal-level engineers looking to leverage these abstractions effectively. By understanding these core types, you will be better equipped to design, implement, and extend the Konductor IaC to meet your own requirements.
+This guide is suitable for engineers at all levels. By understanding these core types, you can design, implement, and extend Konductor IaC confidently, leveraging Pulumi's capabilities and industry best practices.
 
 ## Table of Contents
 
 1. [Introduction](#introduction)
 2. [Core Principles and Conventions](#core-principles-and-conventions)
 3. [Exceptions](#exceptions)
-4. [Git Metadata: `GitInfo`](#git-metadata-gitinfo)
-5. [Compliance Configuration](#compliance-configuration)
-   - [Ownership and ATO Information](#ownership-and-ato-information)
-   - [FISMA and NIST Compliance](#fisma-and-nist-compliance)
-   - [Project Configuration](#project-configuration)
-   - [Creating Compliance Configurations from Pulumi](#creating-compliance-configurations-from-pulumi)
-6. [Resource and Configuration Base Types](#resource-and-configuration-base-types)
-   - [ResourceBase](#resourcebase)
-   - [ConfigBase](#configbase)
+4. [Metadata Models](#metadata-models)
+   - [CommonMetadataFields](#commonmetadatafields)
+   - [GitInfo](#gitinfo)
+5. [Compliance and Configuration Models](#compliance-and-configuration-models)
+   - [OwnershipInfo, AtoConfig, ProjectOwnership](#ownershipinfo-atoconfig-projectownership)
+   - [StackConfig (Compliance Project)](#stackconfig-compliance-project)
+   - [FismaConfig and NistConfig](#fismaconfig-and-nistconfig)
+   - [ComplianceConfig](#complianceconfig)
+   - [BaseConfigModel](#baseconfigmodel)
    - [InitializationConfig](#initializationconfig)
-   - [ModuleRegistry](#moduleregistry)
-   - [ModuleBase](#modulebase)
-7. [Module Deployment Results and Interfaces](#module-deployment-results-and-interfaces)
+   - [ModuleRegistry and ModuleBase](#moduleregistry-and-modulebase)
+6. [Resource and Deployment Models](#resource-and-deployment-models)
+   - [ResourceModel](#resourcemodel)
    - [ModuleDeploymentResult](#moduledeploymentresult)
-   - [DeploymentContext Protocol](#deploymentcontext-protocol)
-   - [ModuleInterface Protocol](#moduleinterface-protocol)
-8. [Metadata Singleton](#metadata-singleton)
-9. [Initialization Configuration Protocol: `InitConfig`](#initialization-configuration-protocol-initconfig)
-10. [Global Metadata Setup](#global-metadata-setup)
-11. [Configuration Management with `ConfigManager`](#configuration-management-with-configmanager)
-12. [Global Metadata and Stack Config Types](#global-metadata-and-stack-config-types)
+7. [Interfaces and Protocols](#interfaces-and-protocols)
+   - [DeploymentContext](#deploymentcontext)
+   - [ModuleInterface](#moduleinterface)
+8. [Global Metadata Management](#global-metadata-management)
+   - [MetadataSingleton](#metadatasingleton)
+   - [InitConfig Protocol and setup_global_metadata()](#initconfig-protocol-and-setup_global_metadata)
+9. [Configuration Management Utilities](#configuration-management-utilities)
+   - [ConfigManager](#configmanager)
+10. [Stack-Level Types](#stack-level-types)
     - [GlobalMetadata](#globalmetadata)
     - [SourceRepository](#sourcerepository)
-    - [StackConfig](#stackconfig)
+    - [StackConfig for Outputs](#stackconfig-for-outputs)
     - [StackOutputs](#stackoutputs)
     - [ModuleDefaults](#moduledefaults)
-    - [ResourceMetadata](#resourcemetadata)
-13. [Example Stack Outputs](#example-stack-outputs)
-14. [Best Practices and Usage Guidelines](#best-practices-and-usage-guidelines)
-15. [Conclusion](#conclusion)
-16. [Related Documentation](#related-documentation)
+11. [Best Practices and Usage Guidelines](#best-practices-and-usage-guidelines)
+12. [Conclusion](#conclusion)
+13. [Related Documentation](#related-documentation)
 
 ## Introduction
 
-The `core/types` module provides foundational data models essential for defining and managing infrastructure resources, configuration, compliance requirements, and module metadata within the Konductor platform. These types are implemented using Pythonic best practices, Pydantic models for validation, and Pulumi-native patterns for IaC. By leveraging these carefully curated types, teams can ensure that their deployments are secure, consistent, and compliant with organizational and industry standards.
+The `core/types` module defines a set of Pydantic models, TypedDicts, and Protocols that establish the core schema for configuration, compliance, resource metadata, and module lifecycle in Konductor's Pulumi-based IaC environment. This revision08 focuses on a DRY approach, reducing redundancy and consolidating common attributes into reusable models.
 
 ## Core Principles and Conventions
 
-- **Type Safety**: All types enforce strict typing with no use of `Any`, ensuring robust IDE support, static analysis, and reducing runtime errors.
-- **Pydantic Validation**: Use of Pydantic ensures that configuration and resource definitions are validated early, preventing incorrect deployments.
-- **Compliance and Security**: Compliance-oriented fields, such as ATO details and FISMA/NIST configurations, ensure that resources meet stringent security and governance requirements.
-- **Pulumi-Native Patterns**: Integration points and protocols are designed to fit into the Pulumi ecosystem, enabling state-based IaC workflows and stack configuration management.
-- **Modularity and Clarity**: Classes and interfaces are logically separated. For example, `ResourceBase` centralizes common resource attributes, and `InitializationConfig` standardizes how stacks initialize with required data.
+- **Strict Typing**: All models use strict typing, leveraging Pydantic and TypedDict for validation and clarity.
+- **Pulumi Alignment**: Models and interfaces integrate smoothly with Pulumi stack configurations and resource management patterns.
+- **Compliance and Security**: Compliance configurations (FISMA, NIST, ATO) are central. Production deployments enforce stricter requirements.
+- **DRY and Maintainable**: Common fields (e.g., tags, labels, annotations) and patterns (e.g., enabling/disabling modules) are factored into shared base models.
+- **No Hardcoded Secrets**: All sensitive data must be handled securely outside the code or through Pulumi secrets.
 
 ## Exceptions
 
-- **CoreError**: The base exception class for the core module.
-- **ModuleLoadError**: Raised when a module cannot be loaded due to configuration errors or missing dependencies.
+- **CoreError**: Base exception for the core module.
+- **ModuleLoadError**: Raised if a module cannot be loaded, aiding in clear error reporting and debugging.
 
-These exceptions help isolate and clearly communicate issues within the core module’s loading and configuration processes.
+## Metadata Models
 
-## Git Metadata: `GitInfo`
+### CommonMetadataFields
+
+**Class:** `CommonMetadataFields`
+Provides `tags`, `labels`, and `annotations` fields reused across various models, ensuring uniform application of metadata.
+
+### GitInfo
 
 **Class:** `GitInfo`
+Captures essential Git repository metadata (commit, branch, remote, optional release tag) at deployment time, allowing traceability of deployed code versions.
 
-Stores information about the Git repository state at deployment time:
+## Compliance and Configuration Models
 
-- **Fields:**
-  - `commit_hash`: The current Git commit hash of the deployed code.
-  - `branch_name`: The branch name at deployment time.
-  - `remote_url`: The remote repository URL.
+### OwnershipInfo, AtoConfig, ProjectOwnership
 
-**Use Case:**  
-Embed Git metadata into resource tags or stack outputs for traceability. For example, tagging resources with commit hashes can help identify which code version deployed a particular piece of infrastructure.
+- **OwnershipInfo** and **ProjectOwnership**: TypedDict structures defining contact and ownership details.
+- **AtoConfig**: Includes `authorized`, `eol`, and `last_touch` timestamps for production environments, ensuring no unapproved deployments.
 
-## Compliance Configuration
+### StackConfig (Compliance Project)
 
-Compliance is integral to the Konductor platform. The core module includes types dedicated to capturing compliance metadata from Pulumi stack configurations and embedding it into resource metadata.
+**Class:** `StackConfig` (within ComplianceConfig)
+Represents the project's environment configuration, production flags, ownership details, and ATO configuration. This ensures environment-specific compliance and governance.
 
-### Ownership and ATO Information
+### FismaConfig and NistConfig
 
-- **OwnershipInfo** and **ProjectOwnership**: Typed dictionaries defining ownership contact information for both owner and operations teams.
-- **AtoConfig**: Captures Authority to Operate (ATO) information, including `authorized`, `eol` (end-of-life), and `last_touch` timestamps.  
-  This ensures that production environments must have explicit authorization details before deployments proceed.
+**Classes:** `FismaConfig`, `NistConfig`
+Describe compliance levels and modes for FISMA and NIST frameworks. Enable or disable controls and handle exceptions. Together, they guide compliance-enforcing logic in the IaC pipelines.
 
-### FISMA and NIST Compliance
+### ComplianceConfig
 
-- **FismaConfig**: Describes the FISMA compliance level and mode (e.g., `moderate` level, `warn` mode).
-- **NistConfig**: Details NIST compliance controls, listing auxiliary controls and exceptions.
+**Class:** `ComplianceConfig`
+Holds the combined `StackConfig`, `FismaConfig`, and `NistConfig`. Provides a `from_pulumi_config()` method to build configurations directly from Pulumi stack data. If production, authorized/eol must be present; otherwise defaults apply.
 
-### Project Configuration
+### BaseConfigModel
 
-- **ProjectConfig**: Defines the environment (e.g., `prod-us-west`), production flag, ownership details, and providers used. This ensures clarity on which environment resources belong to and what compliance posture to enforce.
+**Class:** `BaseConfigModel`
+A base configuration model providing:
+- `enabled`: Whether a module or configuration set is active
+- `parent`: Parent module or resource reference
+- `dependencies`: A list of module dependencies
+- `configuration`: Arbitrary config dictionaries
+- `metadata`: `CommonMetadataFields` for consistent tagging and labeling
 
-### Creating Compliance Configurations from Pulumi
-
-**Class:** `ComplianceConfig`  
-Use the classmethod `from_pulumi_config()` to automatically instantiate a `ComplianceConfig` from stack configurations. If a production environment is detected, required fields (like `authorized`) must be present.
-
-This ensures that compliance is not optional. If required compliance data is missing, a default, well-defined compliance configuration is created and logged.
-
-## Resource and Configuration Base Types
-
-### ResourceBase
-
-**Class:** `ResourceBase`
-
-Defines the fundamental attributes of any infrastructure resource managed via Pulumi:
-
-- **name**: The resource’s logical name.
-- **urn**: The Pulumi URN (Uniform Resource Name) identifying the resource.
-- **id**: Provider-assigned ID.
-- **metadata**: Dict containing `tags`, `labels`, and `annotations`.
-- **created_at**: ISO timestamp of resource creation.
-
-By centralizing these fields, all resources gain consistent tagging and annotation capabilities, aiding governance, traceability, and observability.
-
-### ConfigBase
-
-**Class:** `ConfigBase`
-
-Provides common configuration fields for modules, including:
-
-- **enabled**: Whether the module or feature is active.
-- **parent** and **dependencies**: Hierarchy and dependency definition.
-- **configuration**: User-defined dictionary of config parameters.
-- **metadata**: Additional labels and annotations applied to the configuration.
+This base class minimizes duplication across various config models.
 
 ### InitializationConfig
 
 **Class:** `InitializationConfig`
+Extends `BaseConfigModel` with:
+- `pulumi_config`: Pulumi configuration
+- `stack_name`, `project_name`: Identifiers for stack and project
+- `global_depends_on`: Global resource dependencies
+- `git_info`: Git metadata
+- `compliance_config`: Compliance settings
+- `deployment_date_time`, `deployment_manager`: Deployment context details
 
-Extends `ConfigBase` to handle core stack initialization details:
+This ensures the core module initialization has all required info before any module deployments.
 
-- **pulumi_config**: Access to Pulumi configuration objects.
-- **stack_name** and **project_name**: Identifiers for the stack and project.
-- **global_depends_on**: A list of resources that must be deployed before this module.
-- **platform_providers**: References to cloud providers or other platforms.
-- **git_info** and **compliance_config**: Embeds Git and compliance data at initialization time.
-- **deployment_date_time** and **deployment_manager**: Track deployment context for auditing and integration with external systems.
+### ModuleRegistry and ModuleBase
 
-Validation ensures all configurations are dictionaries, preventing malformed inputs.
+**Classes:** `ModuleRegistry`, `ModuleBase`
+`ModuleRegistry` adds a required `name` field.
+`ModuleBase` defines a standard pattern for modules, ensuring `name`, `enabled`, `dependencies`, and `metadata` are uniformly managed.
 
-### ModuleRegistry
+## Resource and Deployment Models
 
-**Class:** `ModuleRegistry`
+### ResourceModel
 
-Records module registration info:
+**Class:** `ResourceModel`
+Represents a resource with:
+- `name`
+- `metadata` (via `CommonMetadataFields`)
+- `created_at`, `updated_at` timestamps
 
-- **name**, **parent**, **dependencies**: Describes how modules relate to each other within the stack.
-
-### ModuleBase
-
-**Class:** `ModuleBase`
-
-Represents deployable infrastructure units (modules):
-
-- **name**, **enabled**, **parent**, **dependencies**, **config**, **metadata**: Standard set of fields to manage lifecycle, dependencies, and configuration of modules.
-
-## Module Deployment Results and Interfaces
+This simplifies resource representation, ensuring that all resources follow a consistent metadata pattern.
 
 ### ModuleDeploymentResult
 
 **Class:** `ModuleDeploymentResult`
+Captures outcomes of a module deployment:
+- `config`: `ResourceModel` instances representing deployed configurations
+- `compliance`: Compliance/tracing info
+- `errors`: Any errors encountered
+- `metadata`: Additional deployment-level metadata
 
-Captures the outcome of deploying a module:
+This helps clients and consumers understand what changed during deployment, what compliance context applies, and any encountered issues.
 
-- **success**: Whether the deployment succeeded.
-- **config**: A list of `ResourceBase` configurations produced.
-- **compliance**: Compliance and traceability information.
-- **resources**: Mapping of resource identifiers to their instances.
-- **errors**: Any errors encountered during deployment.
-- **metadata**: Additional metadata about the deployment.
+## Interfaces and Protocols
 
-This structure helps downstream consumers understand what changed and what resources were created or updated.
+### DeploymentContext
 
-### DeploymentContext Protocol
+**Protocol:** `DeploymentContext`
+Defines the interface for executing deployments and retrieving the configuration model. This ensures modules can be deployed in a consistent manner regardless of underlying logic.
 
-**Interface:** `DeploymentContext`
+### ModuleInterface
 
-A protocol defining how to interact with the deployment environment:
+**Protocol:** `ModuleInterface`
+Defines minimal lifecycle methods for a module:
+- `validate()`: Validate its configuration
+- `deploy(ctx)`: Deploy using the given context
+- `dependencies()`: Declare module dependencies
 
-- `get_config() -> ConfigBase`: Retrieve configuration used during deployment.
-- `deploy() -> ModuleDeploymentResult`: Execute the deployment and return results.
+This common interface ensures a uniform pattern across all modules, simplifying integration and testing.
 
-This abstraction allows modules to work with various deployment contexts uniformly.
+## Global Metadata Management
 
-### ModuleInterface Protocol
-
-**Interface:** `ModuleInterface`
-
-Specifies the lifecycle methods for modules:
-
-- `validate_config()`, `validate_resources()`, `pre_deploy_check()`
-- `deploy(ctx: DeploymentContext) -> ModuleDeploymentResult`
-- `post_deploy_validation()`
-- `get_dependencies()`
-
-These methods ensure that modules follow a consistent pattern of validation, dependency checking, deployment, and post-deployment validation.
-
-## Metadata Singleton
+### MetadataSingleton
 
 **Class:** `MetadataSingleton`
+A thread-safe singleton providing a global store for tags, labels, annotations, and git metadata. `setup_global_metadata(init_config)` uses this to populate global metadata once, ensuring a single source of truth.
 
-A thread-safe global store for cross-module metadata, including global tags, labels, and annotations. This helps ensure consistent metadata application across modules, consolidating data like Git metadata, compliance info, and global annotations in one place.
+### InitConfig Protocol and setup_global_metadata()
 
-## Initialization Configuration Protocol: `InitConfig`
+**Protocol:** `InitConfig`
+Defines `project_name`, `stack_name`, `git_info`, and `metadata` needed to set global metadata.
+**Function:** `setup_global_metadata(init_config)`
+Merges provided metadata with git and project info, populating the `MetadataSingleton`.
 
-**Interface:** `InitConfig`
+## Configuration Management Utilities
 
-A protocol that defines the shape of initial configuration needed to set up global metadata. It includes `project_name`, `stack_name`, `git_info`, and `metadata`. The `setup_global_metadata()` function relies on this protocol to populate global metadata via `MetadataSingleton`.
-
-## Global Metadata Setup
-
-**Function:** `setup_global_metadata(init_config: InitConfig)`
-
-Populates global tags, labels, annotations, and git metadata by merging global context from `InitConfig`. This step standardizes all resources with consistent global metadata, aiding in compliance, governance, and traceability.
-
-## Configuration Management with `ConfigManager`
+### ConfigManager
 
 **Class:** `ConfigManager`
+Handles loading and caching of Pulumi configuration:
+- `get_config()`: Loads full stack config.
+- `get_module_config(module_name)`: Retrieves a module's config.
+- `get_enabled_modules()`: Lists modules that are enabled.
 
-Handles caching and retrieving Pulumi stack configuration:
+By centralizing config retrieval, `ConfigManager` reduces repeated code and improves maintainability.
 
-- `get_config()`: Retrieves the entire configuration.
-- `get_module_config(module_name)`: Gets configuration for a specific module.
-- `get_enabled_modules()`: Lists modules with `enabled = True`.
-
-This class supports dynamic and modular configuration, making it easy to load and adapt configurations across multiple modules and environments.
-
-## Global Metadata and Stack Config Types
+## Stack-Level Types
 
 ### GlobalMetadata
 
 **Class:** `GlobalMetadata`
-
-Encapsulates global resource tags, labels, and annotations applied at the stack level. This supports platform-wide governance and consistent labeling strategies.
+Represents global tags, labels, and annotations at the stack level. Supports platform-wide governance by applying consistent metadata.
 
 ### SourceRepository
 
 **Class:** `SourceRepository`
+Holds branch, commit, and remote URL (and optional tag) for auditing and rollback capabilities. Integrates with compliance and metadata to ensure full traceability of deployed code.
 
-Captures source control details (branch, commit, remote URL, and optional tag) for auditing and compliance. Useful for rollbacks, audits, and ensuring reproducible infrastructure states.
+### StackConfig for Outputs
 
-### StackConfig and StackOutputs
+**Note:** There are now two `StackConfig` concepts. One inside `ComplianceConfig.project` (representing compliance project environment), and one at the stack outputs level. For clarity:
+- `ComplianceConfig.project` uses `StackConfig` to define environment and ATO details.
+- `StackConfig` at the outputs level holds `compliance`, `metadata`, `source_repository`.
 
-**Classes:** `StackConfig` and `StackOutputs`
+This naming can be adjusted if desired. As is, it differentiates project compliance config (internal) from the top-level stack outputs `StackConfig`.
 
-- **StackConfig**: Combines `compliance`, `metadata`, `source_repository`, and other configuration details into a coherent top-level model representing the entire stack’s configuration.
-- **StackOutputs**: Represents the final aggregated outputs after a deployment, potentially including `secrets` for sensitive data storage. This can be shared with other teams, CI/CD pipelines, or auditing tools.
+### StackOutputs
+
+**Class:** `StackOutputs`
+Combines:
+- `stack`: A `StackConfig` with compliance, metadata, and source repository details
+- `secrets`: Optional sensitive data
+
+This final aggregation can be shared with other systems or teams.
 
 ### ModuleDefaults
 
 **Class:** `ModuleDefaults`
-
-Specifies a baseline configuration for modules, providing default `enabled` and `config` values. Useful for ensuring a consistent starting point for new modules.
-
-### ResourceMetadata
-
-**Class:** `ResourceMetadata`
-
-Extends `ResourceBase` to add fields like `tags`, `labels`, `annotations`, and `updated_at`. This ensures resources not only have creation timestamps but can also track updates and extended metadata easily.
-
-## Example Stack Outputs
-
-The provided `stack_outputs.json` exemplifies how all these configuration and metadata constructs come together in a final stack output. Compliance data, global metadata, source repository information, and module-specific details appear harmoniously, offering deep visibility and full traceability into your deployed infrastructure.
+Defines a baseline configuration (e.g., `enabled`, `config`) that modules can inherit. Ensures new modules have a consistent starting point.
 
 ## Best Practices and Usage Guidelines
 
-- **Always Validate Configurations**: Use the `from_pulumi_config()` methods and Pydantic validation to catch errors early.
-- **Tagging and Labeling**: Leverage `MetadataSingleton` and `GlobalMetadata` to ensure consistent labeling for governance and compliance.
-- **Keep Modules Small and Focused**: `ModuleBase` and related interfaces encourage modular design. Keep modules focused on specific tasks.
-- **Regularly Update Compliance Data**: Update `ComplianceConfig` as regulatory requirements change, ensuring continuous compliance.
-- **Embrace Protocols**: `ModuleInterface` and `DeploymentContext` provide patterns that ensure modules are easy to test, mock, and integrate.
+- **Validate Early**: Use `from_pulumi_config()` methods and Pydantic validation to prevent malformed deployments.
+- **Embrace Common Models**: Leverage `CommonMetadataFields` to avoid duplicating metadata fields across models.
+- **Stick to Protocols**: Implement `ModuleInterface` and use `DeploymentContext` to ensure modules are deployable in a uniform manner.
+- **Centralize Compliance**: Maintain compliance via `ComplianceConfig`, ensuring production stacks meet authorization and expiration requirements.
+- **Utilize `MetadataSingleton`**: Set global metadata once, ensuring a single, authoritative source for tagging and labeling.
 
 ## Conclusion
 
-The `core/types` module is the cornerstone for building a secure, compliant, and maintainable IaC ecosystem within the Konductor platform. By understanding and using these types, you empower your team to deliver high-quality, enterprise-grade infrastructure consistently and transparently.
+The revision08 `core/types` module presents a cleaner, DRY, and more maintainable type system for Konductor IaC. By consolidating common fields, standardizing compliance and resource models, and leveraging protocols for modules and deployment contexts, this approach ensures a robust foundation that scales with complexity and supports multi-cloud environments gracefully.
 
-Whether you are a Junior Engineer just starting out, or a Principal Engineer leading large-scale initiatives, these core types enable a unified approach to infrastructure management that is both accessible and powerful.
+Through these models, teams can confidently manage infrastructure configurations, apply compliance and metadata consistently, and integrate smoothly with Pulumi and other modules.
 
 ## Related Documentation
 
 - [Developer Guide](../developer_guide/README.md)
-- [Pulumi Python Development Standards (pulumi-python.md)](../docs/developer_guide/pulumi-python.md)
+- [Pulumi Python Development Standards (pulumi-python.md)](../developer_guide/pulumi-python.md)
 - [Types Hierarchy Guide](../developer_guide/Types_Hierarchy.md)
 - [Documentation Style Guide](../developer_guide/documentation.md)
 - [Contribution Guidelines](../contribution_guidelines.md)
-
