@@ -1,4 +1,5 @@
 # ./modules/core/git.py
+
 """
 Git Utilities Module
 
@@ -26,16 +27,13 @@ from .types import GitInfo
 
 def get_latest_semver_tag(repo: Repo) -> Optional[str]:
     """
-    Retrieves the latest semantic version tag from a Git repository.
+    Retrieves the latest semantic version tag from a Git repository if the current commit is tagged.
 
     Args:
         repo: GitPython Repo object
 
     Returns:
-        Optional[str]: Latest semantic version tag or None if no valid tags found.
-
-    Raises:
-        GitCommandError: If there's an error accessing Git tags
+        Optional[str]: Latest semantic version tag or None if current commit is not tagged.
     """
     try:
         # Filter and sort tags that are valid semver
@@ -69,7 +67,14 @@ def get_latest_semver_tag(repo: Repo) -> Optional[str]:
 
 def get_remote_url() -> str:
     """
-    Retrieves the remote URL of a Git repository using multiple methods.
+    Retrieves the remote URL of the current Git repository trying via multiple methods.
+
+    Attempt Strategy & Priority:
+    1. Use GitPython Repo object
+    2. Use git command `git config --get remote.origin.url`
+    3. Use `git remote get-url origin`
+    4. Use environment variables
+    5. Try reading .git/config file directly
 
     Returns:
         str: Remote URL or 'unknown' if not found

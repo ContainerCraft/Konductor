@@ -16,6 +16,7 @@ Assistant Behavior
 - Do ask questions if you have no way of solving a problem without outside help.
 
 Development Philosophy
+- Honor code comments, TODO notes, reasoning, and explanations.
 - Quality over quantity: maintain expert code quality, completeness, and compliance.
 - Implement IaC with strict type safety, cloud-native patterns, and Pulumi best practices.
 - Security, compliance, maintainability, and usability are paramount.

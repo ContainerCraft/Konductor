@@ -3,6 +3,15 @@
 AWS Module Configuration Types
 """
 
+from .components.eks import (
+    NetworkingConfig,
+    EksNodeGroupConfig,
+    EksClusterConfig,
+    EksConfig,
+    NodeGroupConfig,
+    ClusterConfig,
+)
+
 from .base import (
     IAMUserConfig,
     NetworkConfig,
@@ -13,17 +22,6 @@ from .base import (
     AWSGlobalMetadata,
     TenantAccountConfig,
     AWSProviderMetadata,
-    EksNodeGroupConfig,
-    EksClusterConfig,
-)
-
-from .components.eks import (
-    NetworkingConfig,
-    EksNodeGroupConfig as EksComponentNodeGroupConfig,
-    EksClusterConfig as EksComponentClusterConfig,
-    EksConfig as EksComponentConfig,
-    NodeGroupConfig,
-    ClusterConfig,
 )
 
 __all__ = [
@@ -39,9 +37,7 @@ __all__ = [
     "EksNodeGroupConfig",
     "EksClusterConfig",
     "NetworkingConfig",
-    "EksComponentNodeGroupConfig",
-    "EksComponentClusterConfig",
-    "EksComponentConfig",
+    "EksConfig",
     "NodeGroupConfig",
     "ClusterConfig",
 ]

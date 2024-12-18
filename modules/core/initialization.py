@@ -1,4 +1,5 @@
 # ./modules/core/initialization.py
+
 """
 Pulumi Initialization Module
 
@@ -40,7 +41,7 @@ def initialize_pulumi() -> InitializationConfig:
         # Get stack and project names from Pulumi
         stack_name = get_stack()
         project_name = get_project()
-        log.info(f"Initializing Pulumi project: {project_name}, stack: {stack_name}")
+        log.info(f"Initializing project: [{project_name}], stack: [{stack_name}]")
 
         # Get compliance config
         compliance_config = ComplianceConfig.from_pulumi_config(pulumi_config, program_start_time)
@@ -58,7 +59,6 @@ def initialize_pulumi() -> InitializationConfig:
             pulumi_config=pulumi_config,
             stack_name=stack_name,
             project_name=project_name,
-            default_versions={},
             git_info=collect_git_info(),
             metadata=metadata,
             deployment_date_time=program_start_time.isoformat(),
@@ -69,7 +69,7 @@ def initialize_pulumi() -> InitializationConfig:
         from modules.core.deployment import DeploymentManager
         init_config.deployment_manager = DeploymentManager(init_config, pulumi_config)
 
-        log.info(f"Pulumi initialization completed successfully at {program_start_time}")
+        log.info(f"Initialization time: [{program_start_time}]")
         return init_config
 
     except Exception as e:

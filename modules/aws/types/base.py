@@ -5,10 +5,10 @@ Base AWS Types implemented in the AWS module.
 
 from __future__ import annotations
 from typing import List, Dict, Optional, Any, TypedDict
-import pulumi_aws as aws
 from pydantic import BaseModel, Field, validator
-from ..core.types import ComplianceConfig, GlobalMetadata
-from .eks.types import EksConfig
+from modules.core import ComplianceConfig, GlobalMetadata
+from pulumi_aws import get_caller_identity
+from .components.eks import EksConfig as EksComponentConfig
 
 
 class IAMUserConfig(BaseModel):
@@ -83,7 +83,7 @@ class AWSConfig(BaseModel):
     security: SecurityConfig = Field(default_factory=SecurityConfig)
     compliance: ComplianceConfig = Field(default_factory=ComplianceConfig)
     tags: Dict[str, str] = Field(default_factory=dict)
-    eks: Optional[EksConfig] = Field(default=None)
+    eks: Optional[EksComponentConfig] = Field(default=None)
 
     @validator("region")
     def validate_region(cls, v):
@@ -121,7 +121,7 @@ class AWSGlobalMetadata(GlobalMetadata):
 
 
 def collect_module_metadata() -> AWSGlobalMetadata:
-    caller_identity = aws.get_caller_identity()
+    caller_identity = get_caller_identity()
 
     return AWSGlobalMetadata(
         aws_account_id=caller_identity.account_id,

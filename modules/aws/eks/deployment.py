@@ -9,7 +9,7 @@ import json
 
 from .iam import IamRoleManager
 from .networking import NetworkManager
-from .types import EksConfig, EksClusterConfig, EksNodeGroupConfig, ClusterConfig, NodeGroupConfig
+from ..types.components.eks import EksConfig, ClusterConfig, NodeGroupConfig
 
 
 class EksManager:

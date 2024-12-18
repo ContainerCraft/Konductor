@@ -1,4 +1,5 @@
 # ./modules/core/utils.py
+
 """
 Utility Functions Module
 
@@ -20,6 +21,7 @@ from pulumi import (
 
 def set_resource_metadata(
     metadata: Dict[str, Any],
+    global_tags: Dict[str, str],
     global_labels: Dict[str, str],
     global_annotations: Dict[str, str],
 ) -> Dict[str, Any]:
@@ -27,12 +29,18 @@ def set_resource_metadata(
     Update the metadata of a resource with global labels and annotations.
 
     This function modifies the provided metadata dictionary by adding or updating
-    its 'labels' and 'annotations' fields with the specified global labels and
+    its 'tags', 'labels', and 'annotations' fields with the specified global labels and
     annotations. This is a base implementation and can be extended for
     provider-specific requirements.
 
+    Global tags, labels, and annotations are applied to all resources in the stack by
+    merging the global metadata with module and submodule specific metadata.
+
+    Provider-specific implementations should conform with provider module encapsulation.
+
     Args:
         metadata (Dict[str, Any]): The metadata dictionary to be updated.
+        global_tags (Dict[str, str]): A dictionary of global tags to apply.
         global_labels (Dict[str, str]): A dictionary of global labels to apply.
         global_annotations (Dict[str, str]): A dictionary of global annotations to apply.
 
@@ -40,22 +48,26 @@ def set_resource_metadata(
         Dict[str, Any]: The updated metadata dictionary with applied labels and annotations.
     """
     if isinstance(metadata, dict):
+        metadata.setdefault("tags", {}).update(global_tags)
         metadata.setdefault("labels", {}).update(global_labels)
         metadata.setdefault("annotations", {}).update(global_annotations)
     return metadata
 
 
 def generate_global_transformations(
-    global_labels: Dict[str, str], global_annotations: Dict[str, str]
+    global_tags: Dict[str, str],
+    global_labels: Dict[str, str],
+    global_annotations: Dict[str, str],
 ) -> None:
     """
     Register global transformations to apply consistent metadata across all Pulumi resources.
 
     This function sets up a transformation that will be applied to every Pulumi resource
-    in the stack. It ensures that each resource has the specified global labels and
-    annotations in its metadata, promoting uniformity and ease of management.
+    in the stack. It ensures that each resource has the specified global labels,
+    annotations, and tags in its metadata, promoting uniformity and ease of management.
 
     Args:
+        global_tags (Dict[str, str]): A dictionary of global tags to apply to all resources.
         global_labels (Dict[str, str]): A dictionary of global labels to apply to all resources.
         global_annotations (Dict[str, str]): A dictionary of global annotations to apply to all resources.
     """
@@ -81,12 +93,15 @@ def generate_global_transformations(
         try:
             if "metadata" in props:
                 set_resource_metadata(
-                    props["metadata"], global_labels, global_annotations
+                    props["metadata"], global_tags, global_labels, global_annotations
                 )
             elif "spec" in props and isinstance(props["spec"], dict):
                 if "metadata" in props["spec"]:
                     set_resource_metadata(
-                        props["spec"]["metadata"], global_labels, global_annotations
+                        props["spec"]["metadata"],
+                        global_tags,
+                        global_labels,
+                        global_annotations,
                     )
 
             return ResourceTransformationResult(props, args.opts)
@@ -111,3 +126,19 @@ def apply_tags(resource, tags: dict):
     """
     if hasattr(resource, "tags"):
         resource.tags.update(tags)
+
+
+def apply_labels(resource, labels: dict):
+    """
+    Apply labels to a resource if it supports labeling.
+    """
+    if hasattr(resource, "labels"):
+        resource.labels.update(labels)
+
+
+def apply_annotations(resource, annotations: dict):
+    """
+    Apply annotations to a resource if it supports annotations.
+    """
+    if hasattr(resource, "annotations"):
+        resource.annotations.update(annotations)

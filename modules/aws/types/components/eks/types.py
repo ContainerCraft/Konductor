@@ -22,7 +22,7 @@ class NetworkingConfig:
 class EksNodeGroupConfig:
     """Configuration for EKS node groups."""
 
-    name: str = "default"  # Default name if none provided
+    name: str = "default"
     instance_types: List[str] = field(default_factory=lambda: ["t3.medium"])
     scaling_config: Dict[str, int] = field(
         default_factory=lambda: {
@@ -39,8 +39,8 @@ class EksNodeGroupConfig:
 class EksClusterConfig:
     """Configuration for individual EKS cluster."""
 
-    name: str  # Required field
-    version: str = "1.29"  # Default to latest supported version
+    name: str
+    version: str = "1.29"
     node_groups: List[EksNodeGroupConfig] = field(default_factory=list)
     endpoint_private_access: bool = True
     endpoint_public_access: bool = True
@@ -48,7 +48,6 @@ class EksClusterConfig:
     tags: Optional[Dict[str, str]] = field(default_factory=dict)
 
     def __post_init__(self):
-        # Ensure at least one node group exists with defaults
         if not self.node_groups:
             self.node_groups = [EksNodeGroupConfig(name=f"{self.name}-default")]
 
@@ -61,12 +60,10 @@ class EksConfig:
     clusters: List[EksClusterConfig] = field(default_factory=list)
 
     def __post_init__(self):
-        # Validate cluster configurations
         if self.enabled and not self.clusters:
             raise ValueError("EKS is enabled but no clusters are configured")
 
 
-# Internal configurations used by the EKS manager
 @dataclass
 class NodeGroupConfig:
     """Internal node group configuration."""

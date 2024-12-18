@@ -9,15 +9,15 @@
                 "ownership": {
                     "owner": {
                         "contacts": [
-                            "seti2@nasa.gov",
-                            "alien51@nasa.gov"
+                            "seti2@haha.science.gg",
+                            "alien51@haha.science.gg"
                         ],
                         "name": "proj123-team-orl2819"
                     },
                     "operations": {
                         "contacts": [
-                            "scip@nasa.gov",
-                            "boberta@nasa.gov"
+                            "scip@haha.science.gg",
+                            "boberta@haha.science.gg"
                         ],
                         "name": "proj123-ops-bc862735"
                     }
@@ -76,7 +76,7 @@
             "Labels": {
                 "production": "true",
                 "project": "SCIP_Ops",
-                "managedBy": "NASA_SCIP_OPERATIONS",
+                "managedBy": "OpsTeam_PROD_OPERATIONS",
             },
             "Annotations": {
                 "production": "true",

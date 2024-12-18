@@ -5,11 +5,16 @@ from pulumi import log
 import pulumi_aws as aws
 from pulumi import ResourceOptions
 
-from modules.core.interfaces import ModuleInterface, ModuleDeploymentResult
-from modules.core.types import InitializationConfig
+from modules.core import (
+    ModuleInterface,
+    ModuleDeploymentResult,
+    InitializationConfig,
+    collect_global_metadata,
+    collect_module_metadata,
+)
+
 from .provider import AWSProvider
 from .types import AWSConfig
-from modules.core.stack_outputs import collect_global_metadata, collect_module_metadata
 from .eks.deployment import EksManager
 from modules.kubernetes import KubernetesProviderRegistry
 
@@ -39,6 +44,14 @@ class AwsModule(ModuleInterface):
     def deploy(self, config: Dict[str, Any]) -> ModuleDeploymentResult:
         """Deploy AWS infrastructure."""
         try:
+            # Early return if AWS is disabled
+            if not config.get("enabled", True):
+                log.info("AWS module is disabled - skipping deployment")
+                return ModuleDeploymentResult(
+                )
+
+            log.info("Starting AWS module deployment")
+
             # Access init_config from the instance if necessary
             init_config = self.init_config
 
@@ -50,8 +63,8 @@ class AwsModule(ModuleInterface):
                 config = {}
 
             # Get AWS configuration from Pulumi config if not provided
-            pulumi_config = pulumi.Config()
-            aws_config_obj = pulumi_config.get_object("aws") or {}
+            pulumi_config = pulumi.Config("aws")
+            aws_config_obj = pulumi_config.get_object("") or {}
             config = {**aws_config_obj, **config}
 
             # Parse and validate config

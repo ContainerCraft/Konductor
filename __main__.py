@@ -33,7 +33,7 @@ def main() -> None:
 
         # Deploy Modules
         if modules_to_deploy:
-            log.info(f"Deploying modules: {modules_to_deploy}")
+            log.info(f"Deploying modules: {', '.join(modules_to_deploy)}")
             deployment_manager = DeploymentManager(init_config, config_manager)
             deployment_manager.deploy_modules(modules_to_deploy)
 

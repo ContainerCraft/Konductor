@@ -1,13 +1,15 @@
 # ./modules/core/deployment.py
+
 """
 Core module deployment implementation.
 """
-from typing import List, Any, Dict
+
+from typing import List
 from pulumi import log
 
 from modules.core.types import InitializationConfig
 from modules.core.interfaces import ModuleInterface
-from modules.core.exceptions import ModuleDeploymentError
+from modules.core.config import ConfigManager
 
 
 class DeploymentManager:
@@ -20,45 +22,44 @@ class DeploymentManager:
     for use in downstream modules or external business logic and analytics systems.
     """
 
-    def __init__(self, init_config: InitializationConfig, config_manager: Any):
+    def __init__(self, init_config: InitializationConfig, config_manager: ConfigManager):
         self.init_config = init_config
         self.config_manager = config_manager
         self.modules_metadata = {}
 
-    def deploy_modules(self, modules_to_deploy: List[str]) -> None:
-        for module_name in modules_to_deploy:
+    def deploy_modules(self, modules: List[str]) -> None:
+        """Deploy enabled modules."""
+        for module_name in modules:
             try:
-                # Verify module is enabled before attempting to load or deploy
+                # Get module config
                 module_config = self.config_manager.get_module_config(module_name)
-                if not module_config.get("enabled"):
+
+                # Skip if module is explicitly disabled
+                if not module_config.get("enabled", True):
+                    log.info(f"Module {module_name} is disabled - skipping")
                     continue
 
-                # Only load module class if module is enabled
-                module_class = self.load_module(module_name)
-                if module_class:
-                    module_config["compliance"] = self.init_config.compliance_config.model_dump()
-
-                    module_instance = module_class(init_config=self.init_config)
-                    result = module_instance.deploy(module_config)
-
-                    if result.success:
-                        self.modules_metadata[module_name] = result.metadata
-                        if module_name == "aws" and "k8s_provider" in result.metadata:
-                            self.k8s_provider = result.metadata["k8s_provider"]
-                    else:
-                        raise ModuleDeploymentError(f"Module {module_name} deployment failed.")
+                # Load and deploy module
+                module = self.load_module(module_name)
+                if module:
+                    self._deploy_module(module, module_config)
 
             except Exception as e:
-                raise ModuleDeploymentError(f"Error deploying module {module_name}: {str(e)}") from e
+                log.error(f"Failed to deploy module {module_name}: {str(e)}")
+                raise
 
-    # Dynamically load module classes from modules/<module_name>/deployment.py
-    # This allows us to maintain a shared interface for all modules while
-    # still allowing each module to be implemented independently
-    # (e.g. AWS, GCP, Azure, Kubernetes, etc.)
+    # Dynamically load module interface classes from modules/<module_name>/types/__init__.py
+    # Dynamically discover module entrypoints from modules/<module_name>/deployment.py
+    # This allows for a shared common dynamic discovery and deployment interface for all modules while
+    # enabling each module to be loosely coupled, have full autonomy and provenance over module configuration,
+    # defaults, and implementation across all cloud providers (e.g. AWS, GCP, Azure, Kubernetes, OpenStack, DigitalOcean, Hetzner, etc.)
     def load_module(self, module_name: str) -> ModuleInterface:
         """
-        Dynamically load module classes from modules/<module_name>/deployment.py
-        Only if the module is enabled.
+        Dynamically discover and load module interface classes from modules/<module_name>/types/__init__.py
+        Dynamically load module entrypoint from modules/<module_name>/deployment.py
+        Support checking module and submodule enabled statuses.
+        Load module only if the module is enabled.
+        Returns the module interface class or None if the module is not enabled.
         """
         try:
             # Verify module is enabled before loading
@@ -67,6 +68,8 @@ class DeploymentManager:
                 return None
 
             # Standard module loading
+            # TODO: Implement dynamic module discovery and loading.
+            # TODO: Implement support for module and submodule enabled checking.
             module = __import__(f"modules.{module_name}.deployment", fromlist=[""])
             module_class = getattr(module, f"{module_name.capitalize()}Module")
             log.info(f"Successfully loaded module: {module_name}")
@@ -78,26 +81,3 @@ class DeploymentManager:
         except Exception as e:
             log.error(f"Failed to load module {module_name}: {str(e)}")
             raise
-
-    def register_kubernetes_provider(
-        self,
-        provider_id: str,
-        provider: Any,
-        cluster_name: str,
-        platform: str,
-        environment: str,
-        region: str,
-        metadata: Dict[str, Any] = None,
-        make_default: bool = False
-    ) -> None:
-        """Register a kubernetes provider."""
-        self.k8s_registry.register_provider(
-            provider_id=provider_id,
-            provider=provider,
-            cluster_name=cluster_name,
-            platform=platform,
-            environment=environment,
-            region=region,
-            metadata=metadata,
-            make_default=make_default
-        )

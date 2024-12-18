@@ -1,6 +1,20 @@
-import pulumi
+# ./modules/core/stack_outputs.py
+
+"""
+Stack Outputs Module
+
+This module collects and assembles stack outputs for `pulumi.export`.
+
+TODO: Develop a comprehensive strategy to centralize and maintain schema for pulumi
+stack config inputs, and pulumi stack outputs spec. Currently the spec is
+scattered across the codebase in types, validators, functions, modules, docs, and config.
+BLOCKER: We need a comprehensive understanding of the spec before we can design
+a comprehensive solution for stack config inputs and pulumi.export stack outputs.
+"""
 
 from typing import Dict, Any
+
+import pulumi
 
 from .types import GlobalMetadata
 from modules.core.git import collect_git_info

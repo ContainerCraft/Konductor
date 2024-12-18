@@ -141,6 +141,15 @@ class KubernetesModule(ModuleInterface):
     def deploy(self, config: Dict[str, Any]) -> ModuleDeploymentResult:
         """Deploy Kubernetes resources to available clusters."""
         try:
+            # Early return if kubernetes is disabled
+            if not config.get("enabled", False):
+                log.info("Kubernetes module is disabled - skipping deployment")
+                return ModuleDeploymentResult(
+                    success=True,
+                    version="0.0.0",
+                    metadata={"status": "disabled"}
+                )
+
             providers = self.registry.list_providers()
 
             if not providers:
