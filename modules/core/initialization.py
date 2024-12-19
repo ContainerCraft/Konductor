@@ -11,8 +11,13 @@ and initializing the Pulumi runtime environment.
 from pulumi import Config, get_stack, get_project, log
 from datetime import datetime, timezone
 
-from modules.core.git import collect_git_info
-from .types import ComplianceConfig, InitializationConfig
+from .types import (
+    InitializationConfig,
+    ComplianceConfig,
+    CommonMetadataFields,
+    MetadataSingleton,
+)
+from .git import collect_git_info
 
 
 def initialize_pulumi() -> InitializationConfig:
@@ -44,15 +49,23 @@ def initialize_pulumi() -> InitializationConfig:
         log.info(f"Initializing project: [{project_name}], stack: [{stack_name}]")
 
         # Get compliance config
-        compliance_config = ComplianceConfig.from_pulumi_config(pulumi_config, program_start_time)
+        compliance_config = ComplianceConfig.from_pulumi_config(
+            pulumi_config,
+            program_start_time
+        )
 
         # Store compliance config in singleton
-        from modules.core.metadata import MetadataSingleton
-
-        MetadataSingleton().set_module_metadata("compliance", compliance_config.model_dump())
+        MetadataSingleton().set_module_metadata(
+            "compliance",
+            compliance_config.model_dump()
+        )
 
         # Initialize default metadata structure
-        metadata = {"labels": {}, "annotations": {}, "timestamps": {"last_touch": program_start_time.isoformat()}}
+        metadata = CommonMetadataFields(
+            tags={},
+            labels={},
+            annotations={},
+        )
 
         # Create the initialization config
         init_config = InitializationConfig(
@@ -63,11 +76,8 @@ def initialize_pulumi() -> InitializationConfig:
             metadata=metadata,
             deployment_date_time=program_start_time.isoformat(),
             compliance_config=compliance_config,
+            enabled=True,  # Base config is always enabled
         )
-
-        # Create deployment manager and attach it to init_config
-        from modules.core.deployment import DeploymentManager
-        init_config.deployment_manager = DeploymentManager(init_config, pulumi_config)
 
         log.info(f"Initialization time: [{program_start_time}]")
         return init_config

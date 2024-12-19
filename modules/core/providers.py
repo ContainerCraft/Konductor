@@ -6,18 +6,21 @@ Contains minimum viable global provider registry for modules to register and ret
 platform providers for chaining together module deployments and supporting downstream
 platform provider dependencies.
 
-TODO: Develop an agnostic, extensible, intuitive, modular, and scalable provider registry architecture and implementation strategy.
-TODO: Implement provider agnostic interface for modules to register and retrieve providers.
-TODO: Implement AWS module and Kubernetes module provider registry publishing and retrival utilizing the provider agnostic interface.
+TODO: Develop an agnostic, extensible, intuitive, modular, and scalable provider
+registry architecture and implementation strategy.
+TODO: Implement provider agnostic interface for modules to register and retrieve
+providers globally.
+TODO: Implement AWS module and Kubernetes module provider registry publishing and
+retrieval utilizing the provider agnostic interface.
 """
 
 from typing import Any, Dict
 
 
-# TODO: Evaluate if core module should be responsible for registering Kubernetes providers.
-# RECOMMEND: Kubernetes module should be responsible for registering Kubernetes providers.
-# CONSIDER: Core module may need a global provider agnostic registry for modules to registr
-# platform providers for use in downstream modules.
+# TODO: Evaluate if core module should be registering Kubernetes providers.
+# RECOMMEND: Kubernetes module should be registering Kubernetes providers.
+# CONSIDER: Core module may need a global provider agnostic registry for modules to
+# register and retrieve platform providers for use in downstream modules.
 def register_kubernetes_provider(
     self,
     provider_id: str,

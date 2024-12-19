@@ -2,7 +2,8 @@
 """
 AWS Module Deployment
 
-This module implements the AWS module interface and provides the deployment logic for AWS resources.
+This module implements the AWS module interface and provides the AWS Module deployment
+logic.
 """
 
 from typing import Dict, Any, List

@@ -7,7 +7,7 @@ This enhances runtime validation, consistency, and the ability to leverage Pydan
 advanced features (validation, defaults, and type conversion) throughout the codebase.
 
 Changes from previous revision:
-- Converted OwnershipInfo, AtoConfig, ProjectOwnership from TypedDict to Pydantic models.
+- Converted OwnershipInfo, AtoConfig, ProjectOwnership from TypedDict to Pydantic models
 - Ensured compliance and project config classes now consistently use Pydantic models.
 - Maintained DRY principles, strict typing, and compliance/security considerations.
 
@@ -26,7 +26,7 @@ This remains a large omnibus module for testing before splitting into submodules
 
 from datetime import datetime, timezone, timedelta
 from threading import Lock
-from typing import Dict, List, Optional, Union, Protocol, ClassVar, cast
+from typing import Dict, List, Optional, Union, Protocol, ClassVar, cast, Any
 from pydantic import BaseModel, Field, validator, ConfigDict
 import pulumi
 from pulumi import Resource, log
@@ -47,12 +47,19 @@ class ModuleLoadError(CoreError):
     pass
 
 
+class ModuleDeploymentError(CoreError):
+    """Exception raised when a module deployment fails."""
+
+    pass
+
+
 # -----------------------
 # Common Metadata Fields
 # -----------------------
 class CommonMetadataFields(BaseModel):
     """
-    Common metadata fields used across multiple classes for tagging, labeling, and annotating resources.
+    Common metadata fields used across multiple classes for tagging,
+    labeling, and annotating resources.
 
     Attributes:
         tags: Key-value tags for resources.
@@ -60,9 +67,18 @@ class CommonMetadataFields(BaseModel):
         annotations: Key-value annotations for resources.
     """
 
-    tags: Dict[str, str] = Field(default_factory=dict, description="Key-value tags for resources.")
-    labels: Dict[str, str] = Field(default_factory=dict, description="Key-value labels for resources.")
-    annotations: Dict[str, str] = Field(default_factory=dict, description="Key-value annotations for resources.")
+    tags: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Key-value tags for resources."
+    )
+    labels: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Key-value labels for resources."
+    )
+    annotations: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Key-value annotations for resources."
+    )
 
 
 # -----------------------
@@ -76,13 +92,18 @@ class GitInfo(BaseModel):
         commit_hash: Current git commit hash or "unk" if unknown.
         branch_name: Current git branch name or "unk" if unknown.
         remote_url: Current git remote URL or "unk" if unknown.
-        release_tag: Optional release tag if the current commit is associated with a semver tag.
+        release_tag: Optional release tag if the current commit has a semver tag.
     """
 
-    commit_hash: str = Field(default="unk", description="Current git commit hash")
+    commit_hash: str = Field(
+        default="unk",
+        description="Current git commit hash"
+    )
     branch_name: str = Field(default="unk", description="Current git branch name")
     remote_url: str = Field(default="unk", description="Current git remote URL")
-    release_tag: Optional[str] = Field(default=None, description="Git release tag if applicable.")
+    release_tag: Optional[str] = Field(
+        default=None, description="Git release tag if applicable."
+    )
 
     def model_dump(self) -> Dict[str, str]:
         """Return a dict with commit, branch, remote, and optional tag fields."""
@@ -153,8 +174,14 @@ class ScipConfig(BaseModel):
         ato: AtoConfig with authorization details.
     """
 
-    environment: str = Field(..., description="Environment name, e.g. 'prod-us-west'")
-    production: bool = Field(default=False, description="Whether environment is production.")
+    environment: str = Field(
+        ...,
+        description="Environment name, e.g. 'prod-us-west'"
+    )
+    production: bool = Field(
+        default=False,
+        description="Whether environment is production."
+    )
     ownership: ProjectOwnership
     ato: AtoConfig
 
@@ -181,8 +208,14 @@ class NistConfig(BaseModel):
         exceptions: Disabled NIST exception controls.
     """
 
-    auxiliary: List[str] = Field(default_factory=list, description="Enabled auxiliary NIST controls.")
-    exceptions: List[str] = Field(default_factory=list, description="Disabled NIST exception controls.")
+    auxiliary: List[str] = Field(
+        default_factory=list,
+        description="Enabled auxiliary NIST controls."
+    )
+    exceptions: List[str] = Field(
+        default_factory=list,
+        description="Disabled NIST exception controls."
+    )
 
 
 class ComplianceConfig(BaseModel):
@@ -200,10 +233,14 @@ class ComplianceConfig(BaseModel):
     nist: NistConfig
 
     @classmethod
-    def from_pulumi_config(cls, config: pulumi.Config, timestamp: datetime) -> "ComplianceConfig":
+    def from_pulumi_config(
+        cls,
+        config: pulumi.Config,
+        timestamp: datetime
+    ) -> "ComplianceConfig":
         """
         Create ComplianceConfig from Pulumi stack config.
-        If environment is production, 'authorized' and 'eol' must be present or defaults are used.
+        If environment is production, 'authorized' and 'eol' must be present.
         """
         try:
             raw = config.get_object("compliance") or {}
@@ -216,10 +253,14 @@ class ComplianceConfig(BaseModel):
             current_time = timestamp.isoformat()
 
             if is_production and "authorized" not in ato_data:
-                raise ValueError("Production environments require 'authorized' date in ATO configuration")
+                raise ValueError("Production environments require authorization date.")
 
-            authorized_date = str(ato_data.get("authorized", current_time))
-            eol_date = str(ato_data.get("eol", (timestamp + timedelta(hours=24)).isoformat()))
+            authorized_date = str(
+                ato_data.get("authorized", current_time)
+            )
+            eol_date = str(
+                ato_data.get("eol", (timestamp + timedelta(hours=24)).isoformat())
+            )
 
             # If project not defined, provide defaults
             if "project" not in compliance_data:
@@ -326,10 +367,13 @@ class InitializationConfig(BaseConfigModel):
     global_depends_on: List[Resource] = Field(default_factory=list)
     git_info: GitInfo = Field(default_factory=GitInfo)
     compliance_config: ComplianceConfig = Field(
-        default_factory=ComplianceConfig.create_default, description="Compliance configuration for the deployment"
+        default_factory=ComplianceConfig.create_default,
+        description="Compliance configuration for the deployment"
     )
     metadata: CommonMetadataFields = Field(default_factory=CommonMetadataFields)
-    deployment_date_time: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    deployment_date_time: str = Field(
+        default_factory=lambda: datetime.now(timezone.utc).isoformat()
+    )
     deployment_manager: Optional[object] = None
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
@@ -518,7 +562,11 @@ class MetadataSingleton:
         with self._lock:
             self._git_metadata.update(metadata)
 
-    def set_module_metadata(self, module_name: str, metadata: Dict[str, object]) -> None:
+    def set_module_metadata(
+        self,
+        module_name: str,
+        metadata: Dict[str, object]
+    ) -> None:
         with self._lock:
             if module_name not in self._modules_metadata:
                 self._modules_metadata[module_name] = {}
@@ -589,56 +637,6 @@ def setup_global_metadata(init_config: InitConfig) -> None:
 
 
 # -----------------------
-# Configuration Management
-# -----------------------
-class ConfigManager:
-    """
-    Configuration Management class for retrieving and caching Pulumi configuration.
-    """
-
-    def __init__(self) -> None:
-        self.pulumi_config = pulumi.Config()
-        self._config_cache: Optional[Dict[str, object]] = None
-        self._module_configs: Dict[str, Dict[str, object]] = {}
-
-    def get_config(self) -> Dict[str, object]:
-        """Retrieve full configuration from Pulumi stack config, caching results."""
-        if self._config_cache is None:
-            raw_config: Dict[str, object] = {}
-            for module_name in ["aws", "kubernetes"]:
-                try:
-                    module_cfg = pulumi.Config(module_name).get_object("") or {}
-                    raw_config[module_name] = module_cfg
-                except KeyError as e:
-                    log.debug(f"No config found for module {module_name}: {e}")
-            self._config_cache = raw_config
-            log.debug(f"Loaded config: {raw_config}")
-        return cast(Dict[str, object], self._config_cache)
-
-    def get_module_config(self, module_name: str) -> Dict[str, object]:
-        """Get configuration for a specific module from cached config."""
-        if module_name in self._module_configs:
-            return self._module_configs[module_name]
-        config = self.get_config()
-        module_config = cast(Dict[str, object], config.get(module_name, {}))
-        self._module_configs[module_name] = module_config
-        log.debug(f"Module {module_name} config: {module_config}")
-        return module_config
-
-    def get_enabled_modules(self) -> List[str]:
-        """Return a list of enabled modules from the cached configuration."""
-        enabled_modules: List[str] = []
-        config = self.get_config()
-        for module_name in ["aws", "kubernetes"]:
-            module_config = cast(Dict[str, object], config.get(module_name, {}))
-            if bool(module_config.get("enabled", False)):
-                enabled_modules.append(module_name)
-                log.info(f"Module {module_name} is enabled")
-        log.info(f"Enabled modules: {enabled_modules}")
-        return enabled_modules
-
-
-# -----------------------
 # Global Metadata and Stack Config
 # -----------------------
 class GlobalMetadata(BaseModel):
@@ -646,9 +644,18 @@ class GlobalMetadata(BaseModel):
     Global metadata structure for top-level stack outputs.
     """
 
-    tags: Dict[str, str] = Field(default_factory=dict, description="Global public cloud resource tags")
-    labels: Dict[str, str] = Field(default_factory=dict, description="Global Kubernetes labels")
-    annotations: Dict[str, str] = Field(default_factory=dict, description="Global Kubernetes annotations")
+    tags: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Global public cloud resource tags"
+    )
+    labels: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Global Kubernetes labels"
+    )
+    annotations: Dict[str, str] = Field(
+        default_factory=dict,
+        description="Global Kubernetes annotations"
+    )
 
 
 class SourceRepository(BaseModel):
@@ -679,7 +686,10 @@ class StackOutputs(BaseModel):
     """
 
     stack: StackConfig
-    secrets: Optional[Dict[str, object]] = Field(default=None, description="Sensitive credentials or tokens")
+    secrets: Optional[Dict[str, object]] = Field(
+        default=None,
+        description="Sensitive credentials or tokens"
+    )
 
 
 class ModuleDefaults(BaseModel):
@@ -688,12 +698,16 @@ class ModuleDefaults(BaseModel):
     """
 
     enabled: bool = Field(default=False, description="Whether the module is enabled")
-    config: Dict[str, object] = Field(default_factory=dict, description="Module-specific configuration")
+    config: Dict[str, object] = Field(
+        default_factory=dict,
+        description="Module-specific configuration"
+    )
 
 
 __all__ = [
     "CoreError",
     "ModuleLoadError",
+    "ModuleDeploymentError",
     "CommonMetadataFields",
     "GitInfo",
     "OwnershipInfo",
@@ -714,7 +728,6 @@ __all__ = [
     "MetadataSingleton",
     "InitConfig",
     "setup_global_metadata",
-    "ConfigManager",
     "GlobalMetadata",
     "SourceRepository",
     "StackConfig",

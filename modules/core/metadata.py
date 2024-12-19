@@ -14,13 +14,22 @@ from datetime import datetime, timezone
 import pulumi
 from pulumi import Config, log
 
-from .types import ComplianceConfig
-from .types.base import MetadataSingleton
+from .types import (
+    ComplianceConfig,
+    MetadataSingleton,
+    GitInfo,
+    SourceRepository,
+    StackConfig,
+    GlobalMetadata,
+)
 
 
 def get_compliance_metadata() -> ComplianceConfig:
     """
     Get compliance metadata from the global singleton.
+
+    Returns:
+        ComplianceConfig: Current compliance configuration
     """
     try:
         metadata = MetadataSingleton()
@@ -29,12 +38,38 @@ def get_compliance_metadata() -> ComplianceConfig:
                 return ComplianceConfig.model_validate(compliance_metadata)
             except ValidationError as e:
                 log.error(f"Compliance metadata validation error: {str(e)}")
-                # Try parsing with more lenient validation
-                return ComplianceConfig.from_pulumi_config(Config(), datetime.now(timezone.utc))
-        return ComplianceConfig()
+                return ComplianceConfig.from_pulumi_config(
+                    Config(),
+                    datetime.now(timezone.utc)
+                )
+        return ComplianceConfig.create_default()
     except Exception as e:
         log.error(f"Failed to get compliance metadata: {str(e)}")
-        return ComplianceConfig()
+        return ComplianceConfig.create_default()
+
+
+def get_git_metadata() -> GitInfo:
+    """
+    Get git metadata from the global singleton.
+
+    Returns:
+        GitInfo: Current git metadata
+    """
+    try:
+        metadata = MetadataSingleton()
+        git_data = metadata.git_metadata
+        log.debug(f"Retrieved git metadata from singleton: {git_data}")
+
+        # Convert the stored metadata format to GitInfo format
+        return GitInfo(
+            commit_hash=str(git_data.get('commit', 'unk')),
+            branch_name=str(git_data.get('branch', 'unk')),
+            remote_url=str(git_data.get('remote', 'unk')),
+            release_tag=git_data.get('tag')
+        )
+    except Exception as e:
+        log.error(f"Failed to get git metadata: {str(e)}")
+        return GitInfo()
 
 
 def export_compliance_metadata() -> None:
@@ -44,28 +79,32 @@ def export_compliance_metadata() -> None:
     """
     try:
         log.info("Exporting compliance metadata")
-        metadata_singleton = MetadataSingleton()
+        metadata = MetadataSingleton()  # noqa: F841 - Used for side effects
 
-        # Get compliance metadata
-        compliance_metadata = get_compliance_metadata()
+        # Get Git metadata and convert to SourceRepository
+        git_info = get_git_metadata()
+        log.debug(f"Git info for export: {git_info.model_dump()}")
 
-        # Get Git metadata
-        git_metadata = metadata_singleton.git_metadata
-        git_info = {
-            "branch": git_metadata.get("branch_name", "unknown"),
-            "commit": git_metadata.get("commit_hash", "unknown"),
-            "remote": git_metadata.get("remote_url", "unknown"),
-        }
+        source_repo = SourceRepository(
+            branch=git_info.branch_name,
+            commit=git_info.commit_hash,
+            remote=git_info.remote_url,
+            tag=git_info.release_tag
+        )
+        log.debug(f"Created source repo: {source_repo.model_dump()}")
 
-        # Create the compliance export structure
-        stack_outputs = {
-            "config": {
-                "compliance": compliance_metadata.model_dump(),
-                "source_repository": git_info,
-            }
-        }
+        # Create the stack config structure using the metadata instance
+        stack_config = StackConfig(
+            compliance=get_compliance_metadata(),
+            metadata=GlobalMetadata(),
+            source_repository=source_repo
+        )
 
         # Export the stack outputs
+        stack_outputs = {
+            "stack": stack_config.model_dump(),
+        }
+        log.debug(f"Exporting stack outputs: {stack_outputs}")
         pulumi.export("stack_outputs", stack_outputs)
         log.info("Successfully exported compliance metadata")
 
