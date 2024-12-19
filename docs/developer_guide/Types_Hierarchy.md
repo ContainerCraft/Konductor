@@ -2,175 +2,246 @@
 
 ## Overview
 
-This guide defines the standardized type hierarchy pattern for the Konductor Infrastructure as Code platform. The type system is designed to support multi-cloud, multi-component infrastructure deployment while maintaining clean separation of concerns, preventing circular dependencies, and providing an intuitive developer experience.
+This guide defines the standardized type hierarchy pattern for the Konductor Infrastructure as Code (IaC) template project. The type system is designed to support multi-cloud, multi-component infrastructure deployments while maintaining a clean separation of concerns, preventing circular dependencies, and providing an intuitive developer experience.
+
+This document outlines core principles, directory structures, and guidelines for defining and extending types within Konductor’s IaC framework. It ensures that types are strongly typed, well-documented, modular, and leverage Pydantic models for validation and sensible defaults.
 
 ## Core Principles
 
-- **Separation of Concerns**: Each module owns its type definitions.
-- **Inheritance Over Composition**: Use type inheritance to share common patterns.
-- **Single Source of Truth**: Base types defined once, extended where needed.
-- **Developer Experience**: Intuitive structure and clear import paths.
-- **Type Safety**: Strong typing throughout with Pydantic models.
-- **Modularity**: Modular and reusable types constrained to proper modules and sub-modules.
-- **Sane Defaults**: Sensible defaults for appropriate types and fields to minimize user configuration.
-- **Documentation**: Self-documenting through type hints and docstrings.
-- **Resources and Components**: Types should be specialized to resources and components.
-- **Principle of Least Astonishment**: Types should be intuitive and predictable.
-- **DRY**: Don't Repeat Yourself.
+- **Separation of Concerns**: Each module owns its type definitions, ensuring local scope and preventing cross-contamination.
+- **Inheritance Over Composition**: Use Pydantic model inheritance to share common patterns and centralize logic.
+- **Single Source of Truth**: Define base types/models once, then extend and refine them as needed.
+- **Developer Experience**: Create an intuitive structure with clear import paths and well-documented fields.
+- **Type Safety**: Enforce strong typing with Pydantic models for reliability and maintainability.
+- **Modularity**: Keep types modular and reusable, constrained to proper modules and sub-modules to avoid circular dependencies.
+- **Sane Defaults**: Provide sensible defaults via Pydantic `Field` definitions to minimize user configuration overhead.
+- **Documentation**: Self-document through Pydantic model docstrings and type hints, ensuring clarity for end-users.
+- **Resources and Components**: Specialize types into resource-focused (strict configurations for infrastructure entities) and component-focused (abstracting multiple resources into higher-level constructs).
+- **Principle of Least Astonishment**: Ensure that types behave in predictable, intuitive ways.
+- **DRY (Don't Repeat Yourself)**: Centralize common logic and fields into base models to avoid redundancy.
 
 ## Directory Structure (Type-Specific)
+
+The directory layout encourages logical grouping and modularization of types. Each module and submodule defines its own types, ensuring easy navigation and preventing cross-module confusion.
 
 ```plaintext
 modules/
 ├── <cloud_or_platform_name>/
-│   ├── types/                   # Base and configuration types
+│   ├── types/                   # Base and configuration types for this provider/platform
 │   │   ├── __init__.py
-│   │   ├── base.py              # Foundational types
-│   │   ├── config.py            # Configuration type definitions
-│   │   ├── metadata.py          # Metadata types
+│   │   ├── base.py              # Foundational types specific to this provider/platform
+│   │   ├── config.py            # Configuration-specific type definitions
+│   │   ├── metadata.py          # Metadata-related types
 │   │   └── compliance.py        # Compliance-related types
 ├── core/
-│   ├── types/                   # Base types used across modules
+│   ├── types/                   # Core base types used across all modules
 │   │   ├── __init__.py
-│   │   ├── base.py
-│   │   ├── compliance.py
-│   │   ├── config.py
-│   │   ├── metadata.py
-│   │   └── interfaces.py
+│   │   ├── base.py              # Fundamental Pydantic base models
+│   │   ├── compliance.py        # Core compliance definitions and validation
+│   │   ├── config.py            # Core configuration model definitions
+│   │   ├── metadata.py          # Common metadata structures
+│   │   └── interfaces.py        # Interface or schema definitions for cross-module interactions
 ```
 
 ## Type Hierarchy
 
+Types are organized at three levels—core, module, and submodule—each extending or specializing the previous level. This ensures consistency across different environments and allows for easy extension as complexity grows.
+
 ### Core Types
 
-Core types establish foundational structures for resources and configurations. They ensure a consistent approach across modules while allowing extension for specific use cases.
+Core types establish foundational structures for resources and configurations. They define a consistent baseline, ensuring that all modules share common fields, validation rules, and patterns. Core types typically include:
 
-- **Resource Types**: Define strict configurations for upstream resource objects with opinionated defaults.
-- **Component Types**: Provide expansive abstractions to compose resource configurations with larger application-specific logic.
-- **Provider Types**: Extend core types with cloud provider-specific attributes such as regions, environments, and compliance settings.
+- **Resource Types (Core)**: Define strict configurations for low-level, upstream resource objects with opinionated defaults.
+- **Component Types (Core)**: Provide more abstracted constructs that group multiple resources into logical units with additional orchestration logic.
+- **Provider Types (Core)**: Extend core types with provider-specific attributes (e.g., cloud regions, compliance labels) to facilitate multi-cloud support.
+
+```python
+from pydantic import BaseModel, Field
+from typing import Dict, List, Optional
+
+class CommonMetadataFields(BaseModel):
+    """Common metadata fields used across multiple classes."""
+    tags: Dict[str, str] = Field(default_factory=dict)
+    labels: Dict[str, str] = Field(default_factory=dict)
+    annotations: Dict[str, str] = Field(default_factory=dict)
+
+class BaseConfigModel(BaseModel):
+    """Base configuration model providing common fields."""
+    enabled: bool = Field(default=False, description="Indicates if this configuration is active")
+    parent: Optional[str] = Field(None, description="Identifier of the parent resource or component")
+    dependencies: List[str] = Field(default_factory=list, description="List of dependencies by name or ID")
+    configuration: Dict[str, object] = Field(default_factory=dict, description="Arbitrary configuration dictionary")
+    metadata: CommonMetadataFields = Field(default_factory=CommonMetadataFields, description="Common metadata fields")
+```
 
 ### Module Types
 
-Module types extend core types to include module-specific configurations. They enable integration with modules like AWS, Kubernetes, or OpenStack, defining types that control specific resource behavior and logic.
+Module types extend core types to incorporate module-specific configurations and logic. They are associated with a particular cloud provider, platform, or service. For example, AWS, Kubernetes, or OpenStack modules can define their own resource and component types that build upon core definitions:
 
-- **Module Resource Types**: Define module-specific resource configurations with centralized defaults and validation.
-- **Module Component Types**: Abstract multiple resources into reusable, module-level components with custom orchestration logic.
+- **Module Resource Types**: Add module-specific fields and validation, centralizing defaults relevant to a particular platform (e.g., AWS VPC configurations).
+- **Module Component Types**: Abstract multiple related module resource types into reusable building blocks, implementing module-level orchestration logic.
+
+```python
+class NetworkConfig(BaseModel):
+    """Network configuration for AWS resources."""
+    vpc_cidr: str = Field(default="10.0.0.0/16", description="CIDR block for the VPC")
+    subnet_cidrs: Dict[str, List[str]] = Field(
+        default_factory=lambda: {
+            "public": ["10.0.1.0/24", "10.0.2.0/24"],
+            "private": ["10.0.3.0/24", "10.0.4.0/24"],
+        },
+        description="Mapping of subnet type (public/private) to CIDR ranges"
+    )
+    availability_zones: List[str] = Field(
+        default_factory=lambda: ["us-east-1a", "us-east-1b"],
+        description="List of AWS availability zones used by this network"
+    )
+    enable_nat_gateway: bool = Field(default=True, description="Enable NAT gateways in the public subnets")
+    enable_vpn_gateway: bool = Field(default=False, description="Enable a VPN gateway for hybrid connectivity")
+    enable_flow_logs: bool = Field(default=True, description="Enable VPC flow logs for observability")
+    metadata: CommonMetadataFields = Field(default_factory=CommonMetadataFields, description="Common metadata")
+
+    @classmethod
+    def validate_vpc_cidr(cls, v):
+        from ipaddress import ip_network
+        try:
+            ip_network(v)
+            return v
+        except ValueError:
+            raise ValueError(f"Invalid VPC CIDR: {v}")
+```
 
 ### Submodule Types
 
-Submodule types further specialize module types by focusing on specific submodules within a broader context. These enable fine-grained control over configurations while leveraging core and module-level defaults.
+Submodule types further specialize module types by focusing on narrower subsets of functionality. For instance, within an AWS module, EKS submodule types focus exclusively on EKS cluster and node group configurations.
 
-- **Submodule Resource Types**: Provide configuration types tailored to submodule-specific resources, such as IAM roles or EKS node groups.
-- **Submodule Component Types**: Aggregate submodule resource types into higher-level abstractions that align with project-specific needs.
+- **Submodule Resource Types**: Fine-grained resource definitions tailored to a submodule, such as an EKS node group or an IAM role.
+- **Submodule Component Types**: Aggregate multiple submodule resource types into higher-level abstractions, representing integrated functionalities within a specific subsystem.
+
+```python
+class EksNodeGroupConfig(BaseModel):
+    """Configuration for EKS node groups."""
+    name: str = Field(..., description="Name of the node group")
+    instance_types: List[str] = Field(
+        default_factory=lambda: ["t3.medium"],
+        description="EC2 instance types for the node group"
+    )
+    scaling_config: Dict[str, int] = Field(
+        default_factory=lambda: {"desired_size": 2, "max_size": 4, "min_size": 1},
+        description="Autoscaling configuration for the node group"
+    )
+    subnet_ids: Optional[List[str]] = Field(None, description="Optional list of subnet IDs for this node group")
+    metadata: CommonMetadataFields = Field(default_factory=CommonMetadataFields, description="Common metadata")
+
+class EksClusterConfig(BaseModel):
+    """Configuration for an EKS cluster."""
+    enabled: bool = Field(default=True, description="Indicates if EKS is enabled")
+    name: str = Field(..., description="Name of the EKS cluster")
+    version: str = Field(default="1.29", description="EKS version")
+    subnet_ids: Optional[List[str]] = Field(None, description="Subnet IDs used by the EKS cluster")
+    endpoint_private_access: bool = Field(default=True, description="Enable private endpoint access")
+    endpoint_public_access: bool = Field(default=True, description="Enable public endpoint access")
+    node_groups: List[EksNodeGroupConfig] = Field(default_factory=list, description="Node groups for this cluster")
+    metadata: CommonMetadataFields = Field(default_factory=CommonMetadataFields, description="Common metadata")
+
+    @classmethod
+    def validate_version(cls, v):
+        valid_versions = ["1.29", "1.28", "1.27", "1.26", "1.25"]
+        if v not in valid_versions:
+            raise ValueError(f"Invalid EKS version: {v}")
+        return v
+```
 
 ## Implementation Guidelines
 
 ### Type Definition
 
-- Use descriptive and consistent naming conventions.
-- Document all fields with meaningful descriptions.
-- Define sensible defaults to minimize user configuration overhead.
+- **Naming Conventions**: Use descriptive, consistent, and readable names for models and fields.
+- **Field Documentation**: Document all fields with meaningful descriptions to improve discoverability and DX.
+- **Defaults**: Provide sensible defaults to streamline usage and reduce boilerplate configuration.
 
 ### Type Inheritance
 
-- Extend core types when creating specific implementations.
-- Avoid deep inheritance hierarchies for simplicity and clarity.
+- **Base Models**: Start from a core Pydantic `BaseModel` or a `BaseConfigModel` if configuration fields are required.
+- **Shallow Hierarchies**: Keep inheritance chains short for simplicity and clarity.
+- **Resource and Component Extensions**: Resource and component types should inherit from base models that already enforce core standards.
 
 ### Validation
 
-- Implement validation rules to ensure data integrity.
-- Leverage Pydantic’s features for robust and declarative validation.
+- **Pydantic Validators**: Implement validators to ensure data integrity and provide helpful error messages.
+- **Custom Validation**: Use custom validators for complex logic or constraints not covered by built-in types.
 
 ### Documentation
 
-- Provide detailed explanations for each type.
-- Use examples to illustrate common use cases and configurations.
+- **Model Docstrings**: Provide a class-level docstring explaining the model’s purpose.
+- **Field-Level Docs**: Use `Field(description="...")` to document each field.
+- **Examples**: Include example usage patterns in the documentation to guide new users.
 
 ### Export and Modularity
 
-- Group types logically and export through `__init__.py`.
-- Ensure modularity to avoid circular dependencies.
+- **Grouping**: Group related types logically and export them through `__init__.py` files.
+- **Avoid Circular Dependencies**: Keep modules self-contained and reference only what’s necessary.
 
 ## Creating New Types
 
-When creating new types, follow these steps to ensure compatibility and extensibility within the framework:
+Follow these steps to ensure new types integrate seamlessly into the existing hierarchy:
 
 ### 1. Define the Type’s Purpose
 
-Determine whether the new type represents a resource (infrastructure entity) or component (abstracted composition). Clearly outline its intended use case and attributes.
+Decide if the type represents a resource (a low-level infrastructure entity) or a component (an abstraction composed of multiple resources). If needed, determine if it’s a provider-specific, module, or submodule type.
 
 ### 2. Extend Existing Types
 
-Identify an appropriate base type to extend. For example:
+Identify the appropriate base model:
 
-- Use `ResourceBase` for strict resource configurations.
-- Use `ComponentBase` for higher-level component abstractions.
-- Extend provider, module, or submodule-specific types if applicable.
+- Start with `BaseModel` or `BaseConfigModel` from core types.
+- For provider-specific logic, extend a relevant provider or module-specific base type.
+- Build upon submodule types if you’re adding more granular domain-specific functionality.
 
 ### 3. Add Custom Fields
 
-Include fields specific to the new type. Ensure each field has:
-
-- A descriptive name.
-- A clear and concise docstring.
-- Sensible default values or validation rules.
+- Provide meaningful names, docstrings, and defaults.
+- Validate fields where necessary to ensure correctness and safety.
 
 ### 4. Document the Type
 
-Add documentation for the new type, including:
-
-- A description of its purpose.
-- Field-level details with examples where necessary.
-- Any constraints or validation rules.
+- Explain the type’s purpose and usage context.
+- Include field-level descriptions and examples.
 
 ### Example: Defining a New Type
 
-#### Hypothetical Resource Type: `MyCustomResource`
-
 ```python
-from core.types.base import ResourceBase
-from typing import Optional, Dict
+from pydantic import BaseModel, Field
+from typing import Optional, List
 
-class MyCustomResource(ResourceBase):
+class MyCustomResource(BaseModel):
     """Custom resource representing a hypothetical infrastructure entity."""
-    custom_field: str = "default_value"
-    optional_field: Optional[int] = None
-    metadata: Dict[str, str] = {"env": "production"}
-```
+    name: str = Field(..., description="Unique name of the custom resource")
+    custom_field: str = Field(default="default_value", description="A custom field with a default value")
+    optional_field: Optional[int] = Field(None, description="An optional integer field")
+    metadata: CommonMetadataFields = Field(default_factory=CommonMetadataFields, description="Common metadata")
 
-#### Hypothetical Component Type: `MyCustomComponent`
-
-```python
-from core.types.base import ComponentBase
-from typing import List
-
-class MyCustomComponent(ComponentBase):
+class MyCustomComponent(BaseModel):
     """Abstracted component representing a collection of resources."""
-    resource_list: List[str] = []
-    logic_flag: bool = True
+    name: str = Field(..., description="Name of the component")
+    resource_list: List[str] = Field(default_factory=list, description="List of resource identifiers")
+    logic_flag: bool = Field(default=True, description="Flag controlling component logic")
+    metadata: CommonMetadataFields = Field(default_factory=CommonMetadataFields, description="Common metadata")
 ```
 
 ### 5. Test and Validate
 
-Create test cases to verify that:
-
-- Default values are applied correctly.
-- Validation rules enforce constraints as expected.
+- Write tests to confirm default behaviors.
+- Validate that custom validators raise appropriate errors for invalid input.
 
 ### 6. Export the Type
 
-Ensure the new type is exported in the appropriate `__init__.py` file to make it accessible to other modules.
-
-### 7. Share Examples
-
-Provide examples in documentation or templates to guide developers in using the new type effectively.
+- Add your new types to the `__init__.py` file of the appropriate directory.
+- Ensure they are accessible to other parts of the codebase.
 
 ## Best Practices
 
-1. Maintain clear separation between resource and component types.
-2. Document all types and their fields for ease of understanding.
-3. Keep validation and defaulting logic concise and meaningful.
-4. Prioritize readability and maintainability in type definitions.
-5. Use examples and templates to facilitate onboarding and self-teaching.
-
-This guide focuses specifically on type definitions and their implementation, ensuring clarity and extensibility while adhering to strong principles of type safety and modularity.
+1. **Clear Separation**: Keep resource-focused and component-focused types distinct, while giving each a well-defined purpose.
+2. **Comprehensive Documentation**: Document all types and fields clearly so developers can quickly understand and use them.
+3. **Meaningful Defaults**: Leverage defaults to reduce overhead on users, guiding them toward best practices effortlessly.
+4. **Maintainability and Readability**: Prioritize code clarity and logical organization to simplify onboarding and long-term maintenance.
