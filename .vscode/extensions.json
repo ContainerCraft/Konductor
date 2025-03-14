@@ -1,0 +1,19 @@
+{
+    "recommendations": [
+        "vscodevim.vim",
+        "github.copilot",
+        "stateful.runme",
+        "ms-python.python",
+        "esbenp.prettier-vscode",
+        "oderwat.indent-rainbow",
+        "ms-python.black-formatter",
+        "okteto.kubernetes-context",
+        "pulumi.pulumi-vscode-tools",
+        "ms-vsliveshare.vsliveshare",
+        "ms-azuretools.vscode-docker",
+        "ms-vscode-remote.remote-containers",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "daltonmenezes.aura-theme"
+    ],
+    "unwantedRecommendations": []
+}
