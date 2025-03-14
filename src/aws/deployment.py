@@ -1,4 +1,4 @@
-# ./modules/aws/deployment.py
+# ./src/aws/deployment.py
 """
 AWS Module Deployment
 
@@ -12,7 +12,7 @@ from pulumi import log
 import pulumi_aws as aws
 from pulumi import ResourceOptions
 
-from modules.core import (
+from src.core import (
     ModuleInterface,
     ModuleDeploymentResult,
     InitializationConfig,
@@ -23,7 +23,7 @@ from modules.core import (
 from .provider import AWSProvider
 from .types import AWSConfig
 from .eks.deployment import EksManager
-from modules.kubernetes import KubernetesProviderRegistry
+from src.kubernetes import KubernetesProviderRegistry
 
 
 class AwsModule(ModuleInterface):

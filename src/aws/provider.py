@@ -1,4 +1,4 @@
-# ./modules/aws/provider.py
+# ./src/aws/provider.py
 from typing import Optional, Dict, Any
 import pulumi
 import pulumi_aws as aws
@@ -6,7 +6,7 @@ from pulumi import log
 import os
 
 from .types import AWSConfig
-from modules.core.metadata import MetadataSingleton
+from src.core.metadata import MetadataSingleton
 
 
 class AWSProvider:

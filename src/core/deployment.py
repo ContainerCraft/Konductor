@@ -1,4 +1,4 @@
-# ./modules/core/deployment.py
+# ./src/core/deployment.py
 
 """
 Core module deployment implementation.
@@ -9,7 +9,7 @@ from importlib import import_module
 from pathlib import Path
 from pulumi import log
 
-from modules.core.types import (
+from src.core.types import (
     InitializationConfig,
     ModuleInterface,
     BaseConfigModel,
@@ -17,7 +17,7 @@ from modules.core.types import (
     ModuleLoadError,
 )
 
-from modules.core.config import ConfigManager
+from src.core.config import ConfigManager
 
 
 class DeploymentManager:
@@ -115,7 +115,7 @@ class DeploymentManager:
         """Dynamically load module interface from discovered modules."""
         try:
             # Import module
-            module_path = f"modules.{module_name}.deployment"
+            module_path = f"src.{module_name}.deployment"
             try:
                 module = import_module(module_path)
                 log.debug(f"Imported module from path: {module_path}")

@@ -1,4 +1,4 @@
-# ./modules/aws/types/__init__.py
+# ./src/aws/types/__init__.py
 """
 AWS Module Configuration Types (consolidated revision)
 
@@ -27,7 +27,7 @@ from typing import Dict, List, Optional
 from pydantic import BaseModel, Field, validator
 import os
 
-from modules.core.types import (
+from src.core.types import (
     BaseConfigModel,
     CommonMetadataFields,
     ComplianceConfig,

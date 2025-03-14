@@ -8,11 +8,11 @@ This is the main entry point for the Konductor platform.
 from sys import exit
 from pulumi import log
 
-from modules.core.initialization import initialize_pulumi
-from modules.core.config import ConfigManager
-from modules.core.types import setup_global_metadata
-from modules.core.deployment import DeploymentManager
-from modules.core.metadata import export_compliance_metadata
+from src.core.initialization import initialize_pulumi
+from src.core.config import ConfigManager
+from src.core.types import setup_global_metadata
+from src.core.deployment import DeploymentManager
+from src.core.metadata import export_compliance_metadata
 
 
 def main() -> None:
