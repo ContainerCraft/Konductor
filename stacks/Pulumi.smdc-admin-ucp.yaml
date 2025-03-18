@@ -1,0 +1,128 @@
+config:
+  zora:azure:
+    enabled: true
+    credentials:
+      entra_id:
+        secure: v1:50Cd6SIh6VZPlTla:iOfuU85p8ltLNX8NGYEyBW8HvVKOqYQX9r/js+XBMDJ4cpSH
+      entra_secret:
+        secure: v1:i26qwpY5M9BwENQS:/JWHq5XeII56WKow9Kdtm14Bnnmzft9uiNLJIrkxSmmE5g22WY2LFIJfOi4w4Kxg8Terore9MQQ=
+      subscription_id:
+        secure: v1:50Cd6SIh6VZPlTla:iOfuU85p8ltLNX8NGYEyBW8HvVKOqYQX9r/js+XBMDJ4cpSH
+      tenant_id:
+        secure: v1:50Cd6SIh6VZPlTla:iOfuU85p8ltLNX8NGYEyBW8HvVKOqYQX9r/js+XBMDJ4cpSH
+  zora:aws:
+    enabled: true
+    region: us-east-1
+    profile: smdc-admin
+    credentials:
+      access_key_id:
+        secure: v1:50Cd6SIh6VZPlTla:iOfuU85p8ltLNX8NGYEyBW8HvVKOqYQX9r/js+XBMDJ4cpSH
+      secret_access_key:
+        secure: v1:i26qwpY5M9BwENQS:/JWHq5XeII56WKow9Kdtm14Bnnmzft9uiNLJIrkxSmmE5g22WY2LFIJfOi4w4Kxg8Terore9MQQ=
+    eks:
+      enabled: true
+      clusters:
+        - name: smdc-admin
+          mode: auto
+          node_groups:
+            - name: default
+              auto_mode_config:
+                compute_enabled: true
+                network_policy_enabled: true
+              instance_types:
+                - m6i.large
+        - name: smdc-ucp
+          mode: auto
+          node_groups:
+            - name: default
+              auto_mode_config:
+                compute_enabled: true
+                network_policy_enabled: true
+              instance_types:
+                - m6i.large
+          oidc:
+            enabled: true
+            # Azure AD / Entra ID Configuration
+            issuer_url: "https://sts.windows.net/4ba2629f-3085-4f9a-b2ec-3962de0e3490/"
+            client_id: "b2c6de45-49b6-4212-a046-1deab920859e" # Used for both server-id and client-id
+            # RBAC Configuration
+            groups_claim: "groups"
+            groups_prefix: "azure:"
+            username_claim: "sub"
+            username_prefix: "azure:"
+            required_claims:
+              aud: "b2c6de45-49b6-4212-a046-1deab920859e"
+            admin_group_id: "3ea68a91-fa07-4611-93dc-c2e34af46298"
+          version: "1.31"
+          ebs_csi:
+            enabled: true
+            storage_class:
+              name: "auto-ebs-sc"
+              make_default: true
+              volume_type: "gp3"
+              encrypted: true
+              fs_type: "ext4"
+              throughput: 125
+  zora:cloudflare:
+    enabled: true
+    api_token:
+      secure: v1:50Cd6SIh6VZPlTla:iOfuU85p8ltLNX8NGYEyBW8HvVKOqYQX9r/js+XBMDJ4cpSH
+  zora:gcp:
+    enabled: true
+    project_id: smdc-admin
+    credentials:
+      secure: v1:50Cd6SIh6VZPlTla:iOfuU85p8ltLNX8NGYEyBW8HvVKOqYQX9r/js+XBMDJ4cpSH
+  zora:compliance:
+    fisma:
+      ato:
+        authorized: 2025-03-27 00:00:00 +0000 UTC
+        eol: 2028-03-27 00:00:00 +0000 UTC
+        id: 1234-ATO
+      level: moderate
+      mode: warn
+  zora:kubernetes:
+    cert_manager:
+      enabled: false
+    crossplane:
+      aws_provider_version: v0.43.1
+      enable_composition_revisions: true
+      enable_external_secret_stores: true
+      enabled: false
+      kubernetes_provider_version: v0.10.0
+      namespace: crossplane-system
+      providers:
+        - provider-aws
+        - provider-kubernetes
+      version: 1.18.0
+    enabled: true
+    fluentbit:
+      enabled: false
+      namespace: amazon-cloudwatch
+      version: 3.2.5
+    flux:
+      bootstrap_repository: git@git.smce.nasa.gov/scip/ucp-gitops-infra.git
+      cluster_domain: cluster.local
+      components:
+        - source-controller
+        - kustomize-controller
+        - helm-controller
+        - notification-controller
+      concurrent_reconciles: 10
+      devops_repository: git@git.smce.nasa.gov/scip/ucp-devops.git
+      enabled: true
+      multitenant: false
+      namespace: flux-system
+      network_policy: true
+      operator_version: 0.10.0
+      reconcile_interval: 1h
+      reconcile_timeout: 3m
+      requeue_dependency_interval: 5s
+      storage_class: gp2
+      storage_size: 10Gi
+      version: 2.x
+    prometheus:
+      enabled: false
+      namespace: monitoring
+      openunison_enabled: false
+      version: 45.7.1
+encryptionsalt: v1:xE8Hi5LMjpU=:v1:nBTeh4eOXbNwtA/m:AGou0P/HdOIy0vAIk5kerX4Np0OhmA==

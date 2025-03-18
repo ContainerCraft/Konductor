@@ -1,193 +1,282 @@
-# Konductor DevOps Template Repository
+# Zora: Cloud-Agnostic Infrastructure as Code Framework
 
 ## Overview
 
-This repository serves as a comprehensive template for starting new DevOps projects from scratch. It is designed to be cloned as a GitHub template repository, providing a fully-configured environment for deploying and managing cloud-native infrastructure using VSCode with Kubernetes and Pulumi boilerplate as a starting line.
+Welcome to **Zora**, an open-source platform engineering framework designed to simplify and accelerate the deployment of cloud infrastructure across multiple providers. Zora empowers teams to build, deploy, and manage cloud-native applications with confidence, ensuring compliance, security, and scalability from the ground up.
 
-Whether you're building for on-premises, cloud, or local environments, this template streamlines the setup and deployment processes, enabling you to focus on building and innovating.
+Zora leverages modern Infrastructure as Code (IaC) practices using Pulumi and Python, providing a type-safe, modular, and maintainable codebase. It abstracts the complexities of cloud environments, enabling you to focus on innovation rather than infrastructure management.
 
-Join the community in the [ContainerCraft Community Discord](https://discord.gg/Jb5jgDCksX) to discuss, collaborate, and contribute!
+---
+
+## Table of Contents
+
+- [Features](#features)
+- [Getting Started](#getting-started)
+- [Documentation](#documentation)
+- [Contributing](#contributing)
+- [Community and Support](#community-and-support)
+- [License](#license)
+
+---
 
 ## Features
 
-- **Kubernetes Deployment**: Automated Kubernetes cluster setup using Talos.
-- **Pulumi IaC Integration**: Infrastructure as Code management with Pulumi.
-- **Runme Integration**: Execute documented tasks directly from the README.md.
-- **GitHub Actions Support**: CI/CD pipelines configured for automated testing and deployment.
+- **Cloud-Agnostic Architecture**: Deploy infrastructure across AWS, Azure, GCP, and Bare Metal Kubernetes from a unified codebase.
+- **Compliance Automation**: Integrate compliance controls directly into your infrastructure code.
+- **Type-Safe Infrastructure as Code**: Leverage Python's type annotations and `TypedDict` for reliable and maintainable code.
+- **Modular Design**: Build reusable modules that can be developed and deployed independently.
+- **Developer-Friendly Tools**: Utilize modern development tools like Poetry, Pyright, and GitHub Actions.
+- **Scalability and Flexibility**: Easily scale your infrastructure and adapt to changing requirements.
+- **Enhanced Developer Experience**: Simplify workflows with self-service capabilities and clear documentation.
 
-## Using This Template to Start a New Project
+---
 
-This repository is designed as a template, allowing you to quickly bootstrap new DevOps projects with a fully-configured environment. Follow the steps below to create a new project from this template.
+```mermaid
+%%{init: {'theme': 'neutral'}}%%
+flowchart TB
+    %% Style Definitions
+    classDef configStyle fill:#e1f5fe,stroke:#01579b,stroke-width:3px,color:#01579b
+    classDef inputStyle fill:#fff8e1,stroke:#ff6f00,stroke-width:3px,color:#ff6f00
+    classDef coreStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:3px,color:#4a148c
+    classDef moduleStyle fill:#e8f5e9,stroke:#1b5e20,stroke-width:3px,color:#1b5e20
+    classDef outputStyle fill:#fce4ec,stroke:#880e4f,stroke-width:3px,color:#880e4f
+    classDef flowStyle stroke:#78909c,stroke-width:2px
 
-### Step 1: Create a New Repository from the Template
+    %% Input Configuration Layer
+    subgraph InputLayer["1️⃣ Input Layer"]
+        direction TB
+        Config["Pulumi Stack Config<br/>• AWS/K8s Settings<br/>• Module Versions<br/>• Compliance Rules"]:::configStyle
+        Versions["Version Management<br/>• Component Versions<br/>• Compatibility Rules"]:::configStyle
+    end
 
-1. **Navigate to the Template Repository:**
+    %% Core Execution Layer
+    subgraph CoreLayer["2️⃣ Core Execution Layer"]
+        direction TB
+        Main["Program Entry<br/>__main__.py"]:::coreStyle
 
-   Visit the [Konductor DevOps Template Repository](https://github.com/ContainerCraft/Konductor) on GitHub.
+        subgraph CoreOrchestration["Core Module Orchestration"]
+            direction TB
+            ConfigMgmt["Configuration Management<br/>• Config Validation<br/>• Version Control<br/>• Dependency Resolution"]:::coreStyle
+            MetadataMgmt["Metadata Management<br/>• Labels & Annotations<br/>• Git Information<br/>• Compliance Data"]:::coreStyle
+            DeployMgmt["Deployment Management<br/>• Module Loading<br/>• Resource Creation<br/>• State Management"]:::coreStyle
+        end
+    end
 
-2. **Use the "Use this template" Button:**
+    %% Infrastructure Layer
+    subgraph InfraLayer["3️⃣ Infrastructure Layer"]
+        direction TB
 
-   - Click the green `Use this template` button located at the top-right of the repository page.
-   - In the form that appears, provide a name for your new repository and decide if it should be public or private.
-   - Click `Create repository from template` to generate your new repository.
+        subgraph AWSStack["AWS Infrastructure"]
+            direction TB
+            AWSCore["AWS Core<br/>• IAM<br/>• VPC<br/>• Security"]:::moduleStyle
+            EKSCluster["EKS Cluster<br/>• Node Groups<br/>• Networking<br/>• IAM Roles"]:::moduleStyle
+        end
 
-### Step 2: Clone Your New Repository
+        subgraph K8sStack["Kubernetes Platform"]
+            direction TB
+            K8sCore["Kubernetes Core<br/>• Namespaces<br/>• RBAC<br/>• Storage"]:::moduleStyle
 
-1. **Clone the Repository to Your Local Machine:**
+            subgraph K8sModules["Platform Modules"]
+                direction TB
+                FluentBit["FluentBit<br/>• Logging"]:::moduleStyle
+                Flux["Flux<br/>• GitOps"]:::moduleStyle
+                Crossplane["Crossplane<br/>• Cloud Resources"]:::moduleStyle
+            end
+        end
+    end
 
-   Once your new repository is created, clone it to your local machine using Git.
+    %% Output Layer
+    subgraph OutputLayer["4️⃣ Output Layer"]
+        direction TB
 
-   ```bash
-   git clone https://github.com/YourUsername/YourNewRepoName.git
-   cd YourNewRepoName
-   ```
+        subgraph Infrastructure["Infrastructure State"]
+            direction TB
+            Cloud["Cloud Resources"]:::outputStyle
+            Platform["Platform Services"]:::outputStyle
+        end
 
-2. **Initialize the Development Environment:**
+        subgraph BusinessData["Business Intelligence"]
+            direction TB
+            Compliance["Compliance Data<br/>• FISMA/NIST/SCIP<br/>• ATO Status<br/>• Controls"]:::outputStyle
+            Metrics["Operational Metrics<br/>• Resource Usage<br/>• Performance<br/>• Cost"]:::outputStyle
+        end
 
-   If you're using [GitHub Codespaces](https://github.com/features/codespaces) or a local development environment with Docker, you can launch directly into the pre-configured environment.
+        subgraph Observability["Observability"]
+            direction TB
+            Logs["System Logs"]:::outputStyle
+            Traces["Audit Trails"]:::outputStyle
+        end
+    end
 
-   - **GitHub Codespaces:** Click the `Code` button and select `Open with Codespaces`, or follow the instructions in the Quickstart section of this README.
-   - **Local Development:** Follow the instructions in the `Getting Started` section to set up your local environment.
+    %% Flow Connections
+    Config --> Main
+    Versions --> Main
+    Main --> CoreOrchestration
 
-### Step 3: Customize the Configuration
+    ConfigMgmt --> AWSStack
+    ConfigMgmt --> K8sStack
+    MetadataMgmt --> BusinessData
+    DeployMgmt --> Infrastructure
 
-1. **Update Configuration Files:**
+    AWSCore --> EKSCluster
+    EKSCluster --> K8sCore
+    K8sCore --> K8sModules
 
-   - Customize the `.env` file with your project-specific environment variables.
-   - Modify the `Taskfile.yaml` to include tasks specific to your project.
-   - Adjust the Pulumi configuration files under `.pulumi` to match your cloud and infrastructure setup.
+    K8sModules --> Platform
+    AWSStack --> Cloud
 
-2. **Set Up Your Pulumi Stack:**
+    Infrastructure --> BusinessData
+    Infrastructure --> Observability
 
-   Configure your Pulumi stack settings to match your project environment by following the steps in the `Getting Started` section.
+    %% Style Subgraphs
+    style InputLayer fill:#fafafa,stroke:#78909c,stroke-width:2px
+    style CoreLayer fill:#ffffff,stroke:#78909c,stroke-width:2px
+    style InfraLayer fill:#fafafa,stroke:#78909c,stroke-width:2px
+    style OutputLayer fill:#ffffff,stroke:#78909c,stroke-width:2px
+```
 
-### Step 4: Start Developing
+---
 
-1. **Deploy the Infrastructure:**
+## Getting Started
 
-   Use the pre-configured tasks to deploy your infrastructure, as detailed in the Quickstart section.
-
-   ```bash
-   task kubernetes
-   task deploy
-   ```
-
-2. **Build and Iterate:**
-
-   With your infrastructure deployed, you can now focus on developing your application, iterating on your DevOps processes, and refining your setup.
-
-### Step 5: Push Your Changes
-
-1. **Commit and Push:**
-
-   After making changes, commit them to your repository.
-
-   ```bash
-   git add .
-   git commit -m "Initial setup and configuration"
-   git push origin main
-   ```
-
-2. **Collaborate and Contribute:**
-
-   Share your repository with your team, collaborate on features, and contribute back to the original template if you make improvements that could benefit others.
-
-### Tips for Success
-
-- **Keep your dependencies up to date:** Regularly update the tools and libraries used in your project.
-- **Document your changes:** Update the README and other documentation as your project evolves.
-- **Engage with the community:** Join the [ContainerCraft Community Discord](https://discord.gg/Jb5jgDCksX) to get support and share your experiences.
-
-## How-To (Boilerplate Instructions)
-
-This repository is designed to be used as a template for new DevOps projects. Follow the steps below to clone and configure your environment.
+Zora provides a robust starting point for building cloud infrastructure. Follow the steps below to set up your development environment and start deploying with Zora.
 
 ### Prerequisites
 
-Ensure you have the following tools and accounts:
+- **Git**: Version control system ([Download Git](https://git-scm.com/downloads))
+- **Docker**: Containerization platform ([Install Docker](https://docs.docker.com/get-docker/))
+- **Visual Studio Code (VSCode)**: Code editor ([Download VSCode](https://code.visualstudio.com/))
+  - **Remote Development Extension Pack**: [Install Extension Pack](https://marketplace.visualstudio.com/items?itemName=ms-vscode-remote.vscode-remote-extensionpack)
 
-1. [GitHub](https://github.com)
-2. [Pulumi Cloud](https://app.pulumi.com/signup)
-3. [Microsoft Edge](https://www.microsoft.com/en-us/edge) or [Google Chrome](https://www.google.com/chrome)
+### Clone the Repository
 
-### Quickstart
+1. **Fork the Zora Repository**
 
-Follow these steps to get your environment up and running:
+   Navigate to the [Zora GitHub repository](https://git.smce.nasa.gov/scip/Zora) and click the "Fork" button to create your own copy.
 
-1. **Clone the Repository:**
+2. **Clone Your Forked Repository**
 
-   Clone this repository to your GitHub account using the "Use this template" button.
-
-2. **Launch in GitHub Codespaces:**
-
-   Start a new GitHub Codespace with the following options:
-
-   - **Branch:** `main`
-   - **Dev Container Configuration:** `konductor`
-   - **Region:** Your choice
-   - **Machine Type:** 4 cores, 16 GB RAM, or better
-
-3. **Open the Integrated Terminal:**
-
-   Use `` Ctrl + ` `` to open the VSCode integrated terminal.
-
-4. **Authenticate Credentials:**
-
-   Login to Pulumi Cloud and other required services.
-
-   ```bash {"id":"01J5VC1KTJBR22WEDNSSGTNAX4","name":"login"}
-   task login
+   ```bash
+   git clone https://git.smce.nasa.gov/<project_namespace>/Zora.git
+   cd zora
    ```
 
-5. **Configure the Pulumi Stack:**
+### Set Up the Development Environment
 
-   Set up Pulumi stack parameters.
+Zora uses a DevContainer configuration to provide a consistent development environment.
 
-   ```bash {"id":"01J5VC1KTJBR22WEDNSWYBKNQS","name":"configure"}
-   export ORGANIZATION="${GITHUB_USER:-${GITHUB_REPOSITORY_OWNER:-}}"
-   export DEPLOYMENT="${RepositoryName:-}"
-   task configure
+1. **Open the Project in VSCode**
+
+   Launch VSCode and open the `zora` directory.
+
+2. **Reopen in Container**
+
+   - When prompted, click **"Reopen in Container"** to start the DevContainer.
+   - If not prompted, open the Command Palette (`Ctrl+Shift+P` or `Cmd+Shift+P` on Mac) and select **"Remote-Containers: Reopen in Container"**.
+
+3. **Wait for the Container to Build**
+
+   VSCode will build the DevContainer image and set up the environment. This may take a few minutes on the first run.
+
+
+### Configure Pulumi
+
+1. **Set Up Pulumi Configuration**
+
+   Ensure that `Pulumi.yaml` configuration is updated with your desired configuration:
+
+   ```yaml
+   name: Zora
+   runtime:
+     name: python
+     options:
+       virtualenv: poetry
+   ```
+### Install Dependencies
+
+1. **Install Pulumi Dependencies**
+
+   ```bash
+   pulumi install
    ```
 
-6. **Deploy Kubernetes:**
+2. **Log In to Pulumi**
 
-   Deploy Kubernetes using Talos.
-
-   ```bash {"excludeFromRunAll":"true","id":"01J5VC1KTJBR22WEDNSX4RHEG2","name":"kubernetes"}
-   task kubernetes
+   ```bash
+   pulumi login
    ```
 
-7. **Deploy the Platform:**
+3. **Create a New Stack**
 
-   Deploy the KubeVirt PaaS infrastructure.
-
-   ```bash {"excludeFromRunAll":"true","id":"01J5VC1KTJBR22WEDNSZW7QADA","name":"deploy"}
-   task deploy
+   ```bash
+   pulumi stack init dev
    ```
 
-10. **Cleanup:**
+   Replace `dev` with your desired stack name.
 
-    Clean up all Kubernetes and Pulumi resources when you're done.
+### Verify Type Checking
 
-    ```bash {"excludeFromRunAll":"true","id":"01J5VC1KTJBR22WEDNT7BDRMAV","name":"clean"}
-    task clean-all
-    ```
+Zora enforces strict type checking using Pyright.
+
+1. **Install Pyright**
+
+   ```bash
+   poetry add --dev pyright
+   ```
+
+2. **Run Type Checking**
+
+   ```bash
+   poetry run pyright
+   ```
+
+### Deploy Your Infrastructure
+
+1. **Preview the Deployment**
+
+   ```bash
+   pulumi preview
+   ```
+
+2. **Deploy with Pulumi**
+
+   ```bash
+   pulumi up
+   ```
+
+3. **Destroy Resources**
+
+   When you're done, you can clean up resources:
+
+   ```bash
+   pulumi destroy
+   ```
+
+---
+
+## Documentation
+
+Explore our comprehensive documentation to get the most out of Zora:
+
+- **[Developer Guide](./docs/developer_guide/README.md)**: Learn about development practices, code standards, and how to contribute.
+- **[Pulumi Python Development Guide](./docs/developer_guide/pulumi-python.md)**: Advanced techniques and best practices for Pulumi with Python.
+- **[Core Module Documentation](./docs/modules/core/README.md)**: Understand the core components and architecture of Zora.
+- **[Documentation Style Guide](./docs/developer_guide/documentation.md)**: Guidelines for writing clear and consistent documentation.
+- **[Roadmap](./docs/developer_guide/ROADMAP.md)**: Learn about our vision, goals, and future plans for Zora.
+
+---
 
 ## Contributing
 
-Contributions are welcome! This template is intended to evolve with the needs of the community. Learn how to contribute by reading our [CONTRIBUTING.md](https://github.com/ContainerCraft/Konductor/issues/22).
+We welcome contributions from the community! To get involved:
 
-### Developing and Testing
+1. **Read the [Contributor Guide](./CONTRIBUTING.md)**: Familiarize yourself with our contribution process, coding standards, and community guidelines.
 
-Use the `act` tool to test GitHub Actions locally before pushing your changes.
+2. **Join Our Community**: Engage with other contributors and maintainers.
 
-```bash {"excludeFromRunAll":"true","id":"01J5VC1KTJBR22WEDNT92WYZEH"}
-task act
-```
+   - **Discord**: Join our [CHAT_SERVER_NEEDED](placeholder) server.
+   - **GitHub Discussions**: Participate in discussions on our [GitHub Discussions](https://git.smce.nasa.gov/scip/zora/discussions) page.
 
-## Community and Support
+3. **Report Issues**: If you find bugs or have feature requests, please [open an issue](https://git.smce.nasa.gov/scip/zora/issues).
 
-Join our community to discuss, learn, and contribute:
-
-- **[ContainerCraft Community Discord](https://discord.gg/Jb5jgDCksX)**
-- **[Konductor Project FAQ](FAQ.md)**
+4. **Submit Pull Requests**: Follow our guidelines to submit high-quality pull requests.

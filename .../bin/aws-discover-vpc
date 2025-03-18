@@ -1,0 +1,154 @@
+#!/bin/bash
+#set -x
+
+# Check if a filter was provided
+if [ -z "$1" ]; then
+  echo "Usage: aws-discover-vpc <name-filter>"
+  echo "Example: aws-discover-vpc smdc-ucp"
+  exit 1
+fi
+
+NAME_FILTER="$1"
+echo "Searching for VPC with name containing: $NAME_FILTER"
+
+# Try different patterns to find the VPC
+# First try with exact name filter
+VPC_ID=$(aws ec2 describe-vpcs --query "Vpcs[?Tags[?Key=='Name' && contains(Value, '$NAME_FILTER')]].VpcId" --output text)
+
+# If not found, try with eks-vpc prefix
+if [ -z "$VPC_ID" ]; then
+  VPC_ID=$(aws ec2 describe-vpcs --query "Vpcs[?Tags[?Key=='Name' && contains(Value, 'eks-vpc-$NAME_FILTER')]].VpcId" --output text)
+fi
+
+# If still not found, try with just the name part (without smdc- prefix)
+if [ -z "$VPC_ID" ]; then
+  NAME_PART=$(echo "$NAME_FILTER" | sed 's/smdc-//')
+  VPC_ID=$(aws ec2 describe-vpcs --query "Vpcs[?Tags[?Key=='Name' && contains(Value, '$NAME_PART')]].VpcId" --output text)
+fi
+
+# Check if VPC was found
+if [ -z "$VPC_ID" ]; then
+  echo "No VPC found with name containing: $NAME_FILTER"
+
+  # List available VPCs to help the user
+  echo -e "\nAvailable VPCs:"
+  aws ec2 describe-vpcs --query "Vpcs[*].[VpcId,Tags[?Key=='Name'].Value|[0]]" --output table
+
+  # Ask user to select a VPC from the list
+  echo "Please enter the VPC ID you want to inspect:"
+  read VPC_ID
+
+  if [ -z "$VPC_ID" ]; then
+    echo "No VPC ID provided. Exiting."
+    exit 1
+  fi
+fi
+
+# If multiple VPCs found, use the first one
+if [[ $(echo "$VPC_ID" | wc -w) -gt 1 ]]; then
+  echo "Multiple VPCs found with name containing: $NAME_FILTER. Using the first one."
+  VPC_ID=$(echo "$VPC_ID" | awk '{print $1}')
+fi
+
+# Export the VPC ID as an environment variable
+export VPC_ID
+echo -e "\nFound VPC: $VPC_ID"
+
+# Discover resources
+echo -e "\nDiscovering resources in VPC $VPC_ID"
+
+echo -e "\n=== Subnets ==="
+aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query "Subnets[*].[SubnetId,Tags[?Key=='Name'].Value|[0]]" --output table
+
+echo -e "\n=== Network Interfaces ==="
+aws ec2 describe-network-interfaces --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query "NetworkInterfaces[*].[NetworkInterfaceId,Description,Status]" --output table
+
+echo -e "\n=== EC2 Instances ==="
+aws ec2 describe-instances --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query "Reservations[*].Instances[*].[InstanceId,State.Name]" --output table
+
+echo -e "\n=== NAT Gateways ==="
+aws ec2 describe-nat-gateways --filter "Name=vpc-id,Values=$VPC_ID" \
+  --query "NatGateways[*].[NatGatewayId,SubnetId,State]" --output table
+
+echo -e "\n=== Internet Gateways ==="
+aws ec2 describe-internet-gateways --filters "Name=attachment.vpc-id,Values=$VPC_ID" \
+  --query "InternetGateways[*].[InternetGatewayId]" --output table
+
+echo -e "\n=== Route Tables ==="
+aws ec2 describe-route-tables --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query "RouteTables[*].[RouteTableId,Associations[0].Main]" --output table
+
+echo -e "\n=== Load Balancers (Classic) ==="
+aws elb describe-load-balancers --query "LoadBalancerDescriptions[?VPCId=='$VPC_ID'].[LoadBalancerName]" --output table
+
+echo -e "\n=== Load Balancers (ALB/NLB) ==="
+aws elbv2 describe-load-balancers --query "LoadBalancers[?VpcId=='$VPC_ID'].[LoadBalancerName,Type]" --output table
+
+echo -e "\n=== VPC Endpoints ==="
+aws ec2 describe-vpc-endpoints --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query "VpcEndpoints[*].[VpcEndpointId,ServiceName]" --output table
+
+echo -e "\n=== Transit Gateway Attachments ==="
+aws ec2 describe-transit-gateway-vpc-attachments --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query "TransitGatewayVpcAttachments[*].[TransitGatewayAttachmentId]" --output table
+
+echo -e "\n=== VPC Peering Connections ==="
+echo "As Requester:"
+aws ec2 describe-vpc-peering-connections --filters "Name=requester-vpc-info.vpc-id,Values=$VPC_ID" \
+  --query "VpcPeeringConnections[*].VpcPeeringConnectionId" --output text
+echo "As Accepter:"
+aws ec2 describe-vpc-peering-connections --filters "Name=accepter-vpc-info.vpc-id,Values=$VPC_ID" \
+  --query "VpcPeeringConnections[*].VpcPeeringConnectionId" --output text
+
+echo -e "\n=== Security Groups ==="
+aws ec2 describe-security-groups --filters "Name=vpc-id,Values=$VPC_ID" \
+  --query "SecurityGroups[*].[GroupId,GroupName]" --output table
+
+echo -e "\n=== EKS Clusters ==="
+CLUSTERS=$(aws eks list-clusters --query "clusters" --output text)
+if [ -n "$CLUSTERS" ]; then
+  for CLUSTER in $CLUSTERS; do
+    CLUSTER_VPC=$(aws eks describe-cluster --name $CLUSTER --query "cluster.resourcesVpcConfig.vpcId" --output text 2>/dev/null || echo "")
+    if [ "$CLUSTER_VPC" == "$VPC_ID" ]; then
+      echo "Cluster: $CLUSTER"
+      echo "Subnets:"
+      aws eks describe-cluster --name $CLUSTER --query "cluster.resourcesVpcConfig.subnetIds" --output text
+    fi
+  done
+else
+  echo "No EKS clusters found"
+fi
+
+# Find subnet dependencies
+echo -e "\n=== Subnet Dependencies ==="
+SUBNETS=$(aws ec2 describe-subnets --filters "Name=vpc-id,Values=$VPC_ID" --query "Subnets[*].SubnetId" --output text)
+for SUBNET in $SUBNETS; do
+  echo "Checking dependencies for subnet: $SUBNET"
+
+  # Check for network interfaces in the subnet
+  echo "Network interfaces:"
+  aws ec2 describe-network-interfaces --filters "Name=subnet-id,Values=$SUBNET" \
+    --query "NetworkInterfaces[*].[NetworkInterfaceId,Description]" --output table
+
+  # Check for instances in the subnet
+  echo "Instances:"
+  aws ec2 describe-instances --filters "Name=subnet-id,Values=$SUBNET" \
+    --query "Reservations[*].Instances[*].[InstanceId,State.Name]" --output table
+
+  # Check for NAT gateways in the subnet
+  echo "NAT Gateways:"
+  aws ec2 describe-nat-gateways --filter "Name=subnet-id,Values=$SUBNET" \
+    --query "NatGateways[*].[NatGatewayId,State]" --output table
+
+  # Check for load balancers using the subnet
+  echo "Load Balancers:"
+  aws elbv2 describe-load-balancers --query "LoadBalancers[?contains(AvailabilityZones[*].SubnetId, '$SUBNET')].[LoadBalancerName,Type]" --output table
+
+  echo "---"
+done
+
+echo -e "\nResource discovery complete for VPC $VPC_ID"
+echo "To use this VPC ID in other commands, run: export VPC_ID=$VPC_ID"

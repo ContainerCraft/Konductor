@@ -1,3 +1,0 @@
-cluster:
-    clusterName: konductor
-    allowSchedulingOnControlPlanes: true

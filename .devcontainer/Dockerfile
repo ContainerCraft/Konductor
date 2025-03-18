@@ -56,7 +56,6 @@ RUN echo \
   && echo
 
 RUN npm install -g minimist
-RUN apt-get update && apt-get install -y nano less
 USER ubuntu
 
 ##################################################################################

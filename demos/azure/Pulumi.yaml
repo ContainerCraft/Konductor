@@ -1,0 +1,10 @@
+name: this-is-a-test
+description: a test aws pulumi program
+runtime:
+  name: python
+  options:
+    toolchain: poetry
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: aws-python

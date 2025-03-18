@@ -1,22 +1,81 @@
-local
-.kube
-.talos
-
-*.pyc
-venv/
+# Python
 __pycache__/
-pulumi/.pulumi
-
-*.pyc
+*.py[cod]
+*$py.class
+*.so
+.Python
 venv/
-__pycache__/
-.talos/manifest
-.pulumi/plugins
-.pulumi/*
-Pulumi.*.yaml
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+
+# Editor files
+.idea/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*.swo
+*~
+
+# Environment
 .env
-.devcontainer/docker
-tmp.*
-tmp
-.ssh
-tmp
+.envrc
+.tmpenv
+**/.tmpenv
+
+# Runtime data
+local/
+tmp/
+tmp.*/
+
+# Pulumi
+.pulumi/
+Pulumi.*.yaml
+!Pulumi.yaml
+!stacks/Pulumi.*.yaml
+
+# Kubernetes/Infrastructure
+.kube/
+.talos/
+.talos/manifest
+
+# Security
+.ssh/
+
+# Project-specific
+# These directories should NOT be excluded since they're part of our source code
+# Explicitly allow these critical directories
+!src/core/config/
+!src/core/logging/
+!src/core/providers/
+
+# Exclude only specific config/credential files
+.aws/credentials
+.aws/config
+.azure/
+kubernetes/config
+**/credentials.json
+**/secrets.yaml
+
+# We want to track empty directories with .gitkeep
+!**/.gitkeep

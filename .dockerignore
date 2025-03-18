@@ -1,0 +1,8 @@
+*
+!.devcontainer
+!.devcontainer/devcontainer.json
+!.devcontainer/Dockerfile
+!.devcontainer/rootfs
+!.devcontainer/rootfs/usr
+!.devcontainer/rootfs/usr/bin
+!.devcontainer/rootfs/usr/bin/entrypoint

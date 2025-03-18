@@ -1,42 +1,11 @@
-name: konductor
-description: Konductor DevOps bootstrap template.
-main: ./pulumi
-stackConfigDir: ./pulumi/stacks
-options:
-  refresh: always
+name: zora
+description: DevOps Platform IaC Template Repository
+main: ./
+stackConfigDir: ./stacks
 runtime:
   name: python
   options:
-    virtualenv: venv
-config:
-  pulumi:tags:
-    value:
-      pulumi:template: konductor
-  kubernetes:
-    value:
-      context: admin@konductor
-      kubeconfig: ../.kube/config
-  cert_manager:
-    value:
-      enabled: true
-      version: 1.15.1
-  prometheus:
-    value:
-      enabled: false
-      version: 61.3.2
-  kubernetes_dashboard:
-    value:
-      enabled: false
-      version: 7.4.0
-  cilium:
-    value:
-      enabled: false
-  vm:
-    value:
-      enabled: false
-      namespace: default
-      instance_name: ubuntu
-      image_name: docker.io/containercraft/ubuntu:22.04
-      node_port: 30590
-      ssh_user: kc2
-      ssh_password: kc2
+    toolchain: poetry
+    typechecker: pyright
+options:
+  refresh: always

@@ -1,0 +1,95 @@
+config:
+  zora:aws:
+    enabled: true
+    region: us-east-1
+    profile: smdc-admin
+    access_key_id:
+      secure: AAABAJm5qD+VrS8Y6xWfNjXGtANoNHEJSIYA97D1oSl6+30rq2xoJ4AzGoNF190rzOEFSA==
+    secret_access_key:
+      secure: AAABAIT0blo+2FsJrv7H6DeckSL4doRb5rErpiMOerGyOkUCgCQi5cBjrYz7XeGb3X9qx9z4IRnvP8OaH0zMnomRg1CtNLCA
+    eks:
+      enabled: true
+      clusters:
+        - mode: auto
+          name: smdc-ucp
+          node_groups:
+            - auto_mode_config:
+                compute_enabled: true
+                network_policy_enabled: true
+              instance_types:
+                - m6i.large
+              name: default
+          oidc:
+            enabled: true
+            client_id: "b2c6de45-49b6-4212-a046-1deab920859e"
+            issuer_url: "https://sts.windows.net/4ba2629f-3085-4f9a-b2ec-3962de0e3490/"
+            groups_claim: "groups"
+            groups_prefix: "azure:"
+            username_claim: "sub"
+            username_prefix: "azure:"
+            required_claims:
+              aud: "b2c6de45-49b6-4212-a046-1deab920859e"
+            admin_group_id: "3ea68a91-fa07-4611-93dc-c2e34af46298"
+          version: "1.31"
+          ebs_csi:
+            enabled: true
+            storage_class:
+              name: "auto-ebs-sc"
+              make_default: true
+              volume_type: "gp3"
+              encrypted: true
+              fs_type: "ext4"
+              throughput: 125
+  zora:compliance:
+    fisma:
+      ato:
+        authorized: 2025-03-27 00:00:00 +0000 UTC
+        eol: 2028-03-27 00:00:00 +0000 UTC
+        id: 1234-ATO
+      level: moderate
+      mode: warn
+  zora:kubernetes:
+    cert_manager:
+      enabled: false
+    crossplane:
+      aws_provider_version: v0.43.1
+      enable_composition_revisions: true
+      enable_external_secret_stores: true
+      enabled: false
+      kubernetes_provider_version: v0.10.0
+      namespace: crossplane-system
+      providers:
+        - provider-aws
+        - provider-kubernetes
+      version: 1.18.0
+    enabled: true
+    fluentbit:
+      enabled: false
+      namespace: amazon-cloudwatch
+      version: 3.2.5
+    flux:
+      bootstrap_repository: git@git.smce.nasa.gov/scip/ucp-gitops-infra.git
+      cluster_domain: cluster.local
+      components:
+        - source-controller
+        - kustomize-controller
+        - helm-controller
+        - notification-controller
+      concurrent_reconciles: 10
+      devops_repository: git@git.smce.nasa.gov/scip/ucp-devops.git
+      enabled: true
+      multitenant: false
+      namespace: flux-system
+      network_policy: true
+      operator_version: 0.10.0
+      reconcile_interval: 1h
+      reconcile_timeout: 3m
+      requeue_dependency_interval: 5s
+      storage_class: auto-ebs-sc
+      storage_size: 10Gi
+      version: 2.x
+    prometheus:
+      enabled: false
+      namespace: monitoring
+      openunison_enabled: false
+      version: 45.7.1

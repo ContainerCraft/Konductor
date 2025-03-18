@@ -1,0 +1,16 @@
+# Feature Supported on self-hosted Gitlab ETA Q4 2025
+# BLOCKED: https://gitlab.com/groups/gitlab-org/-/epics/11770
+schemaVersion: 2.2.0
+components:
+  - name: zora
+    attributes:
+      gl/inject-editor: true
+    container:
+      image: ghcr.io/containercraft/konductor:latest
+      memoryRequest: 8192M
+      memoryLimit: 16384M
+      cpuRequest: 2000m
+      cpuLimit: 4000m
+      endpoints:
+        - name: ssh-2222
+          targetPort: 2222

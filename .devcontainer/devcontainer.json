@@ -1,11 +1,11 @@
 {
-    "name": "konductor",
+    "name": "zora",
     "remoteUser": "ubuntu",
     "containerUser": "ubuntu",
-    "dockerFile": "Dockerfile",
     "updateRemoteUserUID": true,
+    "dockerFile": "Dockerfile",
     "initializeCommand": "echo 'Initializing development environment...'",
-    "postCreateCommand": "sudo mkdir -p /home/ubuntu/.cache /home/ubuntu/.kube /home/ubuntu/.aws /home/ubuntu/.config /home/ubuntu/.pulumi /home/ubuntu/.terraform.d /home/ubuntu/go/pkg /home/ubuntu/.azure /home/ubuntu/.vscode-server /home/ubuntu/.cargo && sudo mkdir -p /home/ubuntu/.cache/starship && sudo chmod -R 755 /home/ubuntu/.cache && sudo chmod -R 755 /home/ubuntu/.kube /home/ubuntu/.aws /home/ubuntu/.config /home/ubuntu/.pulumi /home/ubuntu/.terraform.d /home/ubuntu/go/pkg /home/ubuntu/.azure /home/ubuntu/.vscode-server /home/ubuntu/.cargo && sudo chown -R ubuntu:ubuntu /home/ubuntu && devcontainer-links",
+    "postCreateCommand": "sudo mkdir -p /home/ubuntu/.cache /home/ubuntu/.kube /home/ubuntu/.aws /home/ubuntu/.config /home/ubuntu/.pulumi /home/ubuntu/.terraform.d /home/ubuntu/go/pkg /home/ubuntu/.azure /home/ubuntu/.vscode-server /home/ubuntu/.cargo && sudo mkdir -p /home/ubuntu/.cache/starship && sudo chmod -R 777 /home/ubuntu/.cache && sudo chmod -R 755 /home/ubuntu/.kube /home/ubuntu/.aws /home/ubuntu/.config /home/ubuntu/.pulumi /home/ubuntu/.terraform.d /home/ubuntu/go/pkg /home/ubuntu/.azure /home/ubuntu/.vscode-server /home/ubuntu/.cargo && sudo chown -R ubuntu:ubuntu /home/ubuntu/.cache && sudo chown -R ubuntu:ubuntu /home/ubuntu/.kube && sudo chown -R ubuntu:ubuntu /home/ubuntu/.aws && sudo chown -R ubuntu:ubuntu /home/ubuntu/.config && sudo chown -R ubuntu:ubuntu /home/ubuntu/.pulumi && sudo chown -R ubuntu:ubuntu /home/ubuntu/.terraform.d && sudo chown -R ubuntu:ubuntu /home/ubuntu/go/pkg && sudo chown -R ubuntu:ubuntu /home/ubuntu/.azure && sudo chown -R ubuntu:ubuntu /home/ubuntu/.vscode-server && sudo chown -R ubuntu:ubuntu /home/ubuntu/.cargo && devcontainer-links",
     "shutdownAction": "stopContainer",
     "overrideCommand": false,
     "privileged": true,
@@ -58,71 +58,71 @@
     "mounts": [
         "source=dind-var-lib-docker,target=/var/lib/docker,type=volume",
         {
-            "source": "konductor-pulumi-config",
+            "source": "zora-pulumi-config",
             "target": "/home/ubuntu/.pulumi",
             "type": "volume",
             "uid": 1000,
             "gid": 1000
         },
         {
-            "source": "konductor-kube-config",
+            "source": "zora-kube-config",
             "target": "/home/ubuntu/.kube",
             "type": "volume",
             "uid": 1000,
             "gid": 1000
         },
         {
-            "source": "konductor-aws-config",
+            "source": "zora-aws-config",
             "target": "/home/ubuntu/.aws",
             "type": "volume",
             "uid": 1000,
             "gid": 1000
         },
         {
-            "source": "konductor-gcloud-config",
+            "source": "zora-gcloud-config",
             "target": "/home/ubuntu/.config/gcloud",
             "type": "volume",
             "uid": 1000,
             "gid": 1000
         },
         {
-            "source": "konductor-terraform-config",
+            "source": "zora-terraform-config",
             "target": "/home/ubuntu/.terraform.d",
             "type": "volume",
             "uid": 1000,
             "gid": 1000
         },
         {
-            "source": "konductor-go-pkg",
+            "source": "zora-go-pkg",
             "target": "/home/ubuntu/go/pkg",
             "type": "volume",
             "uid": 1000,
             "gid": 1000
         },
-        "source=konductor-cache,target=/home/ubuntu/.cache,type=volume",
+        "source=zora-cache,target=/home/ubuntu/.cache,type=volume",
         {
-            "source": "konductor-config",
+            "source": "zora-config",
             "target": "/home/ubuntu/.config",
             "type": "volume",
             "uid": 1000,
             "gid": 1000
         },
         {
-            "source": "konductor-azure",
+            "source": "zora-azure",
             "target": "/home/ubuntu/.azure",
             "type": "volume",
             "uid": 1000,
             "gid": 1000
         },
         {
-            "source": "konductor-vscode-server",
+            "source": "zora-vscode-server",
             "target": "/home/ubuntu/.vscode-server",
             "type": "volume",
             "uid": 1000,
             "gid": 1000
         },
         {
-            "source": "konductor-cargo",
+            "source": "zora-cargo",
             "target": "/home/ubuntu/.cargo",
             "type": "volume",
             "uid": 1000,
@@ -134,20 +134,18 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "GitHub.copilot",
+                "ms-azuretools.vscode-docker",
+                "ms-kubernetes-tools.vscode-kubernetes-tools",
+                "redhat.vscode-yaml",
+                "hashicorp.hcl",
+                "hashicorp.terraform",
+                "ms-azuretools.vscode-azureterraform",
                 "ms-python.python",
                 "ms-vscode.cpptools",
-                "ms-vsliveshare.vsliveshare",
-                "ms-azuretools.vscode-docker",
-                "ms-vscode-remote.remote-containers",
-                "ms-kubernetes-tools.vscode-kubernetes-tools",
-                "pulumi.pulumi-vscode-tools",
-                "ms-python.black-formatter",
-                "okteto.kubernetes-context",
-                "daltonmenezes.aura-theme",
-                "oderwat.indent-rainbow",
                 "esbenp.prettier-vscode",
-                "stateful.runme"
+                "eamodio.gitlens",
+                "GitHub.copilot",
+                "ms-vscode-remote.remote-containers"
             ],
             "settings": {
                 "terminal.integrated.defaultProfile.linux": "bash",

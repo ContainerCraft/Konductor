@@ -1,0 +1,155 @@
+{
+    "config": {
+        "compliance": {
+            "scip": {
+                "environment": "production",
+                "ownership": {
+                    "operator": {
+                        "contacts": [
+                            "seti2@nasa.gov",
+                            "alien51@nasa.gov"
+                        ],
+                        "name": "science-team-seti2-obs2819"
+                    },
+                    "operations": {
+                        "contacts": [
+                            "scip@nasa.gov",
+                            "boberta@nasa.gov"
+                        ],
+                        "name": "scip-team-ops"
+                    }
+                },
+                "providers": {
+                    "name": [
+                        "Azure",
+                        "AWS",
+                        "Kubernetes"
+                    ],
+                    "regions": [
+                        "us-east-1",
+                        "scip-west-1",
+                        "scip-east-1",
+                        "scip-lunar-2"
+                    ]
+                }
+            },
+            "fisma": {
+                "level": "moderate",
+                "mode": "strict",
+                "ato": {
+                    "id": "1234-ATO",
+                    "authorized": "2025-03-27T00:00:00Z",
+                    "eol": "2028-03-27T00:00:00Z",
+                    "last_touch": "2026-03-27T00:00:00Z"
+                }
+            },
+            "nist": {
+                "controls": [
+                    "AC-2",
+                    "AC-3",
+                    "AC-6",
+                    "ac-1"
+                ],
+                "exceptions": [
+                    "AC-7",
+                    "AC-8",
+                    "ca-7.1",
+                    "ma-2.2",
+                    "si-12"
+                ]
+            }
+        },
+        "metadata": {
+            "globalLabels": {
+                "project": "SCIP_Ops",
+                "managedBy": "NASA_SCIP_OPERATIONS",
+                "version": "v1.03.11"
+            },
+            "globalAnnotations": {
+                "purpose": "production",
+                "owner": "scip-ops-team"
+            }
+        },
+        "aws": {
+            "sts_caller_identity": {
+                "aws_user_account_id": "<current_aws_user_id_from->",
+                "aws_user_id": "<current_aws_account_name>",
+                "aws_user_arn": "<current_aws_arn>"
+            },
+            "aws_account_id": "111122223333",
+            "profile": "smdc-cba",
+            "region": "us-east-1",
+            "opsStateBucket": "scip-ops-prod-state-bucket",
+            "controlTower": {
+                "organizationalUnitName": "NASA_SCIP_PRODUCTION",
+                "executionRoleName": "AWSControlTowerExec",
+                "adminRoleName": "AWSControlTowerAdmin",
+                "auditRoleName": "AWSControlTowerAudit",
+                "logArchiveBucket": "aws-control-tower-logs-111122223333"
+            },
+            "iamUsers": [
+                {
+                    "name": "alice",
+                    "email": "alice@example.com",
+                    "groups": [
+                        "Developers"
+                    ],
+                    "policies": [
+                        "arn:aws:iam::aws:policy/AdministratorAccess"
+                    ]
+                },
+                {
+                    "name": "bob",
+                    "email": "bob@example.com",
+                    "groups": [
+                        "Operations"
+                    ],
+                    "policies": [
+                        "arn:aws:iam::aws:policy/ReadOnlyAccess"
+                    ]
+                }
+            ],
+            "landingzones": [
+                {
+                    "name": "Tenant1",
+                    "email": "tenant1@example.com",
+                    "administrators": [
+                        "admin1",
+                        "admin2"
+                    ],
+                    "users": [
+                        "user1",
+                        "user2"
+                    ],
+                    "features": [
+                        "bucket",
+                        "ec2"
+                    ],
+                    "aws": {
+                        "vpcCidr": "10.0.0.0/16"
+                    },
+                    "tags": {
+                        "Environment": "Production"
+                    }
+                }
+            ]
+        },
+        "kubernetes": {
+            "context": "scip-prod-cluster",
+            "kubeconfig": "${KUBECONFIG}"
+        },
+        "k8s_versions": {
+            "cert_manager": {
+                "1.15.3": {}
+            },
+            "kubevirt": {
+                "1.3.1": {}
+            }
+        },
+        "source_repository": {
+            "branch": "rerefactor",
+            "commit": "1714788619ba712bdc5d90e0cc1d919a3eb8a6",
+            "remote": "https://github.com/ContainerCraft/Kargo"
+        }
+    }
+}

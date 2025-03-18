@@ -1,0 +1,7 @@
+# Pulumi Stack Configuration for stack name `test`
+
+config:
+  # Core configuration
+  project:
+    name: "test-project"
+    environment: "dev"  # dev, staging, production
