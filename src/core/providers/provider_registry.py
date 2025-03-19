@@ -2,18 +2,20 @@
 
 """Provider registry for the core module."""
 
-from typing import Dict, Any, Optional, Callable
+from typing import Any, Optional, Callable
 
 
 class ProviderRegistry:
     """Registry for all providers."""
 
-    def __init__(self, log_manager):
+    def __init__(self, config_manager, log_manager):
         """Initialize the provider registry.
 
         Args:
+            config_manager: The configuration manager instance.
             log_manager: The log manager instance.
         """
+        self.config_manager = config_manager
         self.logger = log_manager.get_logger("provider_registry")
         self.provider_factories = {}
         self.providers = {}
@@ -47,13 +49,22 @@ class ProviderRegistry:
 
         # Check if factory exists for this provider type
         if provider_type not in self.provider_factories:
-            self.logger.error(f"No factory registered for provider type: {provider_type}")
+            self.logger.error(
+                f"No factory registered for provider type: {provider_type}"
+            )
             return None
+
+        # Get provider configuration
+        provider_config = self.config_manager.get_provider_config(provider_type)
 
         # Create the provider instance
         try:
             factory = self.provider_factories[provider_type]
-            provider = factory(provider_name=provider_name, **kwargs)
+            provider = factory(
+                provider_name=provider_name,
+                provider_config=provider_config,
+                **kwargs
+            )
 
             # Register the provider in the registry
             if provider_type not in self.providers:
@@ -63,7 +74,8 @@ class ProviderRegistry:
             return provider
         except Exception as e:
             self.logger.error(
-                f"Failed to create provider: {provider_type}/{provider_name}. Error: {str(e)}"
+                f"Failed to create provider: {provider_type}/{provider_name}. "
+                f"Error: {str(e)}"
             )
             return None
 

@@ -31,12 +31,11 @@ from src.core import CoreModule
 
 def main():
     """Main entry point for the Pulumi program."""
-    # Initialize the core module
-    core = CoreModule()
-
-    # Run the core module
-    core.run()
+    # Create and run the core module
+    core_module = CoreModule()
+    core_module.run()
 
 
 # Execute the main function
-main()
+if __name__ == "__main__":
+    main()
