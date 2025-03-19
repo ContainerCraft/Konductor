@@ -114,16 +114,16 @@ from typing import Dict, Any, Optional
 
 class BaseComponent(pulumi.ComponentResource):
     """Base class for all component resources."""
-    
-    def __init__(self, 
+
+    def __init__(self,
                  resource_type: str,
-                 name: str, 
-                 props: Dict[str, Any] = None, 
+                 name: str,
+                 props: Dict[str, Any] = None,
                  opts: Optional[pulumi.ResourceOptions] = None):
         super().__init__(resource_type, name, props or {}, opts)
         self.resource_type = resource_type
         self.name = name
-        
+
     def register_outputs(self, outputs: Dict[str, Any]):
         """Register component outputs to be tracked in Pulumi state."""
         super().register_outputs(outputs)
@@ -146,16 +146,16 @@ A typical component resource implementation follows this pattern:
 ```python
 class SecureVpc(BaseComponent):
     """A secure VPC implementation with proper subnet isolation and security groups."""
-    
+
     def __init__(self,
                  name: str,
                  config: Dict[str, Any],
                  opts: Optional[pulumi.ResourceOptions] = None):
         super().__init__("vpc:SecureVpc", name, {}, opts)
-        
+
         # Create child resources with parent=self
         child_opts = pulumi.ResourceOptions(parent=self)
-        
+
         # VPC creation
         self.vpc = aws.ec2.Vpc(
             f"{name}-vpc",
@@ -168,7 +168,7 @@ class SecureVpc(BaseComponent):
             },
             opts=child_opts
         )
-        
+
         # Create subnets
         self.public_subnets = []
         for i, az in enumerate(config.get("availability_zones", [])):
@@ -186,7 +186,7 @@ class SecureVpc(BaseComponent):
                 opts=child_opts
             )
             self.public_subnets.append(subnet)
-        
+
         # Register outputs that will be available to consumers
         self.register_outputs({
             "vpc_id": self.vpc.id,
@@ -230,23 +230,23 @@ Pulumi provides two primary mechanisms for managing resource dependencies, and i
 # Parent/Child relationship (preferred for logical grouping)
 def create_database_server(name, opts=None):
     # Parent resource
-    server = aws.rds.Instance(f"{name}-server", 
+    server = aws.rds.Instance(f"{name}-server",
                              engine="postgres",
                              # other properties...
                              opts=opts)
-    
+
     # Child resources - automatically depend on the parent
     # These are logically "owned" by the server
     parameter_group = aws.rds.ParameterGroup(f"{name}-params",
                                            family="postgres13",
                                            # other properties...
                                            opts=pulumi.ResourceOptions(parent=server))
-    
+
     subnet_group = aws.rds.SubnetGroup(f"{name}-subnets",
                                      subnet_ids=[...],
                                      # other properties...
                                      opts=pulumi.ResourceOptions(parent=server))
-    
+
     return server, parameter_group, subnet_group
 
 # depends_on relationship (for resources with a dependency but no ownership)
@@ -255,7 +255,7 @@ def create_application_with_dependencies(name, database_server):
     app = aws.ecs.Service(f"{name}-app",
                          # other properties...
                          opts=pulumi.ResourceOptions(depends_on=[database_server]))
-    
+
     return app
 ```
 
@@ -280,24 +280,24 @@ def create_application_with_dependencies(name, database_server):
 class NetworkComponent(BaseComponent):
     def __init__(self, name, props, opts=None):
         super().__init__("infrastructure:network", name, props, opts)
-        
+
         # Create VPC as a child of this component
-        self.vpc = aws.ec2.Vpc(f"{name}-vpc", 
+        self.vpc = aws.ec2.Vpc(f"{name}-vpc",
                              cidr_block="10.0.0.0/16",
                              opts=pulumi.ResourceOptions(parent=self))
-        
+
         # Create subnets as children of this component (siblings to VPC)
         self.public_subnet = aws.ec2.Subnet(f"{name}-public",
-                                         vpc_id=self.vpc.id,  # Reference creates implicit dependency 
+                                         vpc_id=self.vpc.id,  # Reference creates implicit dependency
                                          cidr_block="10.0.1.0/24",
                                          opts=pulumi.ResourceOptions(parent=self))
-                                         
+
         # Register outputs
         self.register_outputs({
             "vpc_id": self.vpc.id,
             "public_subnet_id": self.public_subnet.id
         })
-        
+
 # Usage with proper dependency management
 network = NetworkComponent("prod-network", {})
 
@@ -550,12 +550,12 @@ class ComplianceMetadataManager:
                     "framework": control_id.split(":")[0],
                 }
                 metadata["applicable_controls"].append(control_meta)
-                
+
         # Add compliance tags for resource tracking
         for control in metadata["applicable_controls"]:
             tag_key = f"compliance:{control['framework']}:{control['control_id'].split(':')[1]}"
             metadata["tags"][tag_key] = "applicable"
-                    
+
         return metadata
 ```
 
@@ -598,15 +598,15 @@ from pulumi import CustomResource
 
 class SecureS3Bucket(CustomResource):
     """A secure S3 bucket with standardized security settings."""
-    
+
     def __init__(self, name, args=None, opts=None):
         if args is None:
             args = {}
-            
+
         # Apply security best practices
         args.setdefault("acl", "private")
         args.setdefault("versioning", {"enabled": True})
-        
+
         # Apply server-side encryption by default
         if "server_side_encryption_configuration" not in args:
             args["server_side_encryption_configuration"] = {
@@ -616,7 +616,7 @@ class SecureS3Bucket(CustomResource):
                     }
                 }
             }
-            
+
         super().__init__("aws:s3/bucket:Bucket", name, args, opts)
 ```
 
@@ -630,33 +630,33 @@ from pulumi import ComponentResource, ResourceOptions
 
 class NetworkStack(ComponentResource):
     """A network stack with VPC, subnets, and security groups."""
-    
+
     def __init__(self, name, args=None, opts=None):
         super().__init__("infrastructure:network", name, {}, opts)
-        
+
         if args is None:
             args = {}
-            
+
         # Create child resources with this component as the parent
         child_opts = ResourceOptions(parent=self)
-        
+
         # VPC and its components
         self.vpc = aws.ec2.Vpc(f"{name}-vpc",
                               cidr_block=args.get("cidr_block", "10.0.0.0/16"),
                               opts=child_opts)
-        
+
         # Create subnets
         self.public_subnet = aws.ec2.Subnet(f"{name}-public",
                                           vpc_id=self.vpc.id,
                                           cidr_block="10.0.1.0/24",
                                           map_public_ip_on_launch=True,
                                           opts=child_opts)
-        
+
         self.private_subnet = aws.ec2.Subnet(f"{name}-private",
                                            vpc_id=self.vpc.id,
                                            cidr_block="10.0.2.0/24",
                                            opts=child_opts)
-        
+
         # Register outputs
         self.register_outputs({
             "vpc_id": self.vpc.id,
