@@ -1,7 +1,35 @@
 # Pulumi Stack Configuration for stack name `test`
+# 'test' is the development stack for testing, debugging and enhancing pulumi python iac
 
 config:
   # Core configuration
   project:
     name: "test-project"
     environment: "dev"  # dev, staging, production
+
+  # Logging configuration
+  logging:
+    level: "info"  # debug, info, warning, error, critical
+
+  # Provider configurations
+  providers:
+    # AWS provider configuration
+    aws:
+      enabled: false
+      regions:
+        - us-west-2
+        - us-east-1
+
+    # Azure provider configuration
+    azure:
+      enabled: false
+      regions:
+        - eastus2
+        - westus2
+
+    # Kubernetes provider configuration
+    kubernetes:
+      enabled: false
+      contexts:
+        - name: "dev-cluster"
+          kubeconfig: "~/.kube/config"

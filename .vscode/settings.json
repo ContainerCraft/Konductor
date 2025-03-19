@@ -5,6 +5,20 @@
     "editor.fontSize": 14,
     "editor.formatOnSave": false,
     "cSpell.words": [
+        "abstractmethod",
+        "configmap",
+        "docstrings",
+        "eastus",
+        "elif",
+        "hasattr",
+        "hexsha",
+        "iterdir",
+        "kwargs",
+        "levelname",
+        "levelno",
+        "pathlib",
+        "startswith",
+        "truediv",
         "Zora"
     ],
 }
