@@ -95,7 +95,6 @@ def convert_to_type(value: Any, target_type: Type[T]) -> Optional[T]:
     except (ValueError, TypeError, OverflowError):
         return None
 
-    # Fallback: try direct cast
     try:
         return cast(T, target_type(value))
     except (ValueError, TypeError):
@@ -163,7 +162,10 @@ def _extracted_from_convert_to_type_30(value, args, convert_to_type):
     return cast(T, result)
 
 
-def convert_dict_types(data: Dict[str, Any], type_hints: Dict[str, Any]) -> Dict[str, Any]:
+def convert_dict_types(
+    data: Dict[str, Any],
+    type_hints: Dict[str, Any]
+) -> Dict[str, Any]:
     """Convert dictionary values according to type hints.
 
     Args:
